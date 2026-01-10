@@ -1,3 +1,34 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-soccer",
+      "description": "A soccer player kicking a ball on a green field.",
+      "imageUrl": "https://images.unsplash.com/photo-1487466365202-1afdb86c764e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzb2NjZXIlMjBmaWVsZHxlbnwwfHx8fDE3NjgwODgxNDl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "soccer field"
+    },
+    {
+      "id": "event-tournament",
+      "description": "A soccer team celebrating a victory in a tournament.",
+      "imageUrl": "https://images.unsplash.com/photo-1714623431949-7d0afab64ef2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzb2NjZXIlMjB0b3VybmFtZW50fGVufDB8fHx8MTc2ODA4ODE0OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "soccer tournament"
+    },
+    {
+      "id": "event-tryouts",
+      "description": "Young players during a soccer tryout session.",
+      "imageUrl": "https://images.unsplash.com/photo-1606925797300-0b35e9d1794e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxzb2NjZXIlMjBwbGF5ZXJzfGVufDB8fHx8MTc2ODA4ODE0OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "soccer players"
+    },
+    {
+      "id": "news-kit",
+      "description": "A new soccer team kit displayed.",
+      "imageUrl": "https://images.unsplash.com/photo-1552066379-e7bfd22155c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxzb2NjZXIlMjBqZXJzZXl8ZW58MHx8fHwxNzY4MDg4MTQ5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "soccer jersey"
+    },
+    {
+      "id": "news-player",
+      "description": "A close-up shot of a focused soccer player.",
+      "imageUrl": "https://images.unsplash.com/photo-1641280173256-0ac1b2f4cd78?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8c29jY2VyJTIwcGxheWVyfGVufDB8fHx8MTc2ODA4ODE0OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "soccer player"
+    }
+  ]
 }
