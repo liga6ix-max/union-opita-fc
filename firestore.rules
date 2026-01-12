@@ -160,10 +160,11 @@ service cloud.firestore {
     /**
      * @description Stores athlete profiles, which are nested under their respective club.
      *              Only members of that club can read athlete data. Only club managers can
-     *              create, update, or delete athlete records. An athlete can read their own data.
+     *              create, update, or delete athlete records. An athlete can read and update their own data.
      * @path /clubs/{clubId}/athletes/{athleteId}
      * @allow (list) A coach lists all athletes belonging to their club.
      * @allow (get) An athlete reads their own profile.
+     * @allow (update) An athlete updates their own medical information.
      * @deny (create) A user with an 'athlete' role attempts to add a new athlete to the club.
      * @deny (get) A member of 'club-abc' attempts to read an athlete's record from 'club-xyz'.
      * @principle Inherits access control from the parent resource (the club).
@@ -188,7 +189,7 @@ service cloud.firestore {
      * @principle Enforces role-based access for sensitive financial data.
      */
     match /clubs/{clubId}/payments/{paymentId} {
-      allow get: if isClubStaff(clubId);
+      allow get: if isClubStaff(clubId) || (isClubAthlete(clubId) && resource.data.athleteId == request.auth.uid);
       allow list: if isClubStaff(clubId) || (isClubAthlete(clubId) && request.query.where[0][0] == 'athleteId' && request.query.where[0][2] == request.auth.uid);
       allow create: if isClubManager(clubId) && request.resource.data.clubId == clubId;
       allow update: if (isClubManager(clubId) || (isClubAthlete(clubId) && resource.data.athleteId == request.auth.uid)) && resource != null && request.resource.data.clubId == resource.data.clubId;
