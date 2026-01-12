@@ -21,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { User, Shield, Phone, Hospital, ClipboardCheck } from 'lucide-react';
+import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const profileSchema = z.object({
@@ -132,32 +132,34 @@ export default function AthleteProfilePage() {
                 </Form>
                 ) : (
                 <div className="space-y-6">
-                    <div className="flex items-center gap-4">
-                        <User className="h-6 w-6 text-muted-foreground" />
-                        <div>
-                            <p className="text-sm text-muted-foreground">Nombre Completo</p>
-                            <p className="font-medium">{athlete.name}</p>
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="flex items-center gap-4">
+                            <User className="h-6 w-6 text-muted-foreground" />
+                            <div>
+                                <p className="text-sm text-muted-foreground">Nombre Completo</p>
+                                <p className="font-medium">{athlete.name}</p>
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <Shield className="h-6 w-6 text-muted-foreground" />
-                        <div>
-                            <p className="text-sm text-muted-foreground">Equipo</p>
-                            <p className="font-medium">{athlete.team}</p>
+                        <div className="flex items-center gap-4">
+                            <Shield className="h-6 w-6 text-muted-foreground" />
+                            <div>
+                                <p className="text-sm text-muted-foreground">Equipo</p>
+                                <p className="font-medium">{athlete.team}</p>
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <Phone className="h-6 w-6 text-muted-foreground" />
-                        <div>
-                            <p className="text-sm text-muted-foreground">Contacto de Emergencia</p>
-                            <p className="font-medium">{athlete.emergencyContact}</p>
+                        <div className="flex items-center gap-4">
+                            <Phone className="h-6 w-6 text-muted-foreground" />
+                            <div>
+                                <p className="text-sm text-muted-foreground">Contacto de Emergencia</p>
+                                <p className="font-medium">{athlete.emergencyContact}</p>
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <Hospital className="h-6 w-6 text-muted-foreground" />
-                        <div>
-                            <p className="text-sm text-muted-foreground">Información Médica</p>
-                            <p className="font-medium">{athlete.medicalInfo || 'No especificada'}</p>
+                        <div className="flex items-center gap-4">
+                            <Hospital className="h-6 w-6 text-muted-foreground" />
+                            <div>
+                                <p className="text-sm text-muted-foreground">Información Médica</p>
+                                <p className="font-medium">{athlete.medicalInfo || 'No especificada'}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -165,6 +167,33 @@ export default function AthleteProfilePage() {
             </CardContent>
         </Card>
         
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-headline"><CalendarHeart /> Plan de Entrenamiento Anual</CardTitle>
+                <CardDescription>Focos principales para cada trimestre del año.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <h4 className="font-semibold text-primary">Primer Trimestre (Ene-Mar)</h4>
+                        <p className="text-muted-foreground">{athlete.trainingPlan.q1}</p>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold text-primary">Segundo Trimestre (Abr-Jun)</h4>
+                        <p className="text-muted-foreground">{athlete.trainingPlan.q2}</p>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold text-primary">Tercer Trimestre (Jul-Sep)</h4>
+                        <p className="text-muted-foreground">{athlete.trainingPlan.q3}</p>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold text-primary">Cuarto Trimestre (Oct-Dic)</h4>
+                        <p className="text-muted-foreground">{athlete.trainingPlan.q4}</p>
+                    </div>
+                 </div>
+            </CardContent>
+        </Card>
+
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-headline"><ClipboardCheck /> Evaluaciones Físicas</CardTitle>

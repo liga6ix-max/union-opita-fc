@@ -57,6 +57,16 @@ export function DashboardSidebar() {
   const pathname = usePathname();
   const currentNav = navItems[role] || [];
 
+  const isLinkActive = (href: string) => {
+    // Exact match for dashboard pages
+    if (href.endsWith('/manager') || href.endsWith('/coach') || href.endsWith('/athlete')) {
+        return pathname === href;
+    }
+    // Starts with for sub-pages
+    return pathname.startsWith(href);
+  };
+
+
   return (
     <Sidebar>
       <SidebarHeader>
@@ -72,7 +82,7 @@ export function DashboardSidebar() {
           <SidebarMenuItem key={item.label}>
             <SidebarMenuButton
               asChild
-              isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard/manager' || pathname === '/dashboard/manager') && (item.href !== '/dashboard/coach' || pathname === '/dashboard/coach') && (item.href !== '/dashboard/athlete' || pathname === '/dashboard/athlete')}
+              isActive={isLinkActive(item.href)}
               tooltip={item.label}
             >
               <Link href={`${item.href}?role=${role}`}>

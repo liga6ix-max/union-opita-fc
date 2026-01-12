@@ -20,11 +20,15 @@ import { RoleSwitcher } from "./role-switcher";
 
 const pageTitles: { [key: string]: string } = {
   "/dashboard/manager": "Resumen del Gerente",
+  "/dashboard/manager/athletes": "Gestión de Deportistas",
+  "/dashboard/manager/tasks": "Gestión de Tareas",
+  "/dashboard/manager/payments": "Gestión de Pagos",
   "/dashboard/manager/landing": "Gestión Página de Inicio",
   "/dashboard/manager/settings": "Configuración del Club",
   "/dashboard/coach": "Resumen del Entrenador",
   "/dashboard/coach/athletes": "Mis Deportistas",
   "/dashboard/coach/tasks": "Mis Tareas",
+  "/dashboard/coach/profile": "Mi Perfil",
   "/dashboard/athlete": "Mis Pagos",
   "/dashboard/athlete/profile": "Mi Perfil",
 };
@@ -33,6 +37,11 @@ export function DashboardHeader() {
   const pathname = usePathname();
   const role = useRole();
   const title = pageTitles[pathname] || "Dashboard";
+
+  const getProfileLink = () => {
+    if (role === 'manager') return `/dashboard/manager/settings?role=manager`;
+    return `/dashboard/${role}/profile?role=${role}`;
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
@@ -60,7 +69,7 @@ export function DashboardHeader() {
             <DropdownMenuLabel>Mi Cuenta ({role})</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-                <Link href={`/dashboard/${role}/profile?role=${role}`}><User className="mr-2" /> Perfil</Link>
+                <Link href={getProfileLink()}><User className="mr-2" /> Perfil</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>

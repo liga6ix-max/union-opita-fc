@@ -16,6 +16,12 @@ export type Athlete = {
   monthlyFee: number;
   coachId: number;
   physicalEvaluations: PhysicalEvaluation[];
+  trainingPlan: {
+    q1: string;
+    q2: string;
+    q3: string;
+    q4: string;
+  };
 };
 
 export type Coach = {
@@ -23,12 +29,15 @@ export type Coach = {
   name:string;
 };
 
+export type TaskStatus = 'Pendiente' | 'En Progreso' | 'Completada';
+
 export type Task = {
   id: number;
   title: string;
+  description: string;
   assignedTo: number; // Coach ID
   deadline: string;
-  status: 'Pendiente' | 'En Progreso' | 'Completada';
+  status: TaskStatus;
 };
 
 export type Payment = {
@@ -45,6 +54,13 @@ export const coaches: Coach[] = [
   { id: 2, name: 'Sofia Vargas' },
 ];
 
+const defaultTrainingPlan = {
+    q1: "Fase de Acondicionamiento Físico General y técnica fundamental.",
+    q2: "Desarrollo de la fuerza específica, velocidad y táctica de equipo.",
+    q3: "Periodo competitivo, mantenimiento de la forma física y estrategia de partido.",
+    q4: "Transición y recuperación activa, trabajo técnico de baja intensidad.",
+};
+
 export const athletes: Athlete[] = [
   { 
     id: 1, 
@@ -57,7 +73,8 @@ export const athletes: Athlete[] = [
     physicalEvaluations: [
         { date: '2024-05-10', height: '175cm', weight: '70kg', sprint_20m: '3.1s', vertical_jump: '55cm', endurance_test: '10:30' },
         { date: '2024-08-01', height: '176cm', weight: '72kg', sprint_20m: '3.0s', vertical_jump: '58cm', endurance_test: '11:05' },
-    ]
+    ],
+    trainingPlan: defaultTrainingPlan,
   },
   { 
     id: 2, 
@@ -70,7 +87,8 @@ export const athletes: Athlete[] = [
     physicalEvaluations: [
         { date: '2024-05-11', height: '168cm', weight: '58kg', sprint_20m: '3.4s', vertical_jump: '48cm', endurance_test: '12:15' },
         { date: '2024-08-02', height: '168cm', weight: '59kg', sprint_20m: '3.3s', vertical_jump: '50cm', endurance_test: '12:45' },
-    ]
+    ],
+    trainingPlan: defaultTrainingPlan,
   },
   { 
     id: 3, 
@@ -82,7 +100,8 @@ export const athletes: Athlete[] = [
     coachId: 2,
     physicalEvaluations: [
          { date: '2024-05-12', height: '180cm', weight: '78kg', sprint_20m: '2.9s', vertical_jump: '65cm', endurance_test: '11:50' },
-    ]
+    ],
+    trainingPlan: defaultTrainingPlan,
   },
   { 
     id: 4, 
@@ -92,7 +111,8 @@ export const athletes: Athlete[] = [
     team: 'Sub-20', 
     monthlyFee: 60000, 
     coachId: 2,
-    physicalEvaluations: []
+    physicalEvaluations: [],
+    trainingPlan: defaultTrainingPlan,
   },
   { 
     id: 5, 
@@ -104,15 +124,16 @@ export const athletes: Athlete[] = [
     coachId: 1,
     physicalEvaluations: [
         { date: '2024-05-10', height: '178cm', weight: '74kg', sprint_20m: '3.2s', vertical_jump: '60cm', endurance_test: '10:55' },
-    ]
+    ],
+    trainingPlan: defaultTrainingPlan,
   },
 ];
 
 export const tasks: Task[] = [
-  { id: 1, title: 'Planificar entrenamiento de defensa', assignedTo: 1, deadline: '2024-08-15', status: 'En Progreso' },
-  { id: 2, title: 'Revisar videos del último partido', assignedTo: 1, deadline: '2024-08-10', status: 'Completada' },
-  { id: 3, title: 'Preparar charla técnica para la final', assignedTo: 2, deadline: '2024-08-20', status: 'Pendiente' },
-  { id: 4, title: 'Organizar prueba de resistencia física', assignedTo: 2, deadline: '2024-08-12', status: 'En Progreso' },
+  { id: 1, title: 'Planificar entrenamiento de defensa', description: "Diseñar 3 nuevos ejercicios de posicionamiento defensivo para la categoría Sub-17.", assignedTo: 1, deadline: '2024-08-15', status: 'En Progreso' },
+  { id: 2, title: 'Revisar videos del último partido', description: "Analizar el video del partido contra 'Los Pumas' y preparar un informe de 5 puntos clave.", assignedTo: 1, deadline: '2024-08-10', status: 'Completada' },
+  { id: 3, title: 'Preparar charla técnica para la final', description: "Crear la presentación para la charla técnica del partido final de la Sub-20.", assignedTo: 2, deadline: '2024-08-20', status: 'Pendiente' },
+  { id: 4, title: 'Organizar prueba de resistencia física', description: "Coordinar y ejecutar el test de Cooper para todos los jugadores de la Sub-20.", assignedTo: 2, deadline: '2024-08-12', status: 'En Progreso' },
 ];
 
 export const payments: Payment[] = [
