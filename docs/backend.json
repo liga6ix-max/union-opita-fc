@@ -1,66 +1,349 @@
-
 {
   "entities": {
-    "UserProfile": {
-      "title": "User Profile",
-      "description": "Represents a user's profile information.",
+    "Club": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Club",
       "type": "object",
+      "description": "Represents the club entity with its main details.",
       "properties": {
-        "uid": {
+        "id": {
           "type": "string",
-          "description": "The user's unique ID."
+          "description": "Unique identifier for the Club entity."
         },
-        "email": {
+        "name": {
           "type": "string",
-          "format": "email",
-          "description": "The user's email address."
+          "description": "The name of the club."
         },
-        "displayName": {
+        "nit": {
           "type": "string",
-          "description": "The user's display name."
-        },
-        "photoURL": {
-          "type": "string",
-          "format": "uri",
-          "description": "The URL of the user's profile picture."
-        },
-        "role": {
-          "type": "string",
-          "description": "The user's role in the application.",
-          "enum": [
-            "admin",
-            "coach",
-            "athlete"
-          ]
-        },
-        "status": {
-          "type": "string",
-          "description": "The user's account status.",
-          "enum": [
-            "pending",
-            "active",
-            "blocked"
-          ]
+          "description": "The NIT (Tax Identification Number) of the club."
         }
       },
       "required": [
-        "uid",
+        "id",
+        "name",
+        "nit"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user within the application, with different roles (admin, manager, coach, athlete).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "clubId": {
+          "type": "string",
+          "description": "Reference to Club. (Relationship: Club 1:N User)"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user (admin, manager, coach, athlete)."
+        }
+      },
+      "required": [
+        "id",
+        "clubId",
+        "firstName",
+        "lastName",
         "email",
+        "role"
+      ]
+    },
+    "Athlete": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Athlete",
+      "type": "object",
+      "description": "Represents an athlete associated with the club.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Athlete entity."
+        },
+        "clubId": {
+          "type": "string",
+          "description": "Reference to Club. (Relationship: Club 1:N Athlete)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 Athlete)"
+        },
+        "emergencyContactName": {
+          "type": "string",
+          "description": "Name of the emergency contact."
+        },
+        "emergencyContactPhone": {
+          "type": "string",
+          "description": "Phone number of the emergency contact."
+        },
+        "medicalInformation": {
+          "type": "string",
+          "description": "Important medical information about the athlete."
+        }
+      },
+      "required": [
+        "id",
+        "clubId",
+        "userId",
+        "emergencyContactName",
+        "emergencyContactPhone"
+      ]
+    },
+    "Payment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Payment",
+      "type": "object",
+      "description": "Represents a payment made by an athlete.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Payment entity."
+        },
+        "clubId": {
+          "type": "string",
+          "description": "Reference to Club. (Relationship: Club 1:N Payment)"
+        },
+        "athleteId": {
+          "type": "string",
+          "description": "Reference to Athlete. (Relationship: Athlete 1:N Payment)"
+        },
+        "paymentDate": {
+          "type": "string",
+          "description": "The date when the payment was made.",
+          "format": "date-time"
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount paid."
+        }
+      },
+      "required": [
+        "id",
+        "clubId",
+        "athleteId",
+        "paymentDate",
+        "amount"
+      ]
+    },
+    "Task": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Task",
+      "type": "object",
+      "description": "Represents a task assigned to a coach or staff member.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Task entity."
+        },
+        "clubId": {
+          "type": "string",
+          "description": "Reference to Club. (Relationship: Club 1:N Task)"
+        },
+        "assignerId": {
+          "type": "string",
+          "description": "Reference to User who assigned the task. (Relationship: User 1:N Task (assigned))"
+        },
+        "assigneeId": {
+          "type": "string",
+          "description": "Reference to User who is assigned to the task. (Relationship: User 1:N Task (assignee))"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the task."
+        },
+        "dueDate": {
+          "type": "string",
+          "description": "The date when the task is due.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the task (e.g., Open, In Progress, Completed)."
+        }
+      },
+      "required": [
+        "id",
+        "clubId",
+        "assignerId",
+        "assigneeId",
+        "description",
+        "dueDate",
         "status"
+      ]
+    },
+    "LandingPageContent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LandingPageContent",
+      "type": "object",
+      "description": "Represents the content displayed on the landing page.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the LandingPageContent entity."
+        },
+        "clubId": {
+          "type": "string",
+          "description": "Reference to Club. (Relationship: Club 1:N LandingPageContent)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the landing page section."
+        },
+        "content": {
+          "type": "string",
+          "description": "The main content of the landing page section (e.g., information about inscriptions, events)."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of an image associated with the content.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "clubId",
+        "title",
+        "content"
       ]
     }
   },
   "auth": {
     "providers": [
+      "password",
       "anonymous"
     ]
   },
   "firestore": {
-    "/users/{userId}": {
-      "schema": {
-        "$ref": "#/backend/entities/UserProfile"
+    "structure": [
+      {
+        "path": "/clubs/{clubId}",
+        "definition": {
+          "entityName": "Club",
+          "schema": {
+            "$ref": "#/backend/entities/Club"
+          },
+          "description": "Stores club details.  `clubId` is used as the document ID.",
+          "params": [
+            {
+              "name": "clubId",
+              "description": "The unique identifier for the club."
+            }
+          ]
+        }
       },
-      "description": "Stores user profile information."
-    }
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user details. `userId` is used as the document ID.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/clubs/{clubId}/athletes/{athleteId}",
+        "definition": {
+          "entityName": "Athlete",
+          "schema": {
+            "$ref": "#/backend/entities/Athlete"
+          },
+          "description": "Stores athlete information related to a specific club. Includes denormalized 'clubId' for authorization independence.",
+          "params": [
+            {
+              "name": "clubId",
+              "description": "The unique identifier for the club."
+            },
+            {
+              "name": "athleteId",
+              "description": "The unique identifier for the athlete."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/clubs/{clubId}/payments/{paymentId}",
+        "definition": {
+          "entityName": "Payment",
+          "schema": {
+            "$ref": "#/backend/entities/Payment"
+          },
+          "description": "Stores payment information for athletes within a specific club. Includes denormalized 'clubId' for authorization independence.",
+          "params": [
+            {
+              "name": "clubId",
+              "description": "The unique identifier for the club."
+            },
+            {
+              "name": "paymentId",
+              "description": "The unique identifier for the payment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/clubs/{clubId}/tasks/{taskId}",
+        "definition": {
+          "entityName": "Task",
+          "schema": {
+            "$ref": "#/backend/entities/Task"
+          },
+          "description": "Stores tasks assigned to coaches or staff within a club. Includes denormalized 'clubId' for authorization independence.",
+          "params": [
+            {
+              "name": "clubId",
+              "description": "The unique identifier for the club."
+            },
+            {
+              "name": "taskId",
+              "description": "The unique identifier for the task."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/clubs/{clubId}/landingPageContent/{contentId}",
+        "definition": {
+          "entityName": "LandingPageContent",
+          "schema": {
+            "$ref": "#/backend/entities/LandingPageContent"
+          },
+          "description": "Stores landing page content specific to each club. Includes denormalized 'clubId' for authorization independence.",
+          "params": [
+            {
+              "name": "clubId",
+              "description": "The unique identifier for the club."
+            },
+            {
+              "name": "contentId",
+              "description": "The unique identifier for the landing page content."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to manage a sports club (Opita Club Manager) with role-based access control. It prioritizes authorization independence by denormalizing clubId into every collection that requires club-specific data, eliminating the need for `get()` calls in security rules and enabling atomic operations.\n\n- `/clubs`: Stores club details. This top-level collection allows easy querying for clubs.\n- `/users`: Stores user details, including their role and clubId. This enables role-based access control at the user level.\n- `/clubs/{clubId}/athletes`: Stores athlete information related to a specific club. The clubId is denormalized to enable secure querying of athletes within a club without requiring a `get()` call to the clubs collection. This supports QAPs by ensuring that listing athletes is secure and efficient.\n- `/clubs/{clubId}/payments`: Stores payment information for athletes within a specific club. The clubId is denormalized here as well, ensuring secure and efficient payment listing.\n- `/clubs/{clubId}/tasks`: Stores tasks assigned to coaches or staff within a club. The clubId is denormalized.\n- `/clubs/{clubId}/landingPageContent`: Stores landing page content specific to each club. The clubId is denormalized.\n\nThis structure facilitates secure and efficient data retrieval and management, aligning with the application's role-based access control requirements and the need for an informative landing page."
   }
 }
