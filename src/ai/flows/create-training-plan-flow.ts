@@ -2,7 +2,6 @@
 'use server';
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
 import { 
     TrainingPlanInputSchema, 
     TrainingPlanOutputSchema,
@@ -36,6 +35,7 @@ const prompt = ai.definePrompt({
     name: 'createTrainingPlanPrompt',
     input: { schema: TrainingPlanInputSchemaAI },
     output: { schema: TrainingPlanOutputSchema },
+    model: 'googleai/gemini-1.5-flash',
     prompt: `
         Eres un director deportivo y experto en metodología de fútbol base, especializado en la creación de planes de entrenamiento.
         Tu tarea es generar un plan de entrenamiento (mesociclo) completo y coherente basado en los siguientes parámetros:
@@ -62,9 +62,6 @@ const prompt = ai.definePrompt({
 
         **IMPORTANTE:** El contenido debe ser 100% en español. Asegúrate de que la progresión de los objetivos y la complejidad de las actividades sean coherentes con la metodología y la categoría de edad.
     `,
-    config: {
-        model: 'googleai/gemini-1.5-flash',
-    }
 });
 
 
