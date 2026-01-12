@@ -27,6 +27,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const profileSchema = z.object({
   firstName: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
@@ -51,8 +52,6 @@ export default function AthleteProfilePage() {
 
   const athleteDocRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid || !profile?.clubId) return null;
-    // We assume the athlete document ID is the same as the user's UID for simplicity.
-    // In a more complex scenario, you might need a separate query to find the athlete doc.
     return doc(firestore, `clubs/${profile.clubId}/athletes`, user.uid);
   }, [firestore, user?.uid, profile?.clubId]);
 
@@ -63,41 +62,36 @@ export default function AthleteProfilePage() {
   });
 
   useEffect(() => {
-    if (athleteData) {
-      form.reset({
-        firstName: athleteData.firstName || '',
-        lastName: athleteData.lastName || '',
-        birthDate: athleteData.birthDate ? format(parseISO(athleteData.birthDate), 'yyyy-MM-dd') : '',
-        gender: athleteData.gender || 'Masculino',
-        bloodType: athleteData.bloodType || '',
-        documentType: athleteData.documentType || 'TI',
-        documentNumber: athleteData.documentNumber || '',
-        emergencyContactName: athleteData.emergencyContactName || '',
-        emergencyContactPhone: athleteData.emergencyContactPhone || '',
-        medicalInformation: athleteData.medicalInformation || '',
-      });
-    } else if (profile) {
-      form.reset({
-        firstName: profile.firstName || '',
-        lastName: profile.lastName || '',
-        birthDate: '',
-        gender: 'Masculino',
-        bloodType: '',
-        documentType: 'TI',
-        documentNumber: '',
-        emergencyContactName: '',
-        emergencyContactPhone: '',
-        medicalInformation: '',
-      })
-    }
+    // Combine profile and athleteData to ensure the form has all available data
+    const combinedData = { ...profile, ...athleteData };
+
+    form.reset({
+      firstName: combinedData.firstName || '',
+      lastName: combinedData.lastName || '',
+      birthDate: combinedData.birthDate ? format(parseISO(combinedData.birthDate), 'yyyy-MM-dd') : '',
+      gender: combinedData.gender || 'Masculino',
+      bloodType: combinedData.bloodType || '',
+      documentType: combinedData.documentType || 'TI',
+      documentNumber: combinedData.documentNumber || '',
+      emergencyContactName: combinedData.emergencyContactName || '',
+      emergencyContactPhone: combinedData.emergencyContactPhone || '',
+      medicalInformation: combinedData.medicalInformation || '',
+    });
   }, [athleteData, profile, form]);
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!athleteDocRef) return;
+    if (!athleteDocRef || !user?.uid || !profile) return;
     
     try {
-      // The athlete might not have a profile yet, so we use setDoc with merge.
-      await setDoc(athleteDocRef, { ...data, userId: user?.uid, clubId: profile?.clubId }, { merge: true });
+      // Use setDoc with merge to create or update the athlete's specific profile
+      setDocumentNonBlocking(athleteDocRef, data, { merge: true });
+
+      // Also update the main user document with the first and last name
+      const userDocRef = doc(firestore, 'users', user.uid);
+      updateDoc(userDocRef, {
+        firstName: data.firstName,
+        lastName: data.lastName
+      });
       
       toast({
         title: '¡Perfil Actualizado!',
@@ -118,7 +112,7 @@ export default function AthleteProfilePage() {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
   }
   
-  const displayData = athleteData || profile;
+  const displayData = { ...profile, ...athleteData };
 
   if (!displayData) {
     return <div>No se encontró el perfil del deportista.</div>;
