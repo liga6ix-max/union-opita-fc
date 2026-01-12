@@ -1,4 +1,5 @@
 
+
 export type PhysicalEvaluation = {
   date: string;
   height: string; // cm
@@ -14,7 +15,6 @@ export type Athlete = {
   emergencyContact: string;
   medicalInfo: string;
   team: string;
-  monthlyFee: number;
   coachId: number;
   physicalEvaluations: PhysicalEvaluation[];
   trainingPlan: {
@@ -101,7 +101,6 @@ export const athletes: Athlete[] = [
     emergencyContact: 'Maria Pérez - 3101234567', 
     medicalInfo: 'Alergia a la penicilina', 
     team: 'Sub-17', 
-    monthlyFee: 50000, 
     coachId: 1,
     physicalEvaluations: [
         { date: '2024-05-10', height: '175cm', weight: '70kg', sprint_20m: '3.1s', vertical_jump: '55cm', endurance_test: '10:30' },
@@ -115,7 +114,6 @@ export const athletes: Athlete[] = [
     emergencyContact: 'Luis Gómez - 3119876543', 
     medicalInfo: 'Ninguna', 
     team: 'Sub-17', 
-    monthlyFee: 50000, 
     coachId: 1,
     physicalEvaluations: [
         { date: '2024-05-11', height: '168cm', weight: '58kg', sprint_20m: '3.4s', vertical_jump: '48cm', endurance_test: '12:15' },
@@ -129,7 +127,6 @@ export const athletes: Athlete[] = [
     emergencyContact: 'Elena Fernández - 3125550011', 
     medicalInfo: 'Asma (lleva inhalador)', 
     team: 'Sub-20', 
-    monthlyFee: 60000, 
     coachId: 2,
     physicalEvaluations: [
          { date: '2024-05-12', height: '180cm', weight: '78kg', sprint_20m: '2.9s', vertical_jump: '65cm', endurance_test: '11:50' },
@@ -142,7 +139,6 @@ export const athletes: Athlete[] = [
     emergencyContact: 'Pedro Jiménez - 3134448899', 
     medicalInfo: 'Ninguna', 
     team: 'Sub-20', 
-    monthlyFee: 60000, 
     coachId: 2,
     physicalEvaluations: [],
     trainingPlan: defaultTrainingPlan,
@@ -153,7 +149,6 @@ export const athletes: Athlete[] = [
     emergencyContact: 'Isabel Martinez - 3142223344', 
     medicalInfo: 'Ninguna', 
     team: 'Sub-17', 
-    monthlyFee: 50000, 
     coachId: 1,
     physicalEvaluations: [
         { date: '2024-05-10', height: '178cm', weight: '74kg', sprint_20m: '3.2s', vertical_jump: '60cm', endurance_test: '10:55' },

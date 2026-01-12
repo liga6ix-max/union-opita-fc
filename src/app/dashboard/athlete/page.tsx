@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { CalendarIcon, ShieldAlert } from "lucide-react";
 import { format } from "date-fns";
+import { es } from 'date-fns/locale';
 
 import { payments, athletes, coaches, type PaymentStatus } from "@/lib/data";
 import clubConfig from "@/lib/club-config.json";
@@ -40,6 +41,8 @@ const athlete = athletes.find(a => a.id === currentAthleteId);
 const athletePayments = payments.filter(p => p.athleteId === currentAthleteId);
 const coach = athlete ? coaches.find(c => c.id === athlete.coachId) : undefined;
 const hasPendingPayment = athletePayments.some(p => p.status === 'Pendiente');
+
+const monthlyFee = athlete ? (clubConfig.monthlyFees as Record<string, number>)[athlete.team] || 0 : 0;
 
 
 export default function AthleteDashboard() {
@@ -99,7 +102,7 @@ export default function AthleteDashboard() {
                 <DollarSign className="h-4 w-4 text-primary-foreground/70" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(athlete.monthlyFee)}</div>
+                <div className="text-2xl font-bold">{formatCurrency(monthlyFee)}</div>
                 <p className="text-xs text-primary-foreground/70">Este es el valor a pagar cada mes.</p>
             </CardContent>
         </Card>
@@ -251,5 +254,3 @@ export default function AthleteDashboard() {
     </div>
   );
 }
-
-    
