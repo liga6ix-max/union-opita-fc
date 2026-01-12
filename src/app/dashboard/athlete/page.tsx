@@ -1,10 +1,35 @@
+"use client";
+
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+
 import { payments, athletes } from "@/lib/data";
+import clubConfig from "@/lib/club-config.json";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { DollarSign } from "lucide-react";
+import { DollarSign, Banknote, Landmark, User, Hash, Info } from "lucide-react";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useToast } from '@/hooks/use-toast';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Separator } from '@/components/ui/separator';
+
+const paymentSchema = z.object({
+    paymentDate: z.date({
+        required_error: "La fecha de pago es requerida.",
+    }),
+    referenceNumber: z.string().min(4, { message: "El número de referencia debe tener al menos 4 caracteres."}),
+});
+type PaymentFormValues = z.infer<typeof paymentSchema>;
 
 // Assuming athlete ID 1 is logged in for this demo
 const currentAthleteId = 1;
@@ -12,12 +37,32 @@ const athlete = athletes.find(a => a.id === currentAthleteId);
 const athletePayments = payments.filter(p => p.athleteId === currentAthleteId);
 
 export default function AthleteDashboard() {
+  const { toast } = useToast();
+  const [openDialogId, setOpenDialogId] = useState<number | null>(null);
+
+  const form = useForm<PaymentFormValues>({
+    resolver: zodResolver(paymentSchema),
+    defaultValues: {
+        referenceNumber: "",
+    },
+  });
+
   if (!athlete) {
     return <div>Deportista no encontrado.</div>;
   }
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
+  }
+
+  const onSubmit = (data: PaymentFormValues, month: string) => {
+    console.log(`Pago registrado para ${month}:`, data);
+    toast({
+        title: "¡Registro de Pago Enviado!",
+        description: `Tu pago para ${month} ha sido enviado para verificación.`,
+    });
+    setOpenDialogId(null);
+    form.reset();
   }
 
   return (
@@ -61,20 +106,90 @@ export default function AthleteDashboard() {
                             <TableCell>{payment.paymentDate || 'N/A'}</TableCell>
                             <TableCell className="text-right">
                                 {payment.status === 'Pendiente' && (
-                                    <Dialog>
+                                    <Dialog open={openDialogId === payment.id} onOpenChange={(isOpen) => setOpenDialogId(isOpen ? payment.id : null)}>
                                         <DialogTrigger asChild>
                                             <Button size="sm">Registrar Pago</Button>
                                         </DialogTrigger>
-                                        <DialogContent>
+                                        <DialogContent className="sm:max-w-md">
                                             <DialogHeader>
                                                 <DialogTitle>Registrar Pago para {payment.month}</DialogTitle>
                                                 <DialogDescription>
-                                                    Confirma que has realizado el pago de {formatCurrency(payment.amount)}. El gerente verificará la transacción.
+                                                    Realiza la transferencia al siguiente destino y luego registra los detalles aquí.
                                                 </DialogDescription>
                                             </DialogHeader>
-                                            <DialogFooter>
-                                                <Button type="submit">Confirmar Pago</Button>
-                                            </DialogFooter>
+                                            
+                                            <div className="space-y-4 rounded-lg border bg-secondary/50 p-4">
+                                                <h4 className="font-semibold text-center text-primary">Datos para la Transferencia</h4>
+                                                <div className="flex items-center gap-4"><Landmark className="h-5 w-5 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Banco</p><p className="font-medium">{clubConfig.bankAccount.bankName}</p></div></div>
+                                                <div className="flex items-center gap-4"><Banknote className="h-5 w-5 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Tipo de Cuenta</p><p className="font-medium">{clubConfig.bankAccount.accountType}</p></div></div>
+                                                <div className="flex items-center gap-4"><Hash className="h-5 w-5 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Número de Cuenta</p><p className="font-medium">{clubConfig.bankAccount.accountNumber}</p></div></div>
+                                                <div className="flex items-center gap-4"><User className="h-5 w-5 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Titular</p><p className="font-medium">{clubConfig.bankAccount.accountHolder}</p></div></div>
+                                                <div className="flex items-center gap-4"><Info className="h-5 w-5 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Valor a pagar</p><p className="font-medium">{formatCurrency(payment.amount)}</p></div></div>
+                                            </div>
+
+                                            <Separator />
+
+                                            <Form {...form}>
+                                                <form onSubmit={form.handleSubmit((data) => onSubmit(data, payment.month))} className="space-y-4">
+                                                    <FormField
+                                                        control={form.control}
+                                                        name="paymentDate"
+                                                        render={({ field }) => (
+                                                            <FormItem className="flex flex-col">
+                                                            <FormLabel>Fecha de la Transferencia</FormLabel>
+                                                            <Popover>
+                                                                <PopoverTrigger asChild>
+                                                                <FormControl>
+                                                                    <Button
+                                                                    variant={"outline"}
+                                                                    className={cn(
+                                                                        "w-full pl-3 text-left font-normal",
+                                                                        !field.value && "text-muted-foreground"
+                                                                    )}
+                                                                    >
+                                                                    {field.value ? (
+                                                                        format(field.value, "PPP")
+                                                                    ) : (
+                                                                        <span>Elige una fecha</span>
+                                                                    )}
+                                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                                    </Button>
+                                                                </FormControl>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-auto p-0" align="start">
+                                                                <Calendar
+                                                                    mode="single"
+                                                                    selected={field.value}
+                                                                    onSelect={field.onChange}
+                                                                    disabled={(date) =>
+                                                                    date > new Date() || date < new Date("1900-01-01")
+                                                                    }
+                                                                    initialFocus
+                                                                />
+                                                                </PopoverContent>
+                                                            </Popover>
+                                                            <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={form.control}
+                                                        name="referenceNumber"
+                                                        render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Número de Referencia</FormLabel>
+                                                            <FormControl>
+                                                            <Input placeholder="Ej: 123456789" {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                        )}
+                                                    />
+                                                    <DialogFooter className="pt-4">
+                                                        <Button type="submit">Confirmar Pago</Button>
+                                                    </DialogFooter>
+                                                </form>
+                                            </Form>
                                         </DialogContent>
                                     </Dialog>
                                 )}
