@@ -24,10 +24,10 @@ export default function ApprovalsPage() {
     const { profile, firestore, isUserLoading } = useUser();
 
     const pendingUsersQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.clubId) return null;
-        // Query for users that are pending and don't have a clubId yet, or have our clubId but are pending.
+        if (!firestore) return null;
+        // Query for users that are pending
         return query(collection(firestore, 'users'), where('role', '==', 'pending'));
-    }, [firestore, profile?.clubId]);
+    }, [firestore]);
 
     const { data: pendingUsers, isLoading: usersLoading } = useCollection(pendingUsersQuery);
 
