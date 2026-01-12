@@ -23,12 +23,14 @@ import {
   ListTodo,
   Settings,
   Image as ImageIcon,
+  CalendarClock,
 } from "lucide-react";
 
 const managerNav = [
   { href: "/dashboard/manager", label: "Resumen", icon: LayoutDashboard },
   { href: "/dashboard/manager/athletes", label: "Deportistas", icon: Users },
   { href: "/dashboard/manager/tasks", label: "Tareas", icon: ClipboardList },
+  { href: "/dashboard/manager/planning", label: "Planificación", icon: CalendarClock },
   { href: "/dashboard/manager/payments", label: "Pagos", icon: Wallet },
   { href: "/dashboard/manager/landing", label: "Página Inicio", icon: ImageIcon },
   { href: "/dashboard/manager/settings", label: "Configuración", icon: Settings },
@@ -37,6 +39,7 @@ const managerNav = [
 const coachNav = [
     { href: "/dashboard/coach", label: "Resumen", icon: LayoutDashboard },
     { href: "/dashboard/coach/athletes", label: "Mis Deportistas", icon: Users },
+    { href: "/dashboard/coach/planning", label: "Planificación", icon: CalendarClock },
     { href: "/dashboard/coach/tasks", label: "Mis Tareas", icon: ListTodo },
     { href: "/dashboard/coach/profile", label: "Mi Perfil", icon: User },
 ];

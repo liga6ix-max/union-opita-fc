@@ -49,6 +49,24 @@ export type Payment = {
   paymentDate?: string;
 };
 
+export type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica';
+
+export type Microcycle = {
+  id: number;
+  week: string; // e.g., "Semana 1 (2024-08-19 - 2024-08-25)"
+  coachId: number;
+  methodology: MicrocycleMethodology;
+  team: string;
+  mainObjective: string;
+  sessions: {
+    day: string; // Lunes, Martes, etc.
+    focus: string; // Calentamiento, Principal, Vuelta a la calma
+    duration: number; // in minutes
+    activities: string;
+  }[];
+};
+
+
 export const coaches: Coach[] = [
   { id: 1, name: 'Carlos Rodriguez' },
   { id: 2, name: 'Sofia Vargas' },
@@ -145,4 +163,20 @@ export const payments: Payment[] = [
   { id: 6, athleteId: 3, month: 'Agosto 2024', amount: 60000, status: 'Pendiente' },
   { id: 7, athleteId: 4, month: 'Julio 2024', amount: 60000, status: 'Pendiente' },
   { id: 8, athleteId: 4, month: 'Agosto 2024', amount: 60000, status: 'Pendiente' },
+];
+
+export const microcycles: Microcycle[] = [
+  {
+    id: 1,
+    week: "Semana 34 (19 Ago - 25 Ago)",
+    coachId: 1,
+    methodology: 'periodizacion_tactica',
+    team: 'Sub-17',
+    mainObjective: 'Mejorar la transición defensa-ataque.',
+    sessions: [
+      { day: 'Lunes', focus: 'Técnica/Táctica', duration: 90, activities: 'Rondos de posesión. Ejercicios de salida de balón bajo presión. Partido condicionado.' },
+      { day: 'Miércoles', focus: 'Físico/Táctico', duration: 90, activities: 'Circuito de fuerza funcional. Trabajo de contraataque 3vs2 y 4vs3. Fútbol en espacio reducido.' },
+      { day: 'Viernes', focus: 'Estrategia', duration: 75, activities: 'Análisis de video del rival. Práctica de balón parado (ofensivo y defensivo). Partido táctico 11vs11.' }
+    ]
+  }
 ];
