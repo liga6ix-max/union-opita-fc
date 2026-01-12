@@ -5,7 +5,9 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { microcycles, coaches, type Microcycle, type MicrocycleMethodology } from '@/lib/data';
-import { createTrainingPlan, TrainingPlanInputSchema, type TrainingPlanInput, type TrainingPlanOutput } from '@/ai/flows/create-training-plan-flow';
+import { createTrainingPlan } from '@/ai/flows/create-training-plan-flow';
+import { TrainingPlanInputSchema, type TrainingPlanInput, type TrainingPlanOutput } from '@/ai/schemas/training-plan-schema';
+
 
 import {
   Card,
