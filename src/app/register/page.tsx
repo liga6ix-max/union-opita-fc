@@ -24,22 +24,14 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { ClubLogo } from '@/components/icons';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const registerSchema = z.object({
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres.'),
   email: z.string().email('Por favor, introduce un correo electrónico válido.'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres.'),
-  role: z.enum(['athlete', 'coach'], { required_error: 'Debes seleccionar un rol.' }),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -60,19 +52,19 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
-    console.log('Datos de registro:', data);
+    console.log('Datos de registro (sin rol):', data);
     
     // Simulación de una llamada a la API
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     // En una aplicación real:
     // 1. Llamarías a Firebase Auth para crear el usuario (createUserWithEmailAndPassword).
-    // 2. Guardarías el perfil del usuario en Firestore con un estado 'pending'.
+    // 2. Guardarías el perfil del usuario en Firestore con un estado 'pending' y sin rol asignado.
     
     setIsLoading(false);
     toast({
       title: '¡Registro Enviado!',
-      description: 'Tu solicitud ha sido enviada. Un administrador la revisará pronto.',
+      description: 'Tu solicitud ha sido enviada. Un administrador la revisará y asignará tu rol pronto.',
     });
     router.push('/login');
   };
@@ -87,7 +79,7 @@ export default function RegisterPage() {
             </Link>
           <CardTitle className="font-headline text-2xl">Crear una Cuenta</CardTitle>
           <CardDescription>
-            Únete a nuestra comunidad. Tu cuenta será activada tras la aprobación de un administrador.
+            Tu cuenta será activada por un administrador, quien asignará tu rol en la plataforma.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -128,27 +120,6 @@ export default function RegisterPage() {
                     <FormControl>
                       <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>¿Cómo te unes?</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona tu rol" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="athlete">Soy Deportista</SelectItem>
-                        <SelectItem value="coach">Soy Entrenador</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
