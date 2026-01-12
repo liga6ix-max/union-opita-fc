@@ -43,27 +43,20 @@ export default function AthleteDashboard() {
   const { firestore, user } = useFirebase();
   const { profile, isUserLoading } = useUser();
 
-  const athleteQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
-    const athletesCollection = collection(firestore, `clubs/${profile?.clubId}/athletes`);
-    return query(athletesCollection, where("userId", "==", user.uid));
+  const athleteDocRef = useMemoFirebase(() => {
+    if (!firestore || !user?.uid || !profile?.clubId) return null;
+    return doc(firestore, `clubs/${profile.clubId}/athletes`, user.uid);
   }, [firestore, user?.uid, profile?.clubId]);
 
-  const { data: athleteData, isLoading: isAthleteLoading } = useCollection(athleteQuery);
-  const athlete = athleteData?.[0];
+  const { data: athlete, isLoading: isAthleteLoading } = useDoc(athleteDocRef);
 
   const paymentsQuery = useMemoFirebase(() => {
-    if (!firestore || !athlete?.id || !profile?.clubId) return null;
-    return collection(firestore, `clubs/${profile.clubId}/payments`);
-  }, [firestore, athlete?.id, profile?.clubId]);
+    if (!firestore || !user?.uid || !profile?.clubId) return null;
+    const paymentsCollection = collection(firestore, `clubs/${profile.clubId}/payments`);
+    return query(paymentsCollection, where("athleteId", "==", user.uid));
+  }, [firestore, user?.uid, profile?.clubId]);
   
-  const { data: allPayments, isLoading: arePaymentsLoading } = useCollection(paymentsQuery);
-  
-  const athletePayments = useMemoFirebase(() => {
-    if (!allPayments || !athlete?.id) return [];
-    return allPayments.filter(p => p.athleteId === athlete.id);
-  }, [allPayments, athlete?.id]);
-
+  const { data: athletePayments, isLoading: arePaymentsLoading } = useCollection(paymentsQuery);
 
   const coachQuery = useMemoFirebase(() => {
     if (!firestore || !athlete?.coachId) return null;
@@ -196,7 +189,7 @@ export default function AthleteDashboard() {
                             <TableCell className="font-medium">{payment.month}</TableCell>
                             <TableCell>{formatCurrency(payment.amount)}</TableCell>
                             <TableCell>
-                                <Badge variant={statusBadgeVariant[payment.status]}>
+                                <Badge variant={statusBadgeVariant[payment.status as PaymentStatus]}>
                                     {payment.status}
                                 </Badge>
                             </TableCell>

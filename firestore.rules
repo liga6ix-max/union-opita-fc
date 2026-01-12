@@ -98,6 +98,14 @@ service cloud.firestore {
         let userData = getUserData();
         return isSignedIn() && userData.role in ['admin', 'manager'];
     }
+    
+    /**
+     * Checks if a user is an athlete in the specified club.
+     */
+    function isClubAthlete(clubId) {
+        let userData = getUserData();
+        return isClubMember(clubId) && userData.role == 'athlete';
+    }
 
     /**
      * Checks if a user is in the same club as a target user.
@@ -143,7 +151,7 @@ service cloud.firestore {
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isMemberOfSameClubAsTarget(userId);
-      allow list: if isAnyManager() && request.query.where.get(0, "role") == "pending";
+      allow list: if isAnyManager() && request.query.where[0][2] == "pending";
       allow create: if request.auth.uid == userId;
       allow update: if isOwner(userId) || isClubManager(getUserData().clubId);
       allow delete: if isOwner(userId) || isClubManager(getUserData().clubId);
@@ -152,36 +160,38 @@ service cloud.firestore {
     /**
      * @description Stores athlete profiles, which are nested under their respective club.
      *              Only members of that club can read athlete data. Only club managers can
-     *              create, update, or delete athlete records.
+     *              create, update, or delete athlete records. An athlete can read their own data.
      * @path /clubs/{clubId}/athletes/{athleteId}
      * @allow (list) A coach lists all athletes belonging to their club.
+     * @allow (get) An athlete reads their own profile.
      * @deny (create) A user with an 'athlete' role attempts to add a new athlete to the club.
      * @deny (get) A member of 'club-abc' attempts to read an athlete's record from 'club-xyz'.
      * @principle Inherits access control from the parent resource (the club).
      */
     match /clubs/{clubId}/athletes/{athleteId} {
-      allow get: if isClubMember(clubId);
-      allow list: if isClubMember(clubId);
+      allow get: if isClubMember(clubId) && (isClubStaff(clubId) || isOwner(athleteId));
+      allow list: if isClubStaff(clubId);
       allow create: if isClubManager(clubId) && request.resource.data.clubId == clubId;
-      allow update: if isClubManager(clubId) && resource != null && request.resource.data.clubId == resource.data.clubId;
+      allow update: if (isClubManager(clubId) || isOwner(athleteId)) && resource != null && request.resource.data.clubId == resource.data.clubId;
       allow delete: if isClubManager(clubId) && resource != null;
     }
 
     /**
-     * @description Secures sensitive payment records for club athletes. Only club staff
-     *              (admins, managers, coaches) can read payment data. Management of payments
-     *              is restricted to managers and admins.
+     * @description Secures sensitive payment records for club athletes. Club staff
+     *              can read payment data. An athlete can read ONLY their own payments.
+     *              Management of payments is restricted to managers and admins.
      * @path /clubs/{clubId}/payments/{paymentId}
      * @allow (list) A club manager lists all recent payments to generate a financial report.
+     * @allow (list) An athlete lists ONLY their own payments.
      * @deny (get) An athlete attempts to read the payment records of another athlete.
      * @deny (create) A coach attempts to log a new payment for an athlete.
      * @principle Enforces role-based access for sensitive financial data.
      */
     match /clubs/{clubId}/payments/{paymentId} {
       allow get: if isClubStaff(clubId);
-      allow list: if isClubStaff(clubId);
+      allow list: if isClubStaff(clubId) || (isClubAthlete(clubId) && request.query.where[0][0] == 'athleteId' && request.query.where[0][2] == request.auth.uid);
       allow create: if isClubManager(clubId) && request.resource.data.clubId == clubId;
-      allow update: if isClubManager(clubId) && resource != null && request.resource.data.clubId == resource.data.clubId;
+      allow update: if (isClubManager(clubId) || (isClubAthlete(clubId) && resource.data.athleteId == request.auth.uid)) && resource != null && request.resource.data.clubId == resource.data.clubId;
       allow delete: if isClubAdmin(clubId) && resource != null;
     }
 
@@ -221,5 +231,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
