@@ -1,13 +1,14 @@
+
 "use client";
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, ShieldAlert } from "lucide-react";
 import { format } from "date-fns";
 
-import { payments, athletes, coaches } from "@/lib/data";
+import { payments, athletes, coaches, type PaymentStatus } from "@/lib/data";
 import clubConfig from "@/lib/club-config.json";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
 
 const paymentSchema = z.object({
     paymentDate: z.date({
@@ -36,6 +39,8 @@ const currentAthleteId = 1;
 const athlete = athletes.find(a => a.id === currentAthleteId);
 const athletePayments = payments.filter(p => p.athleteId === currentAthleteId);
 const coach = athlete ? coaches.find(c => c.id === athlete.coachId) : undefined;
+const hasPendingPayment = athletePayments.some(p => p.status === 'Pendiente');
+
 
 export default function AthleteDashboard() {
   const { toast } = useToast();
@@ -65,9 +70,27 @@ export default function AthleteDashboard() {
     setOpenDialogId(null);
     form.reset();
   }
+  
+  const statusBadgeVariant: Record<PaymentStatus, "default" | "secondary" | "destructive" | "outline"> = {
+    'Pagado': 'default',
+    'Pendiente': 'destructive',
+    'En Verificación': 'secondary',
+    'Rechazado': 'destructive',
+  };
 
   return (
     <div className="space-y-8">
+
+        {hasPendingPayment && (
+            <Alert variant="destructive">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertTitle>Notificación Importante</AlertTitle>
+                <AlertDescription>
+                    Tienes una cuota de pago pendiente. Por favor, realiza el pago para poder continuar con los entrenamientos.
+                </AlertDescription>
+            </Alert>
+        )}
+      
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card className="bg-primary text-primary-foreground">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -122,7 +145,7 @@ export default function AthleteDashboard() {
                             <TableCell className="font-medium">{payment.month}</TableCell>
                             <TableCell>{formatCurrency(payment.amount)}</TableCell>
                             <TableCell>
-                                <Badge variant={payment.status === 'Pagado' ? 'default' : 'destructive'}>
+                                <Badge variant={statusBadgeVariant[payment.status]}>
                                     {payment.status}
                                 </Badge>
                             </TableCell>

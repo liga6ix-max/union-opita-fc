@@ -41,14 +41,18 @@ export type Task = {
   status: TaskStatus;
 };
 
+export type PaymentStatus = 'Pagado' | 'Pendiente' | 'En Verificación' | 'Rechazado';
+
 export type Payment = {
   id: number;
   athleteId: number;
   month: string;
   amount: number;
-  status: 'Pagado' | 'Pendiente';
+  status: PaymentStatus;
   paymentDate?: string;
+  referenceNumber?: string;
 };
+
 
 export type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica';
 
@@ -166,14 +170,15 @@ export const tasks: Task[] = [
 ];
 
 export const payments: Payment[] = [
-  { id: 1, athleteId: 1, month: 'Julio 2024', amount: 50000, status: 'Pagado', paymentDate: '2024-07-05' },
-  { id: 2, athleteId: 1, month: 'Agosto 2024', amount: 50000, status: 'Pendiente' },
-  { id: 3, athleteId: 2, month: 'Julio 2024', amount: 50000, status: 'Pagado', paymentDate: '2024-07-03' },
-  { id: 4, athleteId: 2, month: 'Agosto 2024', amount: 50000, status: 'Pagado', paymentDate: '2024-08-01' },
-  { id: 5, athleteId: 3, month: 'Julio 2024', amount: 60000, status: 'Pagado', paymentDate: '2024-07-08' },
-  { id: 6, athleteId: 3, month: 'Agosto 2024', amount: 60000, status: 'Pendiente' },
+  { id: 1, athleteId: 1, month: 'Julio 2024', amount: 50000, status: 'Pagado', paymentDate: '2024-07-05', referenceNumber: 'REF-JUL-001' },
+  { id: 2, athleteId: 1, month: 'Agosto 2024', amount: 50000, status: 'En Verificación', paymentDate: '2024-08-04', referenceNumber: 'REF-AGO-001' },
+  { id: 3, athleteId: 2, month: 'Julio 2024', amount: 50000, status: 'Pagado', paymentDate: '2024-07-03', referenceNumber: 'REF-JUL-002' },
+  { id: 4, athleteId: 2, month: 'Agosto 2024', amount: 50000, status: 'Pagado', paymentDate: '2024-08-01', referenceNumber: 'REF-AGO-002' },
+  { id: 5, athleteId: 3, month: 'Julio 2024', amount: 60000, status: 'Pagado', paymentDate: '2024-07-08', referenceNumber: 'REF-JUL-003' },
+  { id: 6, athleteId: 3, month: 'Agosto 2024', amount: 60000, status: 'En Verificación', paymentDate: '2024-08-06', referenceNumber: 'REF-AGO-003' },
   { id: 7, athleteId: 4, month: 'Julio 2024', amount: 60000, status: 'Pendiente' },
   { id: 8, athleteId: 4, month: 'Agosto 2024', amount: 60000, status: 'Pendiente' },
+  { id: 9, athleteId: 5, month: 'Agosto 2024', amount: 50000, status: 'Rechazado' },
 ];
 
 export const microcycles: Microcycle[] = [
