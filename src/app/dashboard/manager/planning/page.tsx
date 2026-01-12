@@ -2,10 +2,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { microcycles, coaches, type Microcycle } from '@/lib/data';
+import { microcycles, coaches, type Microcycle, type MicrocycleMethodology } from '@/lib/data';
+import { createTrainingPlan, TrainingPlanInputSchema, type TrainingPlanInput, type TrainingPlanOutput } from '@/ai/flows/create-training-plan-flow';
+
 import {
   Card,
   CardContent,
@@ -14,15 +15,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { BrainCircuit, Loader2 } from 'lucide-react';
 import {
   Form,
   FormControl,
@@ -50,28 +43,7 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
 
-
-const sessionSchema = z.object({
-  day: z.string().min(1, "El día es requerido."),
-  focus: z.string().min(1, "El foco es requerido."),
-  duration: z.coerce.number().min(1, "La duración debe ser mayor a 0."),
-  activities: z.string().min(10, "Las actividades son requeridas."),
-});
-
-const microcycleSchema = z.object({
-  week: z.string().min(1, 'La semana es requerida.'),
-  coachId: z.string().min(1, 'Debes asignar un entrenador.'),
-  team: z.string().min(1, 'El equipo es requerido.'),
-  methodology: z.enum(['tecnificacion', 'futbol_medida', 'periodizacion_tactica'], {
-    required_error: 'La metodología es requerida.',
-  }),
-  mainObjective: z.string().min(10, 'El objetivo principal es requerido.'),
-  sessions: z.array(sessionSchema).min(1, 'Debe haber al menos una sesión.'),
-});
-
-type MicrocycleFormValues = z.infer<typeof microcycleSchema>;
-
-const methodologyLabels = {
+const methodologyLabels: Record<MicrocycleMethodology, string> = {
     tecnificacion: 'Tecnificación (4-7 años)',
     futbol_medida: 'Fútbol a la Medida (8-11 años)',
     periodizacion_tactica: 'Periodización Táctica (12-20 años)'
@@ -79,92 +51,86 @@ const methodologyLabels = {
 
 export default function ManagerPlanningPage() {
   const { toast } = useToast();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [cycleList, setCycleList] = useState<Microcycle[]>(microcycles);
 
-  const form = useForm<MicrocycleFormValues>({
-    resolver: zodResolver(microcycleSchema),
+  const form = useForm<TrainingPlanInput>({
+    resolver: zodResolver(TrainingPlanInputSchema),
     defaultValues: {
-      week: '',
-      coachId: '',
-      team: '',
-      mainObjective: '',
-      sessions: [{ day: 'Lunes', focus: '', duration: 90, activities: '' }],
+      category: 'Sub-17',
+      methodology: 'periodizacion_tactica',
+      mesocycleObjective: 'Mejorar la transición defensa-ataque y la finalización.',
+      weeks: 4,
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "sessions"
-  });
-
-  const onSubmit = (data: MicrocycleFormValues) => {
-    const coach = coaches.find(c => c.id === parseInt(data.coachId, 10));
-    const newCycle: Microcycle = {
-      id: cycleList.length + 1,
-      ...data,
-      coachId: parseInt(data.coachId, 10),
-      methodology: data.methodology,
-    };
-    setCycleList((prev) => [newCycle, ...prev]);
+  const onSubmit = async (data: TrainingPlanInput) => {
+    setIsGenerating(true);
     toast({
-      title: '¡Microciclo Creado!',
-      description: `El ciclo para la ${data.week} ha sido asignado a ${coach?.name}.`,
+        title: 'Generando planificación...',
+        description: 'La IA está creando el plan de entrenamiento. Esto puede tardar un momento.',
     });
-    setIsDialogOpen(false);
-    form.reset();
+    try {
+        const generatedPlan: TrainingPlanOutput = await createTrainingPlan(data);
+        
+        // Simular asignación a un entrenador aleatorio para este ejemplo
+        const randomCoach = coaches[Math.floor(Math.random() * coaches.length)];
+
+        const newMicrocycles: Microcycle[] = generatedPlan.microcycles.map((micro, index) => ({
+            id: cycleList.length + index + 1,
+            week: micro.week,
+            coachId: randomCoach.id,
+            team: data.category,
+            methodology: data.methodology,
+            mainObjective: micro.mainObjective,
+            sessions: micro.sessions.map(s => ({
+                day: s.day,
+                focus: s.focus,
+                duration: s.duration,
+                activities: s.activities,
+            }))
+        }));
+
+        setCycleList(prev => [...newMicrocycles, ...prev]);
+
+        toast({
+            title: '¡Planificación Generada!',
+            description: `Se ha creado un mesociclo de ${data.weeks} semanas para la categoría ${data.category}.`,
+        });
+
+    } catch (error) {
+        console.error("Error generating training plan:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Error al generar el plan',
+            description: 'Hubo un problema con la IA. Por favor, inténtalo de nuevo.',
+        });
+    } finally {
+        setIsGenerating(false);
+    }
   };
 
   return (
     <div className="space-y-8">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="font-headline">Planificación de Microciclos</CardTitle>
-            <CardDescription>
-              Crea y asigna planes de entrenamiento semanales a los entrenadores.
-            </CardDescription>
-          </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2" />
-                Nuevo Microciclo
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Crear Nuevo Microciclo</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                    {/* Fila 1: Datos Generales */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <FormField control={form.control} name="week" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Semana</FormLabel>
-                                <FormControl><Input placeholder="Ej: Semana 34 (19 Ago - 25 Ago)" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}/>
-                        <FormField control={form.control} name="coachId" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Asignar a</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un entrenador" /></SelectTrigger></FormControl>
-                                <SelectContent>{coaches.map((coach) => (<SelectItem key={coach.id} value={coach.id.toString()}>{coach.name}</SelectItem>))}</SelectContent>
-                            </Select>
-                            <FormMessage />
-                            </FormItem>
-                        )}/>
-                        <FormField control={form.control} name="team" render={({ field }) => (
+        <CardHeader>
+          <CardTitle className="font-headline">Asistente de Planificación (IA)</CardTitle>
+          <CardDescription>
+            Genera un plan de entrenamiento completo (mesociclo) para una categoría específica utilizando inteligencia artificial.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                         <FormField control={form.control} name="category" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Categoría / Equipo</FormLabel>
                                 <FormControl><Input placeholder="Ej: Sub-17" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}/>
-                         <FormField control={form.control} name="methodology" render={({ field }) => (
+                        <FormField control={form.control} name="methodology" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Metodología</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -178,84 +144,40 @@ export default function ManagerPlanningPage() {
                                 <FormMessage />
                             </FormItem>
                         )}/>
+                        <FormField control={form.control} name="weeks" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Semanas de Duración</FormLabel>
+                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
                     </div>
 
-                    {/* Fila 2: Objetivo Principal */}
-                    <FormField control={form.control} name="mainObjective" render={({ field }) => (
+                    <FormField control={form.control} name="mesocycleObjective" render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Objetivo Principal del Microciclo</FormLabel>
-                            <FormControl><Textarea placeholder="Describe el objetivo principal para esta semana de entrenamiento..." {...field} /></FormControl>
+                            <FormLabel>Objetivo Principal del Mesociclo</FormLabel>
+                            <FormControl><Textarea placeholder="Describe el objetivo principal para este plan (ej: mejorar la salida de balón, aumentar la resistencia aeróbica...)" {...field} /></FormControl>
+                            <FormDescription>La IA usará este objetivo para estructurar los microciclos de forma progresiva.</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}/>
-
-                    {/* Fila 3: Sesiones */}
-                    <div className='space-y-4'>
-                        <FormLabel>Sesiones de Entrenamiento</FormLabel>
-                        {fields.map((field, index) => (
-                           <Card key={field.id} className="p-4 bg-muted/50 relative">
-                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                               <FormField control={form.control} name={`sessions.${index}.day`} render={({ field }) => (
-                                   <FormItem>
-                                       <FormLabel>Día</FormLabel>
-                                       <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue placeholder="Elige un día" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="Lunes">Lunes</SelectItem>
-                                                <SelectItem value="Martes">Martes</SelectItem>
-                                                <SelectItem value="Miércoles">Miércoles</SelectItem>
-                                                <SelectItem value="Jueves">Jueves</SelectItem>
-                                                <SelectItem value="Viernes">Viernes</SelectItem>
-                                                <SelectItem value="Sábado">Sábado</SelectItem>
-                                            </SelectContent>
-                                       </Select>
-                                       <FormMessage />
-                                   </FormItem>
-                               )}/>
-                               <FormField control={form.control} name={`sessions.${index}.focus`} render={({ field }) => (
-                                   <FormItem>
-                                       <FormLabel>Foco de la sesión</FormLabel>
-                                       <FormControl><Input placeholder="Técnico, Táctico, Físico..." {...field} /></FormControl>
-                                       <FormMessage />
-                                   </FormItem>
-                               )}/>
-                               <FormField control={form.control} name={`sessions.${index}.duration`} render={({ field }) => (
-                                   <FormItem>
-                                       <FormLabel>Duración (min)</FormLabel>
-                                       <FormControl><Input type="number" placeholder="90" {...field} /></FormControl>
-                                       <FormMessage />
-                                   </FormItem>
-                               )}/>
-                                <FormField control={form.control} name={`sessions.${index}.activities`} render={({ field }) => (
-                                   <FormItem className="md:col-span-4">
-                                       <FormLabel>Actividades y Ejercicios</FormLabel>
-                                       <FormControl><Textarea placeholder="Describe las actividades..." {...field} /></FormControl>
-                                       <FormMessage />
-                                   </FormItem>
-                               )}/>
-                            </div>
-                            <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => remove(index)}>
-                                <Trash2 className="h-4 w-4"/>
-                            </Button>
-                           </Card>
-                        ))}
-                         <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => append({ day: 'Miércoles', focus: '', duration: 90, activities: '' })}
-                        >
-                           <PlusCircle className="mr-2"/> Añadir Sesión
-                        </Button>
-                    </div>
-
-                  <DialogFooter>
-                    <Button type="submit">Crear Microciclo</Button>
-                  </DialogFooter>
+                    
+                    <Button type="submit" disabled={isGenerating}>
+                        {isGenerating ? <Loader2 className="animate-spin" /> : <BrainCircuit />}
+                        {isGenerating ? 'Generando Plan...' : 'Generar Plan con IA'}
+                    </Button>
                 </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+            </Form>
+        </CardContent>
+      </Card>
+
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline">Microciclos Planificados</CardTitle>
+          <CardDescription>
+            Estos son los planes de entrenamiento semanales generados y asignados a los entrenadores.
+          </CardDescription>
         </CardHeader>
         <CardContent>
             <Accordion type="single" collapsible className="w-full space-y-4">

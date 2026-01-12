@@ -3,7 +3,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { zodToDataURL } from 'zod-form-data';
 
 const methodologyDescriptions = {
   tecnificacion: 'Tecnificación (4-7 años): Enfocado en la familiarización con el balón, la coordinación motriz y juegos lúdicos. Las actividades deben ser simples, divertidas y con mucho contacto con la pelota.',
@@ -24,11 +23,22 @@ const microcycleSchema = z.object({
     sessions: z.array(sessionSchema).describe("Lista de sesiones de entrenamiento para la semana."),
 });
 
-export const TrainingPlanInputSchema = z.object({
+// Zod schema for the AI input, used for validation and type generation.
+const TrainingPlanInputSchemaAI = z.object({
   category: z.string().describe("La categoría o equipo para el que se genera el plan (Ej: Sub-17, Tecnificación)."),
   methodology: z.enum(['tecnificacion', 'futbol_medida', 'periodizacion_tactica']).describe("La metodología de formación a aplicar."),
+  methodologyDescription: z.string().describe("La descripción de la metodología seleccionada."),
   mesocycleObjective: z.string().describe("El objetivo principal a lograr durante todo el mesociclo (varias semanas)."),
-  weeks: z.coerce.number().describe("El número de semanas que durará el mesoclo (cuántos microciclos generar)."),
+  weeks: z.coerce.number().describe("El número de semanas que durará el mesociclo (cuántos microciclos generar)."),
+});
+
+
+// Zod schema for the form input. It's almost the same but doesn't need methodologyDescription.
+export const TrainingPlanInputSchema = z.object({
+  category: z.string().min(1, "La categoría es requerida."),
+  methodology: z.enum(['tecnificacion', 'futbol_medida', 'periodizacion_tactica'], { required_error: 'La metodología es requerida.'}),
+  mesocycleObjective: z.string().min(10, "El objetivo debe tener al menos 10 caracteres."),
+  weeks: z.coerce.number().min(1, "Debe ser al menos 1 semana.").max(8, "No se pueden generar más de 8 semanas a la vez."),
 });
 export type TrainingPlanInput = z.infer<typeof TrainingPlanInputSchema>;
 
@@ -41,20 +51,25 @@ export type TrainingPlanOutput = z.infer<typeof TrainingPlanOutputSchema>;
 
 
 export async function createTrainingPlan(input: TrainingPlanInput): Promise<TrainingPlanOutput> {
-  return createTrainingPlanFlow(input);
+  // Augment the input with the methodology description for the AI.
+  const augmentedInput = {
+    ...input,
+    methodologyDescription: methodologyDescriptions[input.methodology],
+  };
+  return createTrainingPlanFlow(augmentedInput);
 }
 
 
 const prompt = ai.definePrompt({
     name: 'createTrainingPlanPrompt',
-    input: { schema: TrainingPlanInputSchema },
+    input: { schema: TrainingPlanInputSchemaAI },
     output: { schema: TrainingPlanOutputSchema },
     prompt: `
         Eres un director deportivo y experto en metodología de fútbol base, especializado en la creación de planes de entrenamiento.
         Tu tarea es generar un plan de entrenamiento (mesociclo) completo y coherente basado en los siguientes parámetros:
 
         1.  **Categoría del Equipo:** {{{category}}}
-        2.  **Metodología a Aplicar:** {{methodology}} - {{methodologyDescriptions[methodology]}}
+        2.  **Metodología a Aplicar:** {{methodology}} - {{{methodologyDescription}}}
         3.  **Objetivo Principal del Mesociclo:** {{{mesocycleObjective}}}
         4.  **Duración del Mesociclo:** {{{weeks}}} semanas
 
@@ -76,7 +91,7 @@ const prompt = ai.definePrompt({
         **IMPORTANTE:** El contenido debe ser 100% en español. Asegúrate de que la progresión de los objetivos y la complejidad de las actividades sean coherentes con la metodología y la categoría de edad.
     `,
     config: {
-        model: 'googleai/gemini-2.5-flash',
+        model: 'googleai/gemini-1.5-flash',
     }
 });
 
@@ -84,17 +99,11 @@ const prompt = ai.definePrompt({
 const createTrainingPlanFlow = ai.defineFlow(
   {
     name: 'createTrainingPlanFlow',
-    inputSchema: TrainingPlanInputSchema,
+    inputSchema: TrainingPlanInputSchemaAI,
     outputSchema: TrainingPlanOutputSchema,
   },
   async (input) => {
-    // Agregamos la descripción de la metodología al input para que el prompt la pueda usar.
-    const augmentedInput = {
-        ...input,
-        methodologyDescriptions: methodologyDescriptions
-    };
-
-    const { output } = await prompt(augmentedInput);
+    const { output } = await prompt(input);
     if (!output) {
       throw new Error("La IA no pudo generar un plan de entrenamiento.");
     }
