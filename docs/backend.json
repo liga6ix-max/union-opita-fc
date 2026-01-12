@@ -54,7 +54,7 @@
         },
         "role": {
           "type": "string",
-          "description": "The role of the user (admin, manager, coach, athlete)."
+          "description": "The role of the user (admin, manager, coach, athlete, pending)."
         }
       },
       "required": [
@@ -62,8 +62,7 @@
         "clubId",
         "firstName",
         "lastName",
-        "email",
-        "role"
+        "email"
       ]
     },
     "Athlete": {

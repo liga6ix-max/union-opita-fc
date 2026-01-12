@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -27,6 +26,9 @@ import { Input } from '@/components/ui/input';
 import { ClubLogo } from '@/components/icons';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useFirebase } from '@/firebase/provider';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
 const registerSchema = z.object({
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres.'),
@@ -40,6 +42,7 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const { auth, firestore } = useFirebase();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -52,21 +55,49 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
-    console.log('Datos de registro (sin rol):', data);
-    
-    // Simulación de una llamada a la API
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    if (!auth || !firestore) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Los servicios de Firebase no están disponibles.",
+        });
+        setIsLoading(false);
+        return;
+    }
 
-    // En una aplicación real:
-    // 1. Llamarías a Firebase Auth para crear el usuario (createUserWithEmailAndPassword).
-    // 2. Guardarías el perfil del usuario en Firestore con un estado 'pending' y sin rol asignado.
-    
-    setIsLoading(false);
-    toast({
-      title: '¡Registro Enviado!',
-      description: 'Tu solicitud ha sido enviada. Un administrador la revisará y asignará tu rol pronto.',
-    });
-    router.push('/login');
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+        const user = userCredential.user;
+
+        await updateProfile(user, { displayName: data.name });
+
+        // Create user profile in Firestore
+        const userDocRef = doc(firestore, 'users', user.uid);
+        await setDoc(userDocRef, {
+            id: user.uid,
+            firstName: data.name.split(' ')[0] || '',
+            lastName: data.name.split(' ').slice(1).join(' ') || '',
+            email: user.email,
+            clubId: '', // Should be assigned by manager
+            role: 'pending', // Initially pending
+        });
+
+        setIsLoading(false);
+        toast({
+            title: '¡Registro Enviado!',
+            description: 'Tu solicitud ha sido enviada. Un administrador la revisará y asignará tu rol pronto.',
+        });
+        router.push('/login');
+
+    } catch (error: any) {
+        console.error("Error al registrar:", error);
+        setIsLoading(false);
+        toast({
+            variant: "destructive",
+            title: "Error en el registro",
+            description: error.message || "No se pudo completar el registro.",
+        });
+    }
   };
 
   return (
