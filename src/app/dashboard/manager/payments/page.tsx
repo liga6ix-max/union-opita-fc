@@ -2,17 +2,91 @@
 'use client';
 
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { payments, athletes, type Payment } from '@/lib/data';
+import clubConfig from '@/lib/club-config.json';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, FileClock } from 'lucide-react';
+import { CheckCircle, XCircle, FileClock, PlusCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const paymentScheduleSchema = z.object({
+  month: z.string().min(3, 'El mes es requerido.'),
+  team: z.string().min(1, 'Debes seleccionar un equipo.'),
+  amount: z.coerce.number().min(1, 'El monto debe ser mayor a 0.'),
+});
+
+type PaymentScheduleFormValues = z.infer<typeof paymentScheduleSchema>;
+
+const teams = Array.from(new Set(athletes.map(a => a.team)));
 
 export default function ManagerPaymentsPage() {
   const { toast } = useToast();
   const [paymentList, setPaymentList] = useState<Payment[]>(payments);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const form = useForm<PaymentScheduleFormValues>({
+    resolver: zodResolver(paymentScheduleSchema),
+    defaultValues: {
+      month: '',
+      team: '',
+      amount: 0,
+    },
+  });
+
+  const handleTeamChange = (team: string) => {
+    const fee = (clubConfig.monthlyFees as Record<string, number>)[team] || 0;
+    form.setValue('amount', fee);
+    form.setValue('team', team);
+  };
+
+  const onScheduleSubmit = (data: PaymentScheduleFormValues) => {
+    const athletesInTeam = athletes.filter(a => a.team === data.team);
+    const newPayments: Payment[] = athletesInTeam.map(athlete => ({
+      id: paymentList.length + Math.random(), // Unique ID
+      athleteId: athlete.id,
+      month: data.month,
+      amount: data.amount,
+      status: 'Pendiente',
+    }));
+
+    setPaymentList(prev => [...prev, ...newPayments]);
+    toast({
+      title: 'Pagos Programados',
+      description: `Se crearon ${newPayments.length} cuotas de pago para el equipo ${data.team}.`,
+    });
+    setIsDialogOpen(false);
+    form.reset();
+  };
 
   const pendingVerifications = paymentList.filter(p => p.status === 'En Verificación');
 
@@ -32,11 +106,81 @@ export default function ManagerPaymentsPage() {
   return (
     <div className="space-y-8">
       <Card>
-        <CardHeader>
-          <CardTitle className="font-headline flex items-center gap-2"><FileClock /> Pagos por Verificar</CardTitle>
-          <CardDescription>
-            Revisa y aprueba los pagos registrados por los deportistas.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="font-headline flex items-center gap-2"><FileClock /> Pagos por Verificar</CardTitle>
+            <CardDescription>
+              Revisa y aprueba los pagos registrados por los deportistas.
+            </CardDescription>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2" />
+                Programar Pagos
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Programar Nuevas Cuotas de Pago</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onScheduleSubmit)} className="space-y-4 py-4">
+                  <FormField
+                    control={form.control}
+                    name="month"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Mes a Cobrar</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ej: Septiembre 2024" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="team"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Asignar a Equipo</FormLabel>
+                        <Select onValueChange={handleTeamChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecciona un equipo" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {teams.map(team => (
+                              <SelectItem key={team} value={team}>{team}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Monto de la Cuota (COP)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="50000" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button type="submit">Programar Cuotas</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
         <CardContent>
             {pendingVerifications.length > 0 ? (
