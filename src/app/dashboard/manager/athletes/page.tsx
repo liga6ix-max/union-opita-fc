@@ -19,7 +19,7 @@ export default function ManagerAthletesPage() {
              <div className="flex flex-col items-center justify-center h-full text-center">
                 <p className="text-lg text-muted-foreground">Selecciona un equipo desde la página de "Equipos" para ver los deportistas.</p>
                 <Button asChild className="mt-4">
-                    <Link href="/dashboard/manager/teams?role=manager">Volver a Equipos</Link>
+                    <Link href="/dashboard/manager/teams">Volver a Equipos</Link>
                 </Button>
             </div>
         )

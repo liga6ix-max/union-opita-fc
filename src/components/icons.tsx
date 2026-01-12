@@ -1,24 +1,10 @@
 import type { SVGProps } from "react";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
 
+// The useSearchParams version of this component won't work in the sidebar
+// because the layout doesn't have access to the search params.
+// We'll just show the default logo for now.
 export function ClubLogo(props: SVGProps<SVGSVGElement> & { className?: string }) {
-    const searchParams = useSearchParams();
-    const logoUrl = searchParams.get('logo');
-
-    if (logoUrl) {
-        return (
-            <Image
-                src={logoUrl}
-                alt="Club Logo"
-                width={32}
-                height={32}
-                className={props.className}
-                unoptimized
-            />
-        )
-    }
-
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"

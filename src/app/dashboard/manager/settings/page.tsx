@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -60,10 +60,7 @@ function useClubConfig() {
 
 export default function ManagerSettingsPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [logoUrl, setLogoUrl] = useState(
-    searchParams.get("logo") || "https://i.ibb.co/bMRLtG3/Unio-n-Opita-FC-logo.png"
-  );
+  const [logoUrl, setLogoUrl] = useState("https://i.ibb.co/bMRLtG3/Unio-n-Opita-FC-logo.png");
   
   // We use a local state that is initialized from the JSON file.
   const [clubConfig, setClubConfig] = useState(initialClubConfig);
@@ -76,19 +73,10 @@ export default function ManagerSettingsPage() {
 
   const handleLogoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const newParams = new URLSearchParams(searchParams.toString());
-    if (logoUrl) {
-      newParams.set("logo", logoUrl);
-    } else {
-      newParams.delete("logo");
-    }
-    if (!newParams.has("role")) {
-      newParams.set("role", "manager");
-    }
-    router.push(`/dashboard/manager/settings?${newParams.toString()}`);
+    console.log("Logo URL guardada (simulado):", logoUrl);
     toast({
         title: "Logo actualizado",
-        description: "El escudo del club se ha guardado.",
+        description: "El escudo del club se ha guardado (simulado).",
     });
   };
 

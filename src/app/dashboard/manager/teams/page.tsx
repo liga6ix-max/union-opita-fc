@@ -66,7 +66,7 @@ export default function ManagerTeamsPage() {
                         </CardContent>
                         <div className="p-6 pt-0">
                             <Button asChild className="w-full">
-                                <Link href={`/dashboard/manager/athletes?role=manager&team=${encodeURIComponent(teamName)}`}>
+                                <Link href={`/dashboard/manager/athletes?team=${encodeURIComponent(teamName)}`}>
                                     Ver Deportistas <ArrowRight className="ml-2"/>
                                 </Link>
                             </Button>

@@ -29,7 +29,9 @@ import {
   Shield,
   BarChart3,
   UserPlus,
+  Loader2,
 } from "lucide-react";
+import { useFirebase } from "@/firebase";
 
 const managerNav = [
   { href: "/dashboard/manager", label: "Resumen", icon: LayoutDashboard },
@@ -57,7 +59,7 @@ const athleteNav = [
     { href: "/dashboard/athlete/profile", label: "Mi Perfil", icon: User },
 ];
 
-const navItems: Record<Role, { href: string; label: string; icon: React.ElementType }[]> = {
+const navItems: Record<Exclude<Role, 'pending'>, { href: string; label: string; icon: React.ElementType }[]> = {
   manager: managerNav,
   coach: coachNav,
   athlete: athleteNav,
@@ -66,14 +68,68 @@ const navItems: Record<Role, { href: string; label: string; icon: React.ElementT
 export function DashboardSidebar() {
   const role = useRole();
   const pathname = usePathname();
+  const { isUserLoading, auth } = useFirebase();
+
+  const handleLogout = () => {
+    if (auth) {
+      auth.signOut();
+    }
+  };
+
+  if (isUserLoading || !role) {
+    return (
+        <Sidebar>
+            <SidebarHeader>
+                <div className="flex items-center gap-2">
+                    <ClubLogo className="size-8 text-primary" />
+                    <span className="text-lg font-semibold font-headline group-data-[collapsible=icon]:hidden">
+                        Cargando...
+                    </span>
+                </div>
+            </SidebarHeader>
+            <SidebarMenu className="flex-1 justify-center items-center">
+                <Loader2 className="animate-spin h-8 w-8 text-primary" />
+            </SidebarMenu>
+        </Sidebar>
+    );
+  }
+  
+  if (role === 'pending') {
+     return (
+        <Sidebar>
+            <SidebarHeader>
+                <Link href="/" className="flex items-center gap-2">
+                    <ClubLogo className="size-8 text-primary" />
+                    <span className="text-lg font-semibold font-headline group-data-[collapsible=icon]:hidden">
+                        Unión Opita FC
+                    </span>
+                </Link>
+            </SidebarHeader>
+            <SidebarMenu>
+                 <div className="p-4 text-center text-sm text-muted-foreground">
+                    Tu cuenta está pendiente de aprobación por un administrador.
+                 </div>
+            </SidebarMenu>
+            <SidebarFooter className="mt-auto">
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton onClick={handleLogout} tooltip="Cerrar Sesión">
+                            <LogOut />
+                            <span>Cerrar Sesión</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarFooter>
+        </Sidebar>
+     );
+  }
+
   const currentNav = navItems[role] || [];
 
   const isLinkActive = (href: string) => {
-    // Exact match for dashboard pages
     if (href.endsWith('/manager') || href.endsWith('/coach') || href.endsWith('/athlete')) {
         return pathname === href;
     }
-    // Starts with for sub-pages
     return pathname.startsWith(href);
   };
 
@@ -96,7 +152,7 @@ export function DashboardSidebar() {
               isActive={isLinkActive(item.href)}
               tooltip={item.label}
             >
-              <Link href={`${item.href}?role=${role}`}>
+              <Link href={item.href}>
                 <item.icon />
                 <span>{item.label}</span>
               </Link>
@@ -107,11 +163,9 @@ export function DashboardSidebar() {
       <SidebarFooter className="mt-auto">
         <SidebarMenu>
             <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Cerrar Sesión">
-                    <Link href="/">
-                        <LogOut />
-                        <span>Cerrar Sesión</span>
-                    </Link>
+                <SidebarMenuButton onClick={handleLogout} tooltip="Cerrar Sesión">
+                    <LogOut />
+                    <span>Cerrar Sesión</span>
                 </SidebarMenuButton>
             </SidebarMenuItem>
         </SidebarMenu>

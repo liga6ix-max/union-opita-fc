@@ -1,20 +1,16 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useUser } from "@/firebase";
 
-export type Role = "manager" | "coach" | "athlete";
+export type Role = "manager" | "coach" | "athlete" | "pending";
 
-const validRoles: Role[] = ["manager", "coach", "athlete"];
+// This hook now returns the real role of the logged-in user from their profile.
+export function useRole(): Role | null {
+  const { profile, isUserLoading } = useUser();
 
-export function useRole(): Role {
-  const searchParams = useSearchParams();
-  const role = searchParams.get("role");
-
-  if (role && validRoles.includes(role as Role)) {
-    return role as Role;
+  if (isUserLoading) {
+    return null; // Or a 'loading' state if you prefer
   }
 
-  // Default to athlete if no role or invalid role is provided.
-  // In a real app, this would come from a secure session.
-  return "manager";
+  return profile?.role || null;
 }

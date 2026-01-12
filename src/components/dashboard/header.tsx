@@ -16,7 +16,7 @@ import { LogOut, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRole } from "@/hooks/use-role";
-import { RoleSwitcher } from "./role-switcher";
+import { useFirebase } from "@/firebase";
 
 const pageTitles: { [key: string]: string } = {
   "/dashboard/manager": "Resumen del Gerente",
@@ -42,12 +42,20 @@ const pageTitles: { [key: string]: string } = {
 export function DashboardHeader() {
   const pathname = usePathname();
   const role = useRole();
+  const { auth } = useFirebase();
   const title = pageTitles[pathname] || "Dashboard";
 
   const getProfileLink = () => {
-    if (role === 'manager') return `/dashboard/manager/settings?role=manager`;
-    return `/dashboard/${role}/profile?role=${role}`;
+    if (!role) return "#";
+    if (role === 'manager') return `/dashboard/manager/settings`;
+    return `/dashboard/${role}/profile`;
   }
+
+  const handleLogout = () => {
+    if (auth) {
+      auth.signOut();
+    }
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
@@ -57,7 +65,7 @@ export function DashboardHeader() {
       </div>
       
       <div className="ml-auto flex items-center gap-4">
-        <RoleSwitcher />
+        {/* The RoleSwitcher component is removed to prevent manual role changes */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -78,8 +86,8 @@ export function DashboardHeader() {
                 <Link href={getProfileLink()}><User className="mr-2" /> Perfil</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-                <Link href="/"><LogOut className="mr-2" /> Cerrar Sesión</Link>
+            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                <LogOut className="mr-2" /> Cerrar Sesión
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
