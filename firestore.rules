@@ -144,7 +144,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isOwner(userId) || isMemberOfSameClubAsTarget(userId);
       allow list: if isAnyManager();
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow create: if request.auth.uid == userId;
       allow update: if isOwner(userId) && resource != null && request.resource.data.id == resource.data.id;
       allow delete: if isOwner(userId) || isClubManager(getUserData().clubId);
     }
@@ -221,5 +221,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
