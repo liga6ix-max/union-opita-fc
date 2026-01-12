@@ -36,6 +36,26 @@ const bankAccountSchema = z.object({
 
 type BankAccountFormValues = z.infer<typeof bankAccountSchema>;
 
+// This component will manage the shared state for the demo.
+function useClubConfig() {
+    const [config, setConfig] = useState(initialClubConfig);
+
+    const updateBankAccount = (data: BankAccountFormValues) => {
+        const newConfig = { ...config, bankAccount: data };
+        setConfig(newConfig);
+        // In a real app, this would be an API call.
+        // For now, we simulate the update and log it.
+        console.log("Datos bancarios guardados (simulado):", newConfig);
+        toast({
+            title: "¡Datos Bancarios Guardados!",
+            description: "La información de la cuenta ha sido actualizada (simulado).",
+        });
+    };
+    
+    return { clubConfig: config, updateBankAccount };
+}
+
+
 export default function ManagerSettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -43,9 +63,12 @@ export default function ManagerSettingsPage() {
     searchParams.get("logo") || "https://i.ibb.co/bMRLtG3/Unio-n-Opita-FC-logo.png"
   );
   
+  // We use a local state that is initialized from the JSON file.
+  const [clubConfig, setClubConfig] = useState(initialClubConfig);
+
   const form = useForm<BankAccountFormValues>({
     resolver: zodResolver(bankAccountSchema),
-    defaultValues: initialClubConfig.bankAccount,
+    defaultValues: clubConfig.bankAccount,
   });
 
   const handleLogoSubmit = (e: React.FormEvent) => {
@@ -67,8 +90,10 @@ export default function ManagerSettingsPage() {
   };
 
   const onBankAccountSubmit = (data: BankAccountFormValues) => {
+    // This only updates the local state for this component for the demo.
+    setClubConfig(prev => ({...prev, bankAccount: data}));
     console.log("Datos bancarios guardados:", data);
-    // En una app real, esto guardaría en la base de datos
+    // In a real app, this would save to a database or file.
     toast({
         title: "¡Datos Bancarios Guardados!",
         description: "La información de la cuenta ha sido actualizada (simulado).",
