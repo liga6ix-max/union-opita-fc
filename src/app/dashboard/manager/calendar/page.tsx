@@ -14,7 +14,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Calendar as CalendarIcon, Clock, Users, User } from 'lucide-react';
+import { PlusCircle, Calendar as CalendarIcon, Clock, Users, User, MapPin } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -40,7 +40,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const eventSchema = z.object({
@@ -57,7 +57,7 @@ type EventFormValues = z.infer<typeof eventSchema>;
 export default function ManagerCalendarPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [events, setEvents] = useState<TrainingEvent[]>(trainingEvents);
+  const [events, setEvents] = useState<TrainingEvent[]>(trainingEvents.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
 
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventSchema),
@@ -85,6 +85,10 @@ export default function ManagerCalendarPage() {
     setIsDialogOpen(false);
     form.reset();
   };
+  
+  const getCoachName = (coachId: number) => {
+    return coaches.find(c => c.id === coachId)?.name || 'N/A';
+  };
 
   return (
     <div className="space-y-8">
@@ -103,9 +107,9 @@ export default function ManagerCalendarPage() {
                 Programar Sesión
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Programar Nueva Sesión de Entrenamiento</DialogTitle>
+                <DialogTitle>Programar Nueva Sesión</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
@@ -122,7 +126,7 @@ export default function ManagerCalendarPage() {
                       </FormItem>
                     )}
                   />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="date"
@@ -150,20 +154,20 @@ export default function ManagerCalendarPage() {
                       )}
                     />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="team"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Equipo / Categoría</FormLabel>
+                          <FormLabel>Equipo</FormLabel>
                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un equipo" /></SelectTrigger></FormControl>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger></FormControl>
                             <SelectContent>
                                 <SelectItem value="Sub-17">Sub-17</SelectItem>
                                 <SelectItem value="Sub-20">Sub-20</SelectItem>
-                                <SelectItem value="Tecnificación">Tecnificación (4-7)</SelectItem>
-                                <SelectItem value="Fútbol Medida">Fútbol Medida (8-11)</SelectItem>
+                                <SelectItem value="Tecnificación">Tecnificación</SelectItem>
+                                <SelectItem value="Fútbol Medida">Fútbol Medida</SelectItem>
                             </SelectContent>
                            </Select>
                           <FormMessage />
@@ -175,9 +179,9 @@ export default function ManagerCalendarPage() {
                       name="coachId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Entrenador a Cargo</FormLabel>
+                          <FormLabel>Entrenador</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Asignar entrenador" /></SelectTrigger></FormControl>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Asignar" /></SelectTrigger></FormControl>
                             <SelectContent>
                               {coaches.map(coach => (
                                 <SelectItem key={coach.id} value={coach.id.toString()}>{coach.name}</SelectItem>
@@ -213,28 +217,26 @@ export default function ManagerCalendarPage() {
         <CardContent className="space-y-6">
             {events.length > 0 ? (
                 <div className="space-y-4">
-                    {events.map(event => {
-                        const coach = coaches.find(c => c.id === event.coachId);
-                        return (
-                            <div key={event.id} className="flex items-center gap-4 rounded-lg border p-4">
-                                <div className="flex flex-col items-center justify-center p-2 rounded-md bg-muted text-muted-foreground w-20">
-                                    <span className="text-sm font-bold uppercase">{format(new Date(event.date), 'MMM', { locale: es })}</span>
-                                    <span className="text-2xl font-bold">{format(new Date(event.date), 'dd')}</span>
-                                </div>
-                                <div className='flex-1'>
-                                    <h4 className="font-semibold text-lg">{event.title}</h4>
-                                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                                        <span><Clock className="inline-block h-4 w-4 mr-1" />{event.time}</span>
-                                        <span><Users className="inline-block h-4 w-4 mr-1" />{event.team}</span>
-                                        <span><User className="inline-block h-4 w-4 mr-1" />{coach?.name || 'N/A'}</span>
-                                    </div>
-                                </div>
-                                <div>
-                                    {/* Actions like Edit/Delete could go here */}
+                    {events.map(event => (
+                        <div key={event.id} className="flex items-start gap-4 rounded-lg border p-4 transition-all hover:bg-muted/50">
+                            <div className="flex flex-col items-center justify-center p-2 rounded-md bg-muted text-muted-foreground w-20 text-center">
+                                <span className="text-xs font-bold uppercase">{format(parseISO(event.date), 'MMM', { locale: es })}</span>
+                                <span className="text-2xl font-bold">{format(parseISO(event.date), 'dd')}</span>
+                                <span className="text-xs">{event.time}</span>
+                            </div>
+                            <div className='flex-1'>
+                                <h4 className="font-semibold text-md">{event.title}</h4>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
+                                    <span className="flex items-center gap-2"><Users className="h-4 w-4" />{event.team}</span>
+                                    <span className="flex items-center gap-2"><User className="h-4 w-4" />{getCoachName(event.coachId)}</span>
+                                    <span className="flex items-center gap-2 col-span-2"><MapPin className="h-4 w-4" />{event.location}</span>
                                 </div>
                             </div>
-                        )
-                    })}
+                            <div>
+                                {/* Actions like Edit/Delete could go here */}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             ) : (
                 <p className="text-center text-muted-foreground py-8">
