@@ -5,6 +5,7 @@ import { FirebaseApp } from 'firebase/app';
 import { Firestore, doc, onSnapshot, DocumentData } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { useRouter, usePathname } from 'next/navigation';
 
 // Define the shape of the user profile data stored in Firestore
 export interface UserProfile {
@@ -55,6 +56,13 @@ export interface UserHookResult {
   userError: Error | null;
 }
 
+interface FirebaseProviderProps {
+    children: ReactNode;
+    firebaseApp: FirebaseApp | null;
+    firestore: Firestore | null;
+    auth: Auth | null;
+}
+
 // React Context
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
@@ -64,6 +72,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   firestore,
   auth,
 }) => {
+  const router = useRouter();
+  const pathname = usePathname();
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
     user: null,
     profile: null,
@@ -83,6 +93,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       (firebaseUser) => {
         if (firebaseUser) {
           // User is signed in, now fetch their profile from Firestore
+          if (!firestore) return;
           const userDocRef = doc(firestore, 'users', firebaseUser.uid);
           const profileUnsubscribe = onSnapshot(userDocRef, 
             (docSnap) => {
@@ -90,7 +101,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 setUserAuthState({ user: firebaseUser, profile: docSnap.data() as UserProfile, isUserLoading: false, userError: null });
               } else {
                 // Profile doesn't exist, might be an error state or sign-up in progress
-                setUserAuthState({ user: firebaseUser, profile: null, isUserLoading: false, userError: new Error("User profile not found in Firestore.") });
+                setUserAuthState({ user: firebaseUser, profile: null, isUserLoading: false, userError: null });
               }
             },
             (error) => {
@@ -113,6 +124,15 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     
     return () => authUnsubscribe();
   }, [auth, firestore]);
+
+  // Effect to handle redirection on auth state change
+  useEffect(() => {
+    const isPublicPage = ['/login', '/register', '/'].includes(pathname);
+    // If loading is finished and there is no user, redirect to login page if not on a public page
+    if (!userAuthState.isUserLoading && !userAuthState.user && !isPublicPage) {
+        router.push('/login');
+    }
+  }, [userAuthState.isUserLoading, userAuthState.user, pathname, router]);
 
   const contextValue = useMemo((): FirebaseContextState => {
     const servicesAvailable = !!(firebaseApp && firestore && auth);
@@ -185,6 +205,10 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | 
 }
 
 export const useUser = (): UserHookResult => {
-  const { user, profile, isUserLoading, userError } = useFirebase();
+  const context = useContext(FirebaseContext);
+    if (context === undefined) {
+        throw new Error('useUser must be used within a FirebaseProvider.');
+    }
+  const { user, profile, isUserLoading, userError } = context;
   return { user, profile, isUserLoading, userError };
 };

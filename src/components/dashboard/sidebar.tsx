@@ -13,7 +13,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { ClubLogo } from "@/components/icons";
-import { useRole, type Role } from "@/hooks/use-role";
+import { useUser } from "@/firebase";
 import {
   LayoutDashboard,
   Users,
@@ -23,7 +23,7 @@ import {
   User,
   ListTodo,
   Settings,
-  Image as ImageIcon,
+  ImageIcon,
   CalendarClock,
   UserCheck,
   Shield,
@@ -59,22 +59,24 @@ const athleteNav = [
     { href: "/dashboard/athlete/profile", label: "Mi Perfil", icon: User },
 ];
 
-const navItems: Record<Exclude<Role, 'pending'>, { href: string; label: string; icon: React.ElementType }[]> = {
+const navItems = {
   manager: managerNav,
   coach: coachNav,
   athlete: athleteNav,
 };
 
 export function DashboardSidebar() {
-  const role = useRole();
+  const { profile, isUserLoading } = useUser();
   const pathname = usePathname();
-  const { isUserLoading, auth } = useFirebase();
+  const { auth } = useFirebase();
 
   const handleLogout = () => {
     if (auth) {
       auth.signOut();
     }
   };
+
+  const role = profile?.role;
 
   if (isUserLoading || !role) {
     return (

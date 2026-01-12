@@ -15,7 +15,7 @@ import {
 import { LogOut, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useRole } from "@/hooks/use-role";
+import { useUser } from "@/firebase";
 import { useFirebase } from "@/firebase";
 
 const pageTitles: { [key: string]: string } = {
@@ -41,14 +41,14 @@ const pageTitles: { [key: string]: string } = {
 
 export function DashboardHeader() {
   const pathname = usePathname();
-  const role = useRole();
+  const { profile } = useUser();
   const { auth } = useFirebase();
   const title = pageTitles[pathname] || "Dashboard";
 
   const getProfileLink = () => {
-    if (!role) return "#";
-    if (role === 'manager') return `/dashboard/manager/settings`;
-    return `/dashboard/${role}/profile`;
+    if (!profile?.role) return "#";
+    if (profile.role === 'manager') return `/dashboard/manager/settings`;
+    return `/dashboard/${profile.role}/profile`;
   }
 
   const handleLogout = () => {
@@ -65,7 +65,6 @@ export function DashboardHeader() {
       </div>
       
       <div className="ml-auto flex items-center gap-4">
-        {/* The RoleSwitcher component is removed to prevent manual role changes */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -74,13 +73,13 @@ export function DashboardHeader() {
               className="overflow-hidden rounded-full"
             >
               <Avatar>
-                <AvatarImage src="https://picsum.photos/seed/user-avatar/100/100" alt="Avatar" />
-                <AvatarFallback>U</AvatarFallback>
+                <AvatarImage src={`https://picsum.photos/seed/${profile?.id || 'user'}/100/100`} alt="Avatar" />
+                <AvatarFallback>{profile?.firstName?.charAt(0) || 'U'}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Mi Cuenta ({role})</DropdownMenuLabel>
+            <DropdownMenuLabel>Mi Cuenta ({profile?.role})</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
                 <Link href={getProfileLink()}><User className="mr-2" /> Perfil</Link>
