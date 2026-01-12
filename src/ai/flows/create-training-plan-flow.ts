@@ -35,7 +35,6 @@ const prompt = ai.definePrompt({
     name: 'createTrainingPlanPrompt',
     input: { schema: TrainingPlanInputSchemaAI },
     output: { schema: TrainingPlanOutputSchema },
-    model: 'googleai/gemini-1.5-flash',
     prompt: `
         Eres un director deportivo y experto en metodología de fútbol base, especializado en la creación de planes de entrenamiento.
         Tu tarea es generar un plan de entrenamiento (mesociclo) completo y coherente basado en los siguientes parámetros:
