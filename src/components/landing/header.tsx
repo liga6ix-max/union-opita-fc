@@ -31,7 +31,7 @@ export function Header() {
         </nav>
         <div className="flex flex-1 items-center justify-end space-x-4">
             <Button asChild>
-                <Link href="/dashboard">Iniciar Sesión</Link>
+                <Link href="/login">Iniciar Sesión</Link>
             </Button>
             <Sheet>
                 <SheetTrigger asChild>
