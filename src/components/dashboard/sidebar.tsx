@@ -19,7 +19,8 @@ import {
   Wallet,
   LogOut,
   User,
-  ListTodo
+  ListTodo,
+  Settings,
 } from "lucide-react";
 
 const managerNav = [
@@ -27,6 +28,7 @@ const managerNav = [
   { href: "/dashboard/manager/athletes", label: "Deportistas", icon: Users },
   { href: "/dashboard/manager/tasks", label: "Tareas", icon: ClipboardList },
   { href: "/dashboard/manager/payments", label: "Pagos", icon: Wallet },
+  { href: "/dashboard/manager/settings", label: "Configuración", icon: Settings },
 ];
 
 const coachNav = [
@@ -66,7 +68,7 @@ export function DashboardSidebar() {
           <SidebarMenuItem key={item.label}>
             <SidebarMenuButton
               asChild
-              isActive={pathname === item.href}
+              isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard/manager' || pathname === '/dashboard/manager')}
               tooltip={item.label}
             >
               <Link href={`${item.href}?role=${role}`}>

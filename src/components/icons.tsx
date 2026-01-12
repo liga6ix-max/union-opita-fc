@@ -1,6 +1,24 @@
 import type { SVGProps } from "react";
+import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 
-export function ClubLogo(props: SVGProps<SVGSVGElement>) {
+export function ClubLogo(props: SVGProps<SVGSVGElement> & { className?: string }) {
+    const searchParams = useSearchParams();
+    const logoUrl = searchParams.get('logo');
+
+    if (logoUrl) {
+        return (
+            <Image
+                src={logoUrl}
+                alt="Club Logo"
+                width={32}
+                height={32}
+                className={props.className}
+                unoptimized
+            />
+        )
+    }
+
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"

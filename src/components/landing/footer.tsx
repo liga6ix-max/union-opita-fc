@@ -1,3 +1,5 @@
+"use client"
+
 import { ClubLogo } from "@/components/icons"
 
 export function Footer() {
