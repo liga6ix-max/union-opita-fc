@@ -155,7 +155,7 @@ export default function AthleteDashboard() {
                             </TableCell>
                             <TableCell>{payment.paymentDate || 'N/A'}</TableCell>
                             <TableCell className="text-right">
-                                {payment.status === 'Pendiente' && (
+                                {(payment.status === 'Pendiente' || payment.status === 'Rechazado') && (
                                     <Dialog open={openDialogId === payment.id} onOpenChange={(isOpen) => setOpenDialogId(isOpen ? payment.id : null)}>
                                         <DialogTrigger asChild>
                                             <Button size="sm">Registrar Pago</Button>
