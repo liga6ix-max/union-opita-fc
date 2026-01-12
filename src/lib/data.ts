@@ -12,6 +12,11 @@ export type PhysicalEvaluation = {
 export type Athlete = {
   id: number;
   name: string;
+  birthDate: string;
+  gender: 'Masculino' | 'Femenino';
+  bloodType: string; // e.g., 'O+', 'A-', etc.
+  documentType: 'TI' | 'CC' | 'RC'; // Tarjeta de Identidad, Cédula, Registro Civil
+  documentNumber: string;
   emergencyContact: string;
   medicalInfo: string;
   team: string;
@@ -99,6 +104,11 @@ export const athletes: Athlete[] = [
   { 
     id: 1, 
     name: 'Juan Pérez', 
+    birthDate: '2007-03-15',
+    gender: 'Masculino',
+    bloodType: 'O+',
+    documentType: 'TI',
+    documentNumber: '1001234567',
     emergencyContact: 'Maria Pérez - 3101234567', 
     medicalInfo: 'Alergia a la penicilina', 
     team: 'Sub-17', 
@@ -112,6 +122,11 @@ export const athletes: Athlete[] = [
   { 
     id: 2, 
     name: 'Ana Gómez', 
+    birthDate: '2008-01-20',
+    gender: 'Femenino',
+    bloodType: 'A+',
+    documentType: 'TI',
+    documentNumber: '1002345678',
     emergencyContact: 'Luis Gómez - 3119876543', 
     medicalInfo: 'Ninguna', 
     team: 'Sub-17', 
@@ -125,6 +140,11 @@ export const athletes: Athlete[] = [
   { 
     id: 3, 
     name: 'Luis Fernández', 
+    birthDate: '2004-09-05',
+    gender: 'Masculino',
+    bloodType: 'B-',
+    documentType: 'CC',
+    documentNumber: '1003456789',
     emergencyContact: 'Elena Fernández - 3125550011', 
     medicalInfo: 'Asma (lleva inhalador)', 
     team: 'Sub-20', 
@@ -137,6 +157,11 @@ export const athletes: Athlete[] = [
   { 
     id: 4, 
     name: 'Maria Jiménez', 
+    birthDate: '2005-11-12',
+    gender: 'Femenino',
+    bloodType: 'AB+',
+    documentType: 'CC',
+    documentNumber: '1004567890',
     emergencyContact: 'Pedro Jiménez - 3134448899', 
     medicalInfo: 'Ninguna', 
     team: 'Sub-20', 
@@ -146,7 +171,12 @@ export const athletes: Athlete[] = [
   },
   { 
     id: 5, 
-    name: 'Pedro Martinez', 
+    name: 'Pedro Martinez',
+    birthDate: '2007-07-25',
+    gender: 'Masculino',
+    bloodType: 'A-',
+    documentType: 'TI',
+    documentNumber: '1005678901',
     emergencyContact: 'Isabel Martinez - 3142223344', 
     medicalInfo: 'Ninguna', 
     team: 'Sub-17', 
@@ -200,3 +230,5 @@ export const trainingEvents: TrainingEvent[] = [
     { id: 4, date: '2024-08-22', time: '16:00', team: 'Sub-20', coachId: 2, title: 'Práctica de Fútbol', location: 'Cancha Principal' },
     { id: 5, date: '2024-08-23', time: '16:00', team: 'Sub-17', coachId: 1, title: 'Estrategia y Balón Parado', location: 'Cancha Principal' },
 ];
+
+    

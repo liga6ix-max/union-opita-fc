@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { MoreHorizontal, ClipboardCheck } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { parseISO } from "date-fns";
 
 
 export default function CoachAthletesPage() {
@@ -17,6 +18,16 @@ export default function CoachAthletesPage() {
     const openDetailsModal = (athlete: Athlete) => {
         setSelectedAthlete(athlete);
         setIsDetailsOpen(true);
+    };
+
+    const getAge = (birthDateString: string) => {
+        const birthDate = parseISO(birthDateString);
+        const age = new Date().getFullYear() - birthDate.getFullYear();
+        const m = new Date().getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && new Date().getDate() < birthDate.getDate())) {
+            return age - 1;
+        }
+        return age;
     };
 
     return (
@@ -32,8 +43,8 @@ export default function CoachAthletesPage() {
                             <TableRow>
                                 <TableHead>Nombre</TableHead>
                                 <TableHead>Equipo</TableHead>
+                                <TableHead>Edad</TableHead>
                                 <TableHead>Contacto de Emergencia</TableHead>
-                                <TableHead>Info. Médica</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -42,8 +53,8 @@ export default function CoachAthletesPage() {
                                 <TableRow key={athlete.id}>
                                     <TableCell className="font-medium">{athlete.name}</TableCell>
                                     <TableCell>{athlete.team}</TableCell>
+                                    <TableCell>{getAge(athlete.birthDate)}</TableCell>
                                     <TableCell>{athlete.emergencyContact}</TableCell>
-                                    <TableCell>{athlete.medicalInfo || 'N/A'}</TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -110,3 +121,5 @@ export default function CoachAthletesPage() {
         </>
     )
 }
+
+    
