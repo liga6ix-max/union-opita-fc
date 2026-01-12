@@ -63,6 +63,7 @@ export default function AthleteDashboard() {
 
   const onSubmit = (data: PaymentFormValues, month: string) => {
     console.log(`Pago registrado para ${month}:`, data);
+    // Here you would typically update the payment status to 'En Verificación' in your database
     toast({
         title: "¡Registro de Pago Enviado!",
         description: `Tu pago para ${month} ha sido enviado para verificación.`,
@@ -194,7 +195,7 @@ export default function AthleteDashboard() {
                                                                     )}
                                                                     >
                                                                     {field.value ? (
-                                                                        format(field.value, "PPP")
+                                                                        format(field.value, "PPP", { locale: es })
                                                                     ) : (
                                                                         <span>Elige una fecha</span>
                                                                     )}
@@ -211,6 +212,7 @@ export default function AthleteDashboard() {
                                                                     date > new Date() || date < new Date("1900-01-01")
                                                                     }
                                                                     initialFocus
+                                                                    locale={es}
                                                                 />
                                                                 </PopoverContent>
                                                             </Popover>
@@ -249,3 +251,5 @@ export default function AthleteDashboard() {
     </div>
   );
 }
+
+    
