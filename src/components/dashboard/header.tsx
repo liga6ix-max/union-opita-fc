@@ -30,6 +30,7 @@ const pageTitles: { [key: string]: string } = {
   "/dashboard/coach/athletes": "Mis Deportistas",
   "/dashboard/coach/tasks": "Mis Tareas",
   "/dashboard/coach/planning": "Mi Planificación",
+  "/dashboard/coach/attendance": "Registro de Asistencia",
   "/dashboard/coach/profile": "Mi Perfil",
   "/dashboard/athlete": "Mis Pagos",
   "/dashboard/athlete/profile": "Mi Perfil",
