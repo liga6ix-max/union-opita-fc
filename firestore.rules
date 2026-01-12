@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -14,7 +15,7 @@ service cloud.firestore {
      * `/clubs/{clubId}/athletes/{athleteId}`. This structure allows for secure, targeted queries.
      *
      * Key Security Decisions:
-     * - Global listing of users and clubs is disabled to prevent data enumeration.
+     * - Global listing of users and clubs is disabled to prevent data enumeration, except for managers.
      * - Access to any resource under `/clubs/{clubId}` requires the requesting user to be a verified
      *   member of that club. This is checked by reading the `clubId` from the user's own profile.
      * - Admins and Managers have elevated privileges for managing club data.
@@ -72,7 +73,8 @@ service cloud.firestore {
      * Determines if the user has a 'manager' or 'admin' role within the specified club.
      */
     function isClubManager(clubId) {
-      return isClubMember(clubId) && getUserData().role in ['admin', 'manager'];
+      let userData = getUserData();
+      return isClubMember(clubId) && userData.role in ['admin', 'manager'];
     }
 
     /**
@@ -87,6 +89,14 @@ service cloud.firestore {
      */
     function isClubStaff(clubId) {
       return isClubMember(clubId) && getUserData().role in ['admin', 'manager', 'coach'];
+    }
+    
+    /**
+     * Checks if the user is a manager or admin of ANY club. Used for listing pending users.
+     */
+    function isAnyManager() {
+        let userData = getUserData();
+        return isSignedIn() && userData.role in ['admin', 'manager'];
     }
 
     /**
@@ -123,20 +133,20 @@ service cloud.firestore {
     /**
      * @description Manages user profiles. Users can manage their own profile. For privacy,
      *              users can only see other profiles if they belong to the same club.
-     *              Global listing of users is forbidden.
+     *              Listing users is restricted to managers/admins for approval purposes.
      * @path /users/{userId}
      * @allow (create) A new user signing up creates their own user document.
      * @allow (get) A manager from 'club-123' views the profile of a coach from 'club-123'.
-     * @deny (list) An attacker attempts to download a list of all users in the system.
+     * @allow (list) A manager lists all users with a 'pending' status for approval.
      * @deny (get) A user from 'club-abc' attempts to read a user profile from 'club-xyz'.
      * @principle Enforces document ownership and shared access within a closed group (a club).
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isMemberOfSameClubAsTarget(userId);
-      allow list: if false;
+      allow list: if isAnyManager();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isOwner(userId) && resource != null && request.resource.data.id == resource.data.id;
-      allow delete: if isOwner(userId) && resource != null;
+      allow delete: if isOwner(userId) || isClubManager(getUserData().clubId);
     }
 
     /**
@@ -211,3 +221,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
