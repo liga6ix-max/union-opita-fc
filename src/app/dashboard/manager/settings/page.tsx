@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -26,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import initialClubConfig from "@/lib/club-config.json";
+import { coaches as initialCoaches, type Coach } from "@/lib/data";
 
 const bankAccountSchema = z.object({
     bankName: z.string().min(1, "El nombre del banco es requerido."),
@@ -65,8 +67,9 @@ export default function ManagerSettingsPage() {
   
   // We use a local state that is initialized from the JSON file.
   const [clubConfig, setClubConfig] = useState(initialClubConfig);
+  const [coaches, setCoaches] = useState<Coach[]>(initialCoaches);
 
-  const form = useForm<BankAccountFormValues>({
+  const bankAccountForm = useForm<BankAccountFormValues>({
     resolver: zodResolver(bankAccountSchema),
     defaultValues: clubConfig.bankAccount,
   });
@@ -99,6 +102,22 @@ export default function ManagerSettingsPage() {
         description: "La información de la cuenta ha sido actualizada (simulado).",
     });
   };
+
+  const handleSalaryChange = (coachId: number, salary: string) => {
+    const newCoaches = coaches.map(coach => 
+        coach.id === coachId ? { ...coach, salary: parseInt(salary, 10) || 0 } : coach
+    );
+    setCoaches(newCoaches);
+  };
+
+  const handleSaveSalaries = () => {
+    console.log("Salarios guardados (simulado):", coaches);
+    toast({
+        title: "¡Salarios Guardados!",
+        description: "Los salarios de los entrenadores han sido actualizados (simulado)."
+    });
+  };
+
 
   return (
     <div className="space-y-8">
@@ -137,10 +156,10 @@ export default function ManagerSettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onBankAccountSubmit)} className="space-y-6">
+           <Form {...bankAccountForm}>
+            <form onSubmit={bankAccountForm.handleSubmit(onBankAccountSubmit)} className="space-y-6">
               <FormField
-                control={form.control}
+                control={bankAccountForm.control}
                 name="bankName"
                 render={({ field }) => (
                   <FormItem>
@@ -153,7 +172,7 @@ export default function ManagerSettingsPage() {
                 )}
               />
               <FormField
-                control={form.control}
+                control={bankAccountForm.control}
                 name="accountType"
                 render={({ field }) => (
                   <FormItem>
@@ -166,7 +185,7 @@ export default function ManagerSettingsPage() {
                 )}
               />
                <FormField
-                control={form.control}
+                control={bankAccountForm.control}
                 name="accountNumber"
                 render={({ field }) => (
                   <FormItem>
@@ -179,7 +198,7 @@ export default function ManagerSettingsPage() {
                 )}
               />
                <FormField
-                control={form.control}
+                control={bankAccountForm.control}
                 name="accountHolder"
                 render={({ field }) => (
                   <FormItem>
@@ -194,6 +213,36 @@ export default function ManagerSettingsPage() {
               <Button type="submit">Guardar Datos Bancarios</Button>
             </form>
           </Form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Gestión de Salarios de Entrenadores</CardTitle>
+          <CardDescription>
+            Define la remuneración mensual para cada entrenador.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {coaches.map(coach => (
+              <div key={coach.id} className="flex items-center justify-between">
+                <Label htmlFor={`salary-${coach.id}`}>{coach.name}</Label>
+                <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">COP</span>
+                    <Input
+                        id={`salary-${coach.id}`}
+                        type="number"
+                        value={coach.salary}
+                        onChange={(e) => handleSalaryChange(coach.id, e.target.value)}
+                        className="w-40"
+                        placeholder="0"
+                    />
+                </div>
+              </div>
+            ))}
+          </div>
+           <Button onClick={handleSaveSalaries} className="mt-6">Guardar Salarios</Button>
         </CardContent>
       </Card>
     </div>

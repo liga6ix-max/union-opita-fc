@@ -1,16 +1,21 @@
+
 import { athletes, tasks, coaches } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, ListTodo } from "lucide-react";
+import { Users, ListTodo, Wallet } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 // Assuming coach ID 1 is logged in for this demo
 const currentCoachId = 1;
-const assignedAthletesCount = athletes.length; // Simplified for demo
+const assignedAthletesCount = athletes.filter(a => a.coachId === currentCoachId).length;
 const pendingTasksCount = tasks.filter(t => t.assignedTo === currentCoachId && t.status !== 'Completada').length;
 const coachTasks = tasks.filter(t => t.assignedTo === currentCoachId);
+const coach = coaches.find(c => c.id === currentCoachId);
 
+const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
+}
 
 export default function CoachDashboard() {
   return (
@@ -34,6 +39,16 @@ export default function CoachDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{pendingTasksCount}</div>
             <p className="text-xs text-muted-foreground">Tareas por completar</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Salario Mensual</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{coach ? formatCurrency(coach.salary) : 'N/A'}</div>
+            <p className="text-xs text-muted-foreground">Remuneración asignada</p>
           </CardContent>
         </Card>
       </div>

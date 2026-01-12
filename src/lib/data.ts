@@ -28,6 +28,7 @@ export type Athlete = {
 export type Coach = {
   id: number;
   name:string;
+  salary: number;
 };
 
 export type TaskStatus = 'Pendiente' | 'En Progreso' | 'Completada';
@@ -83,8 +84,8 @@ export type TrainingEvent = {
 
 
 export const coaches: Coach[] = [
-  { id: 1, name: 'Carlos Rodriguez' },
-  { id: 2, name: 'Sofia Vargas' },
+  { id: 1, name: 'Carlos Rodriguez', salary: 1800000 },
+  { id: 2, name: 'Sofia Vargas', salary: 1800000 },
 ];
 
 const defaultTrainingPlan = {
