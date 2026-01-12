@@ -1,0 +1,46 @@
+{
+  "hero": {
+    "title": "Unión Opita FC Rivera",
+    "subtitle": "Forjando campeones con disciplina, pasión y trabajo en equipo.",
+    "imageUrl": "https://images.unsplash.com/photo-1487466365202-1afdb86c764e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzb2NjZXIlMjBmaWVsZHxlbnwwfHx8fDE3NjgwODgxNDl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+    "imageHint": "soccer field"
+  },
+  "events": {
+    "title": "Próximos Eventos",
+    "items": [
+      {
+        "title": "Torneo Intermunicipal",
+        "date": "25 de Agosto, 2024",
+        "description": "Participa en el torneo más grande de la región. Demuestra tu talento y lleva a tu equipo a la victoria.",
+        "imageUrl": "https://images.unsplash.com/photo-1714623431949-7d0afab64ef2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzb2NjZXIlMjB0b3VybmFtZW50fGVufDB8fHx8MTc2ODA4ODE0OXww&ixlib=rb-4.1.0&q=80&w=1080",
+        "imageHint": "soccer tournament"
+      },
+      {
+        "title": "Convocatorias Abiertas",
+        "date": "Todo Septiembre, 2024",
+        "description": "Buscamos nuevos talentos para todas nuestras categorías. ¡Es tu oportunidad de unirte a la familia Opita FC!",
+        "imageUrl": "https://images.unsplash.com/photo-1606925797300-0b35e9d1794e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxzb2NjZXIlMjBwbGF5ZXJzfGVufDB8fHx8MTc2ODA4ODE0OXww&ixlib=rb-4.1.0&q=80&w=1080",
+        "imageHint": "soccer players"
+      }
+    ]
+  },
+  "news": {
+    "title": "Últimas Noticias",
+    "items": [
+      {
+        "title": "Nuevo Uniforme 2024",
+        "date": "15 de Julio, 2024",
+        "description": "Presentamos con orgullo nuestro nuevo uniforme, inspirado en los colores y la pasión de nuestra tierra.",
+        "imageUrl": "https://images.unsplash.com/photo-1552066379-e7bfd22155c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxzb2NjZXIlMjBqZXJzZXl8ZW58MHx8fHwxNzY4MDg4MTQ5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+        "imageHint": "soccer jersey"
+      },
+      {
+        "title": "Juan Pérez convocado a la selección regional",
+        "date": "10 de Julio, 2024",
+        "description": "Nuestro talentoso mediocampista ha sido convocado para representar a la región en el próximo campeonato nacional.",
+        "imageUrl": "https://images.unsplash.com/photo-1641280173256-0ac1b2f4cd78?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8c29jY2VyJTIwcGxheWVyfGVufDB8fHx8MTc2ODA4ODE0OXww&ixlib=rb-4.1.0&q=80&w=1080",
+        "imageHint": "soccer player"
+      }
+    ]
+  }
+}

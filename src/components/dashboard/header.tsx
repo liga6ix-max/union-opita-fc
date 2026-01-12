@@ -19,6 +19,8 @@ import { RoleSwitcher } from "./role-switcher";
 
 const pageTitles: { [key: string]: string } = {
   "/dashboard/manager": "Resumen del Gerente",
+  "/dashboard/manager/landing": "Gestión Página de Inicio",
+  "/dashboard/manager/settings": "Configuración del Club",
   "/dashboard/coach": "Resumen del Entrenador",
   "/dashboard/coach/athletes": "Mis Deportistas",
   "/dashboard/coach/tasks": "Mis Tareas",

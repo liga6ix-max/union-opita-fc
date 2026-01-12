@@ -21,6 +21,7 @@ import {
   User,
   ListTodo,
   Settings,
+  Image as ImageIcon,
 } from "lucide-react";
 
 const managerNav = [
@@ -28,6 +29,7 @@ const managerNav = [
   { href: "/dashboard/manager/athletes", label: "Deportistas", icon: Users },
   { href: "/dashboard/manager/tasks", label: "Tareas", icon: ClipboardList },
   { href: "/dashboard/manager/payments", label: "Pagos", icon: Wallet },
+  { href: "/dashboard/manager/landing", label: "Página Inicio", icon: ImageIcon },
   { href: "/dashboard/manager/settings", label: "Configuración", icon: Settings },
 ];
 
