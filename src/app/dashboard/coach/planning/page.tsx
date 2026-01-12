@@ -2,7 +2,6 @@
 'use client';
 
 import { useState } from 'react';
-import { microcycles, coaches, type Microcycle, type MicrocycleMethodology } from '@/lib/data';
 import {
   Card,
   CardContent,
@@ -11,7 +10,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Printer } from 'lucide-react';
+import { Printer, Loader2 } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -27,10 +26,10 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
-// Asumimos que el entrenador con ID 1 ha iniciado sesión
-const currentCoachId = 1;
-const coachCycles = microcycles.filter((cycle) => cycle.coachId === currentCoachId);
+type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica';
 
 const methodologyLabels: Record<MicrocycleMethodology, string> = {
     tecnificacion: 'Tecnificación (4-7 años)',
@@ -39,8 +38,16 @@ const methodologyLabels: Record<MicrocycleMethodology, string> = {
 };
 
 export default function CoachPlanningPage() {
-  const [selectedCycle, setSelectedCycle] = useState<Microcycle | null>(null);
+  const { profile, firestore, isUserLoading } = useUser();
+  const [selectedCycle, setSelectedCycle] = useState<any | null>(null);
   const [isPrintViewOpen, setIsPrintViewOpen] = useState(false);
+
+  const microcyclesQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId || !profile?.id) return null;
+    return query(collection(firestore, `clubs/${profile.clubId}/microcycles`), where("coachId", "==", profile.id));
+  }, [firestore, profile?.clubId, profile?.id]);
+
+  const { data: coachCycles, isLoading: cyclesLoading } = useCollection(microcyclesQuery);
 
   const handlePrint = () => {
     setTimeout(() => {
@@ -48,9 +55,13 @@ export default function CoachPlanningPage() {
     }, 100);
   };
   
-  const openPrintModal = (cycle: Microcycle) => {
+  const openPrintModal = (cycle: any) => {
     setSelectedCycle(cycle);
     setIsPrintViewOpen(true);
+  }
+  
+  if (isUserLoading || cyclesLoading) {
+    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
   return (
@@ -63,8 +74,8 @@ export default function CoachPlanningPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-            {coachCycles.length === 0 ? (
-                <p className="text-muted-foreground">Aún no tienes microciclos asignados.</p>
+            {!coachCycles || coachCycles.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">Aún no tienes microciclos asignados.</p>
             ) : (
                 <Accordion type="single" collapsible className="w-full space-y-4">
                 {coachCycles.map((cycle) => (
@@ -74,7 +85,7 @@ export default function CoachPlanningPage() {
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full pr-4 text-left">
                             <div>
                                 <h4 className="font-bold text-lg">{cycle.week} - {cycle.team}</h4>
-                                <Badge variant="secondary" className="mt-2">{methodologyLabels[cycle.methodology]}</Badge>
+                                <Badge variant="secondary" className="mt-2">{methodologyLabels[cycle.methodology as MicrocycleMethodology]}</Badge>
                             </div>
                         </div>
                         </AccordionTrigger>
@@ -86,7 +97,7 @@ export default function CoachPlanningPage() {
                             </div>
                             <div className="space-y-2">
                                 <h5 className="font-semibold">Sesiones</h5>
-                                {cycle.sessions.map((session, index) => (
+                                {cycle.sessions.map((session: any, index: number) => (
                                     <div key={index} className="border-l-2 border-primary pl-4 py-2">
                                         <p className="font-bold">{session.day} - {session.focus} ({session.duration} min)</p>
                                         <p className="text-muted-foreground whitespace-pre-wrap">{session.activities}</p>
@@ -138,7 +149,7 @@ export default function CoachPlanningPage() {
                         <DialogHeader>
                             <DialogTitle className="text-2xl font-bold font-headline">Microciclo: {selectedCycle.week}</DialogTitle>
                             <DialogDescription>
-                                Equipo: {selectedCycle.team} | Metodología: {methodologyLabels[selectedCycle.methodology]}
+                                Equipo: {selectedCycle.team} | Metodología: {methodologyLabels[selectedCycle.methodology as MicrocycleMethodology]}
                             </DialogDescription>
                         </DialogHeader>
                         <div className="my-6 space-y-6">
@@ -149,7 +160,7 @@ export default function CoachPlanningPage() {
                             <div>
                                 <h3 className="font-semibold text-lg mb-2">Plan de Sesiones</h3>
                                 <div className="space-y-4">
-                                {selectedCycle.sessions.map((session, index) => (
+                                {selectedCycle.sessions.map((session: any, index: number) => (
                                     <div key={index} className="border-t pt-4">
                                         <div className="flex justify-between items-baseline">
                                             <h4 className="font-bold text-md">{session.day} - {session.focus}</h4>

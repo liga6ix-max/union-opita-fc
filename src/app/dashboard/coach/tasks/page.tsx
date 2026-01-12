@@ -2,12 +2,11 @@
 'use client';
 
 import { useState } from 'react';
-import { tasks, coaches, type Task, type TaskStatus } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,10 +25,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
 
-// Asumiendo que el entrenador con ID 1 ha iniciado sesión
-const currentCoachId = 1;
-const coachTasks = tasks.filter((task) => task.assignedTo === currentCoachId);
+type TaskStatus = 'Pendiente' | 'En Progreso' | 'Completada';
 
 const statusBadgeVariant: Record<TaskStatus, "default" | "secondary" | "destructive"> = {
     'Completada': 'default',
@@ -39,25 +38,43 @@ const statusBadgeVariant: Record<TaskStatus, "default" | "secondary" | "destruct
 
 export default function CoachTasksPage() {
   const { toast } = useToast();
-  const [taskList, setTaskList] = useState<Task[]>(coachTasks);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const { profile, firestore, isUserLoading } = useUser();
+  const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  const handleStatusChange = (taskId: number, newStatus: TaskStatus) => {
-    setTaskList((prevTasks) =>
-      prevTasks.map((task) =>
-        task.id === taskId ? { ...task, status: newStatus } : task
-      )
-    );
-    toast({
-        title: '¡Estado de la Tarea Actualizado!',
-        description: `La tarea ha sido marcada como "${newStatus}".`,
-    })
+  const tasksQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId || !profile.id) return null;
+    return query(collection(firestore, `clubs/${profile.clubId}/tasks`), where("assigneeId", "==", profile.id));
+  }, [firestore, profile?.clubId, profile?.id]);
+
+  const { data: taskList, isLoading: tasksLoading } = useCollection(tasksQuery);
+
+  const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
+    if (!firestore || !profile?.clubId) return;
+    const taskRef = doc(firestore, `clubs/${profile.clubId}/tasks`, taskId);
+    try {
+        await updateDoc(taskRef, { status: newStatus });
+        toast({
+            title: '¡Estado de la Tarea Actualizado!',
+            description: `La tarea ha sido marcada como "${newStatus}".`,
+        });
+    } catch(e) {
+        console.error("Error updating task status:", e);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "No se pudo actualizar el estado de la tarea."
+        })
+    }
   };
 
-  const openDetailsModal = (task: Task) => {
+  const openDetailsModal = (task: any) => {
     setSelectedTask(task);
     setIsDetailsOpen(true);
+  }
+  
+  if (isUserLoading || tasksLoading) {
+      return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
   return (
@@ -80,12 +97,12 @@ export default function CoachTasksPage() {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {taskList.map((task) => (
+                {taskList && taskList.map((task) => (
                 <TableRow key={task.id}>
-                    <TableCell className="font-medium">{task.title}</TableCell>
-                    <TableCell>{task.deadline}</TableCell>
+                    <TableCell className="font-medium">{task.description}</TableCell>
+                    <TableCell>{task.dueDate}</TableCell>
                     <TableCell>
-                    <Badge variant={statusBadgeVariant[task.status]}>
+                    <Badge variant={statusBadgeVariant[task.status as TaskStatus]}>
                         {task.status}
                     </Badge>
                     </TableCell>
@@ -120,13 +137,16 @@ export default function CoachTasksPage() {
                 ))}
             </TableBody>
             </Table>
+             {(!taskList || taskList.length === 0) && (
+                <p className="text-center py-8 text-muted-foreground">No tienes tareas asignadas.</p>
+            )}
         </CardContent>
         </Card>
 
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>{selectedTask?.title}</DialogTitle>
+                    <DialogTitle>{selectedTask?.title || "Detalle de la tarea"}</DialogTitle>
                 </DialogHeader>
                 <div className="py-4">
                     <p className="text-sm text-muted-foreground">{selectedTask?.description}</p>

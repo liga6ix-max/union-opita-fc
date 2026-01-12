@@ -1,8 +1,9 @@
+
 "use client";
 
-import { athletes, coaches, payments, tasks } from "@/lib/data";
+import { useUser, useCollection, useMemoFirebase } from "@/firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Wallet, ClipboardList, BarChart, LineChart } from "lucide-react";
+import { Users, Wallet, ClipboardList, BarChart, LineChart, Loader2 } from "lucide-react";
 import {
   ChartContainer,
   ChartTooltip,
@@ -11,32 +12,67 @@ import {
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Line, LineChart as RechartsLineChart } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-
-const totalAthletes = athletes.length;
-const totalCoaches = coaches.length;
-const paymentsDue = payments.filter(p => p.status === 'Pendiente').length;
-
-const paymentStatusData = [
-    { status: "Pagado", count: payments.filter(p => p.status === 'Pagado').length, fill: "hsl(var(--chart-1))" },
-    { status: "Pendiente", count: paymentsDue, fill: "hsl(var(--destructive))" },
-]
-
-const enrollmentData = [
-    { month: "Mar", count: 5 },
-    { month: "Abr", count: 8 },
-    { month: "May", count: 12 },
-    { month: "Jun", count: 15 },
-    { month: "Jul", count: 20 },
-    { month: "Ago", count: 22 },
-]
+import { collection, query, where, orderBy, limit } from "firebase/firestore";
 
 const chartConfig = {
-  count: {
-    label: "Cantidad",
-  },
+  count: { label: "Cantidad" },
+  Deportistas: { label: "Deportistas", color: "hsl(var(--chart-1))" },
 };
 
 export default function ManagerDashboard() {
+  const { profile, firestore, isUserLoading } = useUser();
+
+  const athletesQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId) return null;
+    return collection(firestore, `clubs/${profile.clubId}/athletes`);
+  }, [firestore, profile?.clubId]);
+  const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
+
+  const coachesQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId) return null;
+    return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId), where("role", "==", "coach"));
+  }, [firestore, profile?.clubId]);
+  const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
+
+  const paymentsQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId) return null;
+    return collection(firestore, `clubs/${profile.clubId}/payments`);
+  }, [firestore, profile?.clubId]);
+  const { data: payments, isLoading: paymentsLoading } = useCollection(paymentsQuery);
+
+  const tasksQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId) return null;
+    return query(collection(firestore, `clubs/${profile.clubId}/tasks`), orderBy("dueDate", "desc"), limit(4));
+  }, [firestore, profile?.clubId]);
+  const { data: tasks, isLoading: tasksLoading } = useCollection(tasksQuery);
+  
+  const allCoachesQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId) return null;
+    return query(collection(firestore, `users`), where("clubId", "==", profile.clubId));
+  }, [firestore, profile?.clubId]);
+  const { data: allUsers, isLoading: allUsersLoading } = useCollection(allCoachesQuery);
+
+
+  if (isUserLoading || athletesLoading || coachesLoading || paymentsLoading || tasksLoading || allUsersLoading) {
+    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
+
+  const totalAthletes = athletes?.length || 0;
+  const totalCoaches = coaches?.length || 0;
+  const paymentsDue = payments?.filter(p => p.status === 'Pendiente').length || 0;
+
+  const paymentStatusData = [
+      { status: "Pagado", count: payments?.filter(p => p.status === 'Pagado').length || 0, fill: "hsl(var(--chart-1))" },
+      { status: "Pendiente", count: paymentsDue, fill: "hsl(var(--destructive))" },
+  ]
+
+  // This is mock data, would need real historical data for a real chart
+  const enrollmentData = [
+      { month: "Mar", count: 5 }, { month: "Abr", count: 8 },
+      { month: "May", count: 12 }, { month: "Jun", count: 15 },
+      { month: "Jul", count: 20 }, { month: "Ago", count: totalAthletes },
+  ]
+
   return (
     <div className="space-y-8">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -75,21 +111,14 @@ export default function ManagerDashboard() {
       <div className="grid gap-8 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-headline"><BarChart /> Estado de Pagos (Agosto)</CardTitle>
+            <CardTitle className="flex items-center gap-2 font-headline"><BarChart /> Estado de Pagos</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[250px] w-full">
               <RechartsBarChart accessibilityLayer data={paymentStatusData} layout="vertical" margin={{left: 10}}>
                 <CartesianGrid horizontal={false} />
                 <XAxis type="number" dataKey="count" hide />
-                <YAxis
-                    dataKey="status"
-                    type="category"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={10}
-                    width={80}
-                />
+                <YAxis dataKey="status" type="category" tickLine={false} axisLine={false} tickMargin={10} width={80} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="count" radius={5} />
               </RechartsBarChart>
@@ -128,13 +157,13 @@ export default function ManagerDashboard() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {tasks.slice(0, 4).map(task => {
-                        const coach = coaches.find(c => c.id === task.assignedTo);
+                    {tasks && tasks.map(task => {
+                        const coach = allUsers?.find(c => c.id === task.assigneeId);
                         return (
                             <TableRow key={task.id}>
-                                <TableCell className="font-medium">{task.title}</TableCell>
-                                <TableCell>{coach?.name || 'N/A'}</TableCell>
-                                <TableCell>{task.deadline}</TableCell>
+                                <TableCell className="font-medium">{task.description}</TableCell>
+                                <TableCell>{coach?.firstName || 'N/A'}</TableCell>
+                                <TableCell>{task.dueDate}</TableCell>
                                 <TableCell>
                                     <Badge variant={task.status === 'Completada' ? 'default' : task.status === 'En Progreso' ? 'secondary' : 'destructive'}>
                                         {task.status}
@@ -145,6 +174,9 @@ export default function ManagerDashboard() {
                     })}
                 </TableBody>
             </Table>
+             {(!tasks || tasks.length === 0) && (
+                <p className="text-center py-8 text-muted-foreground">No hay tareas recientes.</p>
+            )}
         </CardContent>
       </Card>
     </div>

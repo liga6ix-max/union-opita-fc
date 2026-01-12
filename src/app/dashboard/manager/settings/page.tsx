@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,7 +27,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import initialClubConfig from "@/lib/club-config.json";
-import { coaches as initialCoaches, type Coach } from "@/lib/data";
+import { useUser, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, where, doc, updateDoc, setDoc } from "firebase/firestore";
+import { Loader2 } from "lucide-react";
 
 const bankAccountSchema = z.object({
     bankName: z.string().min(1, "El nombre del banco es requerido."),
@@ -38,72 +40,83 @@ const bankAccountSchema = z.object({
 
 type BankAccountFormValues = z.infer<typeof bankAccountSchema>;
 
-// This component will manage the shared state for the demo.
-function useClubConfig() {
-    const [config, setConfig] = useState(initialClubConfig);
-
-    const updateBankAccount = (data: BankAccountFormValues) => {
-        const newConfig = { ...config, bankAccount: data };
-        setConfig(newConfig);
-        // In a real app, this would be an API call.
-        // For now, we simulate the update and log it.
-        console.log("Datos bancarios guardados (simulado):", newConfig);
-        toast({
-            title: "¡Datos Bancarios Guardados!",
-            description: "La información de la cuenta ha sido actualizada (simulado).",
-        });
-    };
-    
-    return { clubConfig: config, updateBankAccount };
-}
-
-
 export default function ManagerSettingsPage() {
   const router = useRouter();
+  const { profile, firestore, isUserLoading } = useUser();
   const [logoUrl, setLogoUrl] = useState("https://i.ibb.co/bMRLtG3/Unio-n-Opita-FC-logo.png");
   
   // We use a local state that is initialized from the JSON file.
   const [clubConfig, setClubConfig] = useState(initialClubConfig);
-  const [coaches, setCoaches] = useState<Coach[]>(initialCoaches);
+
+  const clubConfigRef = useMemoFirebase(() => {
+      if (!firestore || !profile?.clubId) return null;
+      return doc(firestore, `clubs/${profile.clubId}`);
+  },[firestore, profile?.clubId]);
+
+  const {data: clubData, isLoading: clubLoading} = useCollection(clubConfigRef ? [clubConfigRef] : null);
+
+  const coachesQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId) return null;
+    return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId), where("role", "==", "coach"));
+  }, [firestore, profile?.clubId]);
+  const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
+
+  const [salaries, setSalaries] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (coaches) {
+      const initialSalaries = coaches.reduce((acc, coach) => {
+        // @ts-ignore
+        acc[coach.id] = coach.salary || 0;
+        return acc;
+      }, {} as Record<string, number>);
+      setSalaries(initialSalaries);
+    }
+  }, [coaches]);
+  
+  useEffect(() => {
+    if (clubData) {
+        // @ts-ignore
+        setClubConfig(clubData[0]);
+    }
+  }, [clubData])
 
   const bankAccountForm = useForm<BankAccountFormValues>({
     resolver: zodResolver(bankAccountSchema),
     defaultValues: clubConfig.bankAccount,
   });
+  
+  useEffect(() => {
+      bankAccountForm.reset(clubConfig.bankAccount);
+  }, [clubConfig, bankAccountForm]);
 
-  const handleLogoSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Logo URL guardada (simulado):", logoUrl);
-    toast({
-        title: "Logo actualizado",
-        description: "El escudo del club se ha guardado (simulado).",
-    });
+  const onBankAccountSubmit = async (data: BankAccountFormValues) => {
+    if (!clubConfigRef) return;
+    try {
+        await updateDoc(clubConfigRef, { bankAccount: data });
+        toast({ title: "¡Datos Bancarios Guardados!", description: "La información de la cuenta ha sido actualizada." });
+    } catch(e) {
+        toast({ variant: 'destructive', title: "Error", description: "No se pudieron guardar los datos bancarios." });
+    }
   };
 
-  const onBankAccountSubmit = (data: BankAccountFormValues) => {
-    // This only updates the local state for this component for the demo.
-    setClubConfig(prev => ({...prev, bankAccount: data}));
-    console.log("Datos bancarios guardados:", data);
-    // In a real app, this would save to a database or file.
-    toast({
-        title: "¡Datos Bancarios Guardados!",
-        description: "La información de la cuenta ha sido actualizada (simulado).",
-    });
+  const handleSalaryChange = (coachId: string, salary: string) => {
+    setSalaries(prev => ({...prev, [coachId]: parseInt(salary, 10) || 0}));
   };
 
-  const handleSalaryChange = (coachId: number, salary: string) => {
-    const newCoaches = coaches.map(coach => 
-        coach.id === coachId ? { ...coach, salary: parseInt(salary, 10) || 0 } : coach
-    );
-    setCoaches(newCoaches);
-  };
-
-  const handleSaveSalaries = () => {
-    console.log("Salarios guardados (simulado):", coaches);
-    toast({
-        title: "¡Salarios Guardados!",
-        description: "Los salarios de los entrenadores han sido actualizados (simulado)."
-    });
+  const handleSaveSalaries = async () => {
+    if (!firestore || !coaches) return;
+    try {
+        const batch = coaches.map(coach => {
+            const coachRef = doc(firestore, 'users', coach.id);
+            // @ts-ignore
+            return updateDoc(coachRef, { salary: salaries[coach.id] });
+        });
+        await Promise.all(batch);
+        toast({ title: "¡Salarios Guardados!", description: "Los salarios de los entrenadores han sido actualizados." });
+    } catch(e) {
+        toast({ variant: 'destructive', title: "Error", description: "No se pudieron guardar los salarios." });
+    }
   };
   
   const handleCategoryYearChange = (index: number, field: 'minYear' | 'maxYear', value: string) => {
@@ -112,14 +125,19 @@ export default function ManagerSettingsPage() {
     setClubConfig(prev => ({ ...prev, categories: newCategories }));
   };
 
-  const handleSaveCategories = () => {
-    console.log("Categorías guardadas (simulado):", clubConfig.categories);
-    toast({
-        title: "¡Configuración de Categorías Guardada!",
-        description: "Los rangos de edad para las categorías han sido actualizados (simulado)."
-    });
+  const handleSaveCategories = async () => {
+    if (!clubConfigRef) return;
+    try {
+        await updateDoc(clubConfigRef, { categories: clubConfig.categories });
+        toast({ title: "¡Configuración de Categorías Guardada!", description: "Los rangos de edad para las categorías han sido actualizados." });
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Error", description: "No se pudo guardar la configuración de categorías." });
+    }
   };
-
+  
+  if (isUserLoading || clubLoading || coachesLoading) {
+    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <div className="space-y-8">
@@ -131,21 +149,16 @@ export default function ManagerSettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogoSubmit} className="space-y-4">
+          <form className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="logoUrl">URL del Escudo del Club (PNG)</Label>
-              <Input
-                id="logoUrl"
-                type="url"
-                placeholder="https://example.com/logo.png"
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">
-                La URL debe apuntar a una imagen en formato PNG.
-              </p>
+              <Label htmlFor="clubName">Nombre del Club</Label>
+              <Input id="clubName" value={clubConfig.name} onChange={(e) => setClubConfig(c => ({...c, name: e.target.value}))} />
             </div>
-            <Button type="submit">Guardar Escudo</Button>
+            <Button onClick={async () => {
+                 if (!clubConfigRef) return;
+                 await updateDoc(clubConfigRef, { name: clubConfig.name });
+                 toast({title: "Nombre del club actualizado"})
+            }}>Guardar Nombre</Button>
           </form>
         </CardContent>
       </Card>
@@ -196,58 +209,10 @@ export default function ManagerSettingsPage() {
         <CardContent>
            <Form {...bankAccountForm}>
             <form onSubmit={bankAccountForm.handleSubmit(onBankAccountSubmit)} className="space-y-6">
-              <FormField
-                control={bankAccountForm.control}
-                name="bankName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre del Banco</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ej: Bancolombia" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={bankAccountForm.control}
-                name="accountType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo de Cuenta</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ej: Ahorros" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={bankAccountForm.control}
-                name="accountNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Número de Cuenta</FormLabel>
-                    <FormControl>
-                      <Input placeholder="000-000000-00" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={bankAccountForm.control}
-                name="accountHolder"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Titular de la Cuenta</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ej: Nombre Club NIT 000.000.000-0" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <FormField control={bankAccountForm.control} name="bankName" render={({ field }) => (<FormItem><FormLabel>Nombre del Banco</FormLabel><FormControl><Input placeholder="Ej: Bancolombia" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={bankAccountForm.control} name="accountType" render={({ field }) => (<FormItem><FormLabel>Tipo de Cuenta</FormLabel><FormControl><Input placeholder="Ej: Ahorros" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={bankAccountForm.control} name="accountNumber" render={({ field }) => (<FormItem><FormLabel>Número de Cuenta</FormLabel><FormControl><Input placeholder="000-000000-00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={bankAccountForm.control} name="accountHolder" render={({ field }) => (<FormItem><FormLabel>Titular de la Cuenta</FormLabel><FormControl><Input placeholder="Ej: Nombre Club NIT 000.000.000-0" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <Button type="submit">Guardar Datos Bancarios</Button>
             </form>
           </Form>
@@ -263,15 +228,15 @@ export default function ManagerSettingsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {coaches.map(coach => (
+            {coaches?.map(coach => (
               <div key={coach.id} className="flex items-center justify-between">
-                <Label htmlFor={`salary-${coach.id}`}>{coach.name}</Label>
+                <Label htmlFor={`salary-${coach.id}`}>{coach.firstName} {coach.lastName}</Label>
                 <div className="flex items-center gap-2">
                     <span className="text-muted-foreground">COP</span>
                     <Input
                         id={`salary-${coach.id}`}
                         type="number"
-                        value={coach.salary}
+                        value={salaries[coach.id] || ''}
                         onChange={(e) => handleSalaryChange(coach.id, e.target.value)}
                         className="w-40"
                         placeholder="0"

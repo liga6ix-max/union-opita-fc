@@ -5,10 +5,11 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { microcycles, coaches, type Microcycle, type MicrocycleMethodology } from '@/lib/data';
 import { createTrainingPlan } from '@/ai/flows/create-training-plan-flow';
-import { TrainingPlanInputSchema, type TrainingPlanInput, type TrainingPlanOutput } from '@/ai/schemas/training-plan-schema';
+import { TrainingPlanInputSchema, type TrainingPlanOutput } from '@/ai/schemas/training-plan-schema';
 import clubConfig from '@/lib/club-config.json';
+import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, addDoc } from 'firebase/firestore';
 
 
 import {
@@ -47,13 +48,14 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
 
+type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica';
+
 const methodologyLabels: Record<MicrocycleMethodology, string> = {
     tecnificacion: 'Tecnificación (4-7 años)',
     futbol_medida: 'Fútbol a la Medida (8-11 años)',
     periodizacion_tactica: 'Periodización Táctica (12-20 años)'
 };
 
-// Extend the form schema to include the coach
 const PlanningFormSchema = TrainingPlanInputSchema.extend({
   coachId: z.string().min(1, "Debes asignar un entrenador."),
 });
@@ -63,7 +65,19 @@ type PlanningFormValues = z.infer<typeof PlanningFormSchema>;
 export default function ManagerPlanningPage() {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
-  const [cycleList, setCycleList] = useState<Microcycle[]>(microcycles);
+  const { profile, firestore, isUserLoading } = useUser();
+
+  const cyclesQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId) return null;
+    return collection(firestore, `clubs/${profile.clubId}/microcycles`);
+  }, [firestore, profile?.clubId]);
+  const { data: cycleList, isLoading: cyclesLoading } = useCollection(cyclesQuery);
+  
+  const coachesQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId) return null;
+    return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId), where("role", "==", "coach"));
+  }, [firestore, profile?.clubId]);
+  const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
   const form = useForm<PlanningFormValues>({
     resolver: zodResolver(PlanningFormSchema),
@@ -78,46 +92,49 @@ export default function ManagerPlanningPage() {
 
   const onSubmit = async (data: PlanningFormValues) => {
     setIsGenerating(true);
-    toast({
-        title: 'Generando planificación...',
-        description: 'La IA está creando el plan de entrenamiento. Esto puede tardar un momento.',
-    });
+    toast({ title: 'Generando planificación...', description: 'La IA está creando el plan de entrenamiento. Esto puede tardar un momento.' });
+    if (!firestore || !profile?.clubId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo conectar a la base de datos.'});
+        setIsGenerating(false);
+        return;
+    }
+
     try {
         const generatedPlan: TrainingPlanOutput = await createTrainingPlan(data);
         
-        const newMicrocycles: Microcycle[] = generatedPlan.microcycles.map((micro, index) => ({
-            id: cycleList.length + index + 1,
-            week: micro.week,
-            coachId: parseInt(data.coachId),
-            team: data.category,
-            methodology: data.methodology,
-            mainObjective: micro.mainObjective,
-            sessions: micro.sessions.map(s => ({
-                day: s.day,
-                focus: s.focus,
-                duration: s.duration,
-                activities: s.activities,
-            }))
-        }));
-
-        setCycleList(prev => [...newMicrocycles, ...prev]);
+        const microcyclesCollection = collection(firestore, `clubs/${profile.clubId}/microcycles`);
+        for (const micro of generatedPlan.microcycles) {
+            await addDoc(microcyclesCollection, {
+                week: micro.week,
+                coachId: data.coachId,
+                team: data.category,
+                methodology: data.methodology,
+                mainObjective: micro.mainObjective,
+                sessions: micro.sessions,
+                clubId: profile.clubId,
+            });
+        }
 
         toast({
-            title: '¡Planificación Generada!',
-            description: `Se ha creado un mesociclo de ${data.weeks} semanas para la categoría ${data.category}.`,
+            title: '¡Planificación Generada y Guardada!',
+            description: `Se ha creado y guardado un mesociclo de ${data.weeks} semanas para la categoría ${data.category}.`,
         });
 
     } catch (error) {
-        console.error("Error generating training plan:", error);
+        console.error("Error generating or saving training plan:", error);
         toast({
             variant: 'destructive',
             title: 'Error al generar el plan',
-            description: 'Hubo un problema con la IA. Por favor, inténtalo de nuevo.',
+            description: 'Hubo un problema con la IA o al guardar en la base de datos. Por favor, inténtalo de nuevo.',
         });
     } finally {
         setIsGenerating(false);
     }
   };
+  
+  if (isUserLoading || cyclesLoading || coachesLoading) {
+      return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <div className="space-y-8">
@@ -173,8 +190,8 @@ export default function ManagerPlanningPage() {
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                  {coaches.map(coach => (
-                                    <SelectItem key={coach.id} value={coach.id.toString()}>{coach.name}</SelectItem>
+                                  {coaches?.map(coach => (
+                                    <SelectItem key={coach.id} value={coach.id}>{coach.firstName} {coach.lastName}</SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
@@ -186,8 +203,8 @@ export default function ManagerPlanningPage() {
                     <FormField control={form.control} name="mesocycleObjective" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Objetivo Principal del Mesociclo</FormLabel>
-                            <FormControl><Textarea placeholder="Describe el objetivo principal para este plan (ej: mejorar la salida de balón, aumentar la resistencia aeróbica...)" {...field} /></FormControl>
-                            <FormDescription>La IA usará este objetivo para estructurar los microciclos de forma progresiva.</FormDescription>
+                            <FormControl><Textarea placeholder="Describe el objetivo principal para este plan..." {...field} /></FormControl>
+                            <FormDescription>La IA usará este objetivo para estructurar los microciclos.</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}/>
@@ -201,18 +218,15 @@ export default function ManagerPlanningPage() {
         </CardContent>
       </Card>
 
-
       <Card>
         <CardHeader>
           <CardTitle className="font-headline">Microciclos Planificados</CardTitle>
-          <CardDescription>
-            Estos son los planes de entrenamiento semanales generados y asignados a los entrenadores.
-          </CardDescription>
+          <CardDescription>Planes de entrenamiento semanales generados y asignados.</CardDescription>
         </CardHeader>
         <CardContent>
             <Accordion type="single" collapsible className="w-full space-y-4">
-              {cycleList.map((cycle) => {
-                const coach = coaches.find((c) => c.id === cycle.coachId);
+              {cycleList?.map((cycle) => {
+                const coach = coaches?.find((c) => c.id === cycle.coachId);
                 return (
                  <Card key={cycle.id}>
                     <AccordionItem value={`cycle-${cycle.id}`} className="border-b-0">
@@ -220,7 +234,7 @@ export default function ManagerPlanningPage() {
                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full pr-4">
                                 <div className='text-left'>
                                     <h4 className="font-bold text-lg">{cycle.week} - {cycle.team}</h4>
-                                    <p className='text-sm text-muted-foreground'>Asignado a: {coach?.name || 'N/A'}</p>
+                                    <p className='text-sm text-muted-foreground'>Asignado a: {coach?.firstName || 'N/A'}</p>
                                 </div>
                                 <Badge variant="secondary" className="mt-2 md:mt-0">{methodologyLabels[cycle.methodology]}</Badge>
                            </div>
@@ -233,7 +247,7 @@ export default function ManagerPlanningPage() {
                             </div>
                             <div className="space-y-2">
                                 <h5 className="font-semibold">Sesiones</h5>
-                                {cycle.sessions.map((session, index) => (
+                                {cycle.sessions.map((session:any, index:number) => (
                                     <div key={index} className="border-l-2 border-primary pl-4 py-2">
                                         <p className="font-bold">{session.day} - {session.focus} ({session.duration} min)</p>
                                         <p className="text-muted-foreground whitespace-pre-wrap">{session.activities}</p>
@@ -247,6 +261,9 @@ export default function ManagerPlanningPage() {
                 );
               })}
             </Accordion>
+             {(!cycleList || cycleList.length === 0) && (
+              <p className="text-center py-8 text-muted-foreground">No hay planificaciones generadas.</p>
+            )}
         </CardContent>
       </Card>
     </div>

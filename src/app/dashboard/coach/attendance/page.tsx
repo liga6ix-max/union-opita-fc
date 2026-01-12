@@ -1,8 +1,9 @@
 
 'use client';
 
-import { useState } from 'react';
-import { athletes, trainingEvents, coaches } from '@/lib/data';
+import { useState, useMemo } from 'react';
+import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, doc, setDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import {
   Card,
   CardContent,
@@ -28,38 +29,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { UserCheck } from 'lucide-react';
+import { UserCheck, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-// Asumimos que el entrenador con ID 1 ha iniciado sesión
-const currentCoachId = 1;
-const coach = coaches.find(c => c.id === currentCoachId);
-// Filtramos los eventos de entrenamiento para el coach actual
-const coachEvents = trainingEvents.filter(e => e.coachId === currentCoachId);
-
-type AttendanceRecord = Record<string, Record<number, boolean>>;
+type AttendanceRecord = Record<string, boolean>; // { [athleteId]: isPresent }
 
 export default function CoachAttendancePage() {
   const { toast } = useToast();
-  const [selectedEventId, setSelectedEventId] = useState<string | undefined>(
-    coachEvents[0]?.id.toString()
-  );
+  const { profile, firestore, isUserLoading } = useUser();
+
+  const [selectedEventId, setSelectedEventId] = useState<string | undefined>();
   const [attendance, setAttendance] = useState<AttendanceRecord>({});
 
-  const handleAttendanceChange = (athleteId: number, isPresent: boolean) => {
-    if (!selectedEventId) return;
+  const trainingEventsQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId || !profile.id) return null;
+    return query(collection(firestore, `clubs/${profile.clubId}/trainingEvents`), where("coachId", "==", profile.id));
+  }, [firestore, profile?.clubId, profile?.id]);
+
+  const { data: trainingEvents, isLoading: eventsLoading } = useCollection(trainingEventsQuery);
+
+  const selectedEvent = useMemo(() => {
+    return trainingEvents?.find(e => e.id === selectedEventId);
+  }, [trainingEvents, selectedEventId]);
+
+  const athletesQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId || !selectedEvent?.team) return null;
+    return query(collection(firestore, `clubs/${profile.clubId}/athletes`), where("team", "==", selectedEvent.team));
+  }, [firestore, profile?.clubId, selectedEvent?.team]);
+  
+  const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
+
+  const handleAttendanceChange = (athleteId: string, isPresent: boolean) => {
     setAttendance(prev => ({
         ...prev,
-        [selectedEventId]: {
-            ...prev[selectedEventId],
-            [athleteId]: isPresent
-        }
+        [athleteId]: isPresent
     }));
   };
 
-  const handleSaveAttendance = () => {
-    if(!selectedEventId) {
+  const handleSaveAttendance = async () => {
+    if(!selectedEventId || !firestore || !profile?.clubId) {
         toast({
             variant: "destructive",
             title: "Error",
@@ -67,18 +76,37 @@ export default function CoachAttendancePage() {
         });
         return;
     }
-    const event = coachEvents.find(e => e.id.toString() === selectedEventId);
-    console.log(`Asistencia guardada para el evento ${event?.title}:`, attendance[selectedEventId]);
-    toast({
-        title: "¡Asistencia Guardada!",
-        description: `Se ha registrado la asistencia para la sesión seleccionada.`
-    });
+    
+    const attendanceRef = collection(firestore, `clubs/${profile.clubId}/attendance`);
+    
+    const attendanceData = {
+        eventId: selectedEventId,
+        date: selectedEvent?.date,
+        coachId: profile.id,
+        team: selectedEvent?.team,
+        attendance: attendance,
+        createdAt: serverTimestamp()
+    };
+
+    try {
+        await addDoc(attendanceRef, attendanceData);
+        toast({
+            title: "¡Asistencia Guardada!",
+            description: `Se ha registrado la asistencia para la sesión seleccionada.`
+        });
+    } catch (error) {
+        console.error("Error saving attendance: ", error);
+        toast({
+            variant: 'destructive',
+            title: "Error al guardar",
+            description: "No se pudo guardar la asistencia."
+        })
+    }
   }
 
-  const selectedEvent = coachEvents.find(e => e.id.toString() === selectedEventId);
-  const currentSessionAthletes = selectedEvent 
-    ? athletes.filter(athlete => athlete.team === selectedEvent.team)
-    : [];
+  if (isUserLoading || eventsLoading) {
+    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <div className="space-y-8">
@@ -92,7 +120,7 @@ export default function CoachAttendancePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {coachEvents.length > 0 ? (
+          {trainingEvents && trainingEvents.length > 0 ? (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <Select onValueChange={setSelectedEventId} value={selectedEventId}>
@@ -100,15 +128,15 @@ export default function CoachAttendancePage() {
                     <SelectValue placeholder="Selecciona una sesión de entrenamiento" />
                   </SelectTrigger>
                   <SelectContent>
-                    {coachEvents.map((event) => (
-                      <SelectItem key={event.id} value={event.id.toString()}>
+                    {trainingEvents.map((event) => (
+                      <SelectItem key={event.id} value={event.id}>
                         {format(new Date(event.date), "PPP", { locale: es })} a las {event.time} - {event.team}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Button onClick={handleSaveAttendance} className="w-full sm:w-auto" disabled={!selectedEventId}>
-                    Guardar Asistencia
+                <Button onClick={handleSaveAttendance} className="w-full sm:w-auto" disabled={!selectedEventId || athletesLoading}>
+                    {athletesLoading ? <Loader2 className="animate-spin" /> : "Guardar Asistencia"}
                 </Button>
               </div>
 
@@ -126,20 +154,22 @@ export default function CoachAttendancePage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {currentSessionAthletes.length > 0 ? (
-                                currentSessionAthletes.map(athlete => (
+                            {athletesLoading ? (
+                                <TableRow><TableCell colSpan={2} className="text-center"><Loader2 className="animate-spin" /></TableCell></TableRow>
+                            ) : athletes && athletes.length > 0 ? (
+                                athletes.map(athlete => (
                                     <TableRow key={athlete.id}>
                                         <TableCell className="text-center">
                                             <Checkbox
                                                 id={`athlete-${athlete.id}`}
-                                                checked={attendance[selectedEventId]?.[athlete.id] || false}
+                                                checked={attendance[athlete.id] || false}
                                                 onCheckedChange={(checked) => handleAttendanceChange(athlete.id, !!checked)}
-                                                aria-label={`Marcar asistencia para ${athlete.name}`}
+                                                aria-label={`Marcar asistencia para ${athlete.firstName}`}
                                             />
                                         </TableCell>
                                         <TableCell className="font-medium">
                                             <label htmlFor={`athlete-${athlete.id}`} className="cursor-pointer">
-                                                {athlete.name}
+                                                {athlete.firstName} {athlete.lastName}
                                             </label>
                                         </TableCell>
                                     </TableRow>
@@ -158,7 +188,7 @@ export default function CoachAttendancePage() {
               )}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center">
+            <p className="text-muted-foreground text-center py-8">
               No tienes sesiones de entrenamiento programadas.
             </p>
           )}

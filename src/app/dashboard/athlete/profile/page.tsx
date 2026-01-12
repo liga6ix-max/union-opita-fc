@@ -1,14 +1,13 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format, parseISO } from 'date-fns';
+import { format, parse, isValid, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-import { athletes } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,71 +22,110 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText } from 'lucide-react';
+import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, updateDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
 
 const profileSchema = z.object({
-  name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
+  firstName: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
+  lastName: z.string().min(3, { message: 'El apellido debe tener al menos 3 caracteres.' }),
   birthDate: z.string().min(1, 'La fecha de nacimiento es requerida.'),
   gender: z.enum(['Masculino', 'Femenino'], { required_error: 'El género es requerido.'}),
   bloodType: z.string().min(1, 'El tipo de sangre es requerido.'),
   documentType: z.enum(['TI', 'CC', 'RC'], { required_error: 'El tipo de documento es requerido.'}),
   documentNumber: z.string().min(5, { message: 'El número de documento es requerido.' }),
-  emergencyContact: z.string().min(10, { message: 'El contacto de emergencia es requerido.' }),
-  medicalInfo: z.string().optional(),
+  emergencyContactName: z.string().min(3, { message: 'El nombre del contacto es requerido.' }),
+  emergencyContactPhone: z.string().min(7, { message: 'El teléfono del contacto es requerido.' }),
+  medicalInformation: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-// Asumimos que el deportista con ID 1 ha iniciado sesión
-const currentAthleteId = 1;
-const athleteData = athletes.find((a) => a.id === currentAthleteId);
-
 export default function AthleteProfilePage() {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
-  // We'll use a local state to simulate updates
-  const [athlete, setAthlete] = useState(athleteData);
+  const { user, profile, isUserLoading } = useUser();
+  const { firestore } = useFirebase();
+
+  const athleteDocRef = useMemoFirebase(() => {
+    if (!firestore || !user?.uid || !profile?.clubId) return null;
+    // We assume the athlete document ID is the same as the user's UID for simplicity.
+    // In a more complex scenario, you might need a separate query to find the athlete doc.
+    return doc(firestore, `clubs/${profile.clubId}/athletes`, user.uid);
+  }, [firestore, user?.uid, profile?.clubId]);
+
+  const { data: athleteData, isLoading: isAthleteLoading, error: athleteError } = useDoc(athleteDocRef);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
-      name: athlete?.name || '',
-      birthDate: athlete?.birthDate ? format(parseISO(athlete.birthDate), 'yyyy-MM-dd') : '',
-      gender: athlete?.gender || 'Masculino',
-      bloodType: athlete?.bloodType || '',
-      documentType: athlete?.documentType || 'TI',
-      documentNumber: athlete?.documentNumber || '',
-      emergencyContact: athlete?.emergencyContact || '',
-      medicalInfo: athlete?.medicalInfo || '',
-    },
   });
 
-  const onSubmit = (data: ProfileFormValues) => {
-    // In a real application, you would save this data to Firestore.
-    // For now, we simulate the update by updating the local state.
-    const updatedAthlete = {
-      ...athlete!,
-      ...data,
-      birthDate: data.birthDate // ensure date is a string
-    };
-    setAthlete(updatedAthlete);
+  useEffect(() => {
+    if (athleteData) {
+      form.reset({
+        firstName: athleteData.firstName || '',
+        lastName: athleteData.lastName || '',
+        birthDate: athleteData.birthDate ? format(parseISO(athleteData.birthDate), 'yyyy-MM-dd') : '',
+        gender: athleteData.gender || 'Masculino',
+        bloodType: athleteData.bloodType || '',
+        documentType: athleteData.documentType || 'TI',
+        documentNumber: athleteData.documentNumber || '',
+        emergencyContactName: athleteData.emergencyContactName || '',
+        emergencyContactPhone: athleteData.emergencyContactPhone || '',
+        medicalInformation: athleteData.medicalInformation || '',
+      });
+    } else if (profile) {
+      form.reset({
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        birthDate: '',
+        gender: 'Masculino',
+        bloodType: '',
+        documentType: 'TI',
+        documentNumber: '',
+        emergencyContactName: '',
+        emergencyContactPhone: '',
+        medicalInformation: '',
+      })
+    }
+  }, [athleteData, profile, form]);
+
+  const onSubmit = async (data: ProfileFormValues) => {
+    if (!athleteDocRef) return;
     
-    console.log('Perfil actualizado (simulación):', updatedAthlete);
-    
-    toast({
-      title: '¡Perfil Actualizado!',
-      description: 'Tu información ha sido guardada correctamente.',
-    });
-    setIsEditing(false);
+    try {
+      // The athlete might not have a profile yet, so we use setDoc with merge.
+      await setDoc(athleteDocRef, { ...data, userId: user?.uid, clubId: profile?.clubId }, { merge: true });
+      
+      toast({
+        title: '¡Perfil Actualizado!',
+        description: 'Tu información ha sido guardada correctamente.',
+      });
+      setIsEditing(false);
+    } catch(e) {
+        console.error("Error updating profile:", e);
+        toast({
+            variant: "destructive",
+            title: "Error al actualizar",
+            description: "No se pudo guardar tu perfil. Inténtalo de nuevo."
+        })
+    }
   };
   
-  if (!athlete) {
-    return <div>Deportista no encontrado.</div>;
+  if (isUserLoading || isAthleteLoading) {
+    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
+  }
+  
+  const displayData = athleteData || profile;
+
+  if (!displayData) {
+    return <div>No se encontró el perfil del deportista.</div>;
   }
 
   const getAge = (birthDateString: string) => {
+    if (!birthDateString || !isValid(parseISO(birthDateString))) return null;
     const birthDate = parseISO(birthDateString);
     const age = new Date().getFullYear() - birthDate.getFullYear();
     const m = new Date().getMonth() - birthDate.getMonth();
@@ -96,6 +134,8 @@ export default function AthleteProfilePage() {
     }
     return age;
   };
+  
+  const age = displayData.birthDate ? getAge(displayData.birthDate) : null;
 
   return (
     <div className="space-y-8">
@@ -114,36 +154,28 @@ export default function AthleteProfilePage() {
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormField
-                                control={form.control}
-                                name="name"
-                                render={({ field }) => (
+                            <FormField control={form.control} name="firstName" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Nombre Completo</FormLabel>
-                                    <FormControl>
-                                    <Input placeholder="Tu nombre" {...field} />
-                                    </FormControl>
+                                    <FormLabel>Nombre</FormLabel>
+                                    <FormControl><Input placeholder="Tu nombre" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="birthDate"
-                                render={({ field }) => (
+                            )}/>
+                             <FormField control={form.control} name="lastName" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Apellido</FormLabel>
+                                    <FormControl><Input placeholder="Tu apellido" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                            <FormField control={form.control} name="birthDate" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Fecha de Nacimiento</FormLabel>
-                                    <FormControl>
-                                        <Input type="date" {...field} />
-                                    </FormControl>
+                                    <FormControl><Input type="date" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={form.control}
-                                name="documentType"
-                                render={({ field }) => (
+                            )}/>
+                             <FormField control={form.control} name="documentType" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Tipo de Documento</FormLabel>
                                      <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -158,23 +190,15 @@ export default function AthleteProfilePage() {
                                 </FormItem>
                                 )}
                             />
-                            <FormField
-                                control={form.control}
-                                name="documentNumber"
-                                render={({ field }) => (
+                            <FormField control={form.control} name="documentNumber" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Número de Documento</FormLabel>
-                                    <FormControl>
-                                    <Input placeholder="123456789" {...field} />
-                                    </FormControl>
+                                    <FormControl><Input placeholder="123456789" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                                 )}
                             />
-                             <FormField
-                                control={form.control}
-                                name="gender"
-                                render={({ field }) => (
+                             <FormField control={form.control} name="gender" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Género</FormLabel>
                                      <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -188,66 +212,51 @@ export default function AthleteProfilePage() {
                                 </FormItem>
                                 )}
                             />
-                             <FormField
-                                control={form.control}
-                                name="bloodType"
-                                render={({ field }) => (
+                             <FormField control={form.control} name="bloodType" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Tipo de Sangre</FormLabel>
-                                    <FormControl>
-                                    <Input placeholder="Ej: O+" {...field} />
-                                    </FormControl>
+                                    <FormControl><Input placeholder="Ej: O+" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
-                                )}
-                            />
+                            )}/>
+                            <FormField control={form.control} name="emergencyContactName" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Nombre Contacto Emergencia</FormLabel>
+                                    <FormControl><Input placeholder="Ej: Maria Pérez" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                             <FormField control={form.control} name="emergencyContactPhone" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Teléfono Contacto Emergencia</FormLabel>
+                                    <FormControl><Input placeholder="Ej: 3101234567" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
                         </div>
-                        <FormField
-                            control={form.control}
-                            name="emergencyContact"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Contacto de Emergencia</FormLabel>
-                                <FormControl>
-                                <Input placeholder="Ej: Maria Pérez - 3101234567" {...field} />
-                                </FormControl>
-                                <FormDescription>
-                                    Nombre y número de teléfono de tu contacto de emergencia.
-                                </FormDescription>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="medicalInfo"
-                            render={({ field }) => (
+                        <FormField control={form.control} name="medicalInformation" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Información Médica Relevante</FormLabel>
-                                <FormControl>
-                                <Textarea placeholder="Ej: Alergia a la penicilina, asma..." {...field} />
-                                </FormControl>
-                                <FormDescription>
-                                    Alergias, condiciones médicas importantes, etc.
-                                </FormDescription>
+                                <FormControl><Textarea placeholder="Alergias, condiciones médicas importantes, etc." {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
-                            )}
-                        />
-                        <Button type="submit">Guardar Cambios</Button>
+                        )}/>
+                        <Button type="submit" disabled={form.formState.isSubmitting}>
+                            {form.formState.isSubmitting ? <Loader2 className="animate-spin" /> : "Guardar Cambios"}
+                        </Button>
                     </form>
                 </Form>
                 ) : (
                 <div className="space-y-6">
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
-                        <div className="flex items-center gap-4"><User className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Nombre Completo</p><p className="font-medium">{athlete.name}</p></div></div>
-                        <div className="flex items-center gap-4"><Shield className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Equipo</p><p className="font-medium">{athlete.team}</p></div></div>
-                        <div className="flex items-center gap-4"><Cake className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Fecha de Nacimiento</p><p className="font-medium">{format(parseISO(athlete.birthDate), "d 'de' MMMM, yyyy", { locale: es })} ({getAge(athlete.birthDate)} años)</p></div></div>
-                        <div className="flex items-center gap-4"><FileText className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Documento</p><p className="font-medium">{athlete.documentType} {athlete.documentNumber}</p></div></div>
-                        <div className="flex items-center gap-4"><VenetianMask className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Género</p><p className="font-medium">{athlete.gender}</p></div></div>
-                        <div className="flex items-center gap-4"><Droplets className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Tipo de Sangre</p><p className="font-medium">{athlete.bloodType}</p></div></div>
-                        <div className="flex items-center gap-4 col-span-1 md:col-span-2 lg:col-span-3"><Phone className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Contacto de Emergencia</p><p className="font-medium">{athlete.emergencyContact}</p></div></div>
-                        <div className="flex items-start gap-4 col-span-1 md:col-span-2 lg:col-span-3"><Hospital className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Información Médica</p><p className="font-medium">{athlete.medicalInfo || 'No especificada'}</p></div></div>
+                        <div className="flex items-center gap-4"><User className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Nombre Completo</p><p className="font-medium">{displayData.firstName} {displayData.lastName}</p></div></div>
+                        <div className="flex items-center gap-4"><Shield className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Equipo</p><p className="font-medium">{athleteData?.team || 'No asignado'}</p></div></div>
+                        <div className="flex items-center gap-4"><Cake className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Fecha de Nacimiento</p><p className="font-medium">{displayData.birthDate ? `${format(parseISO(displayData.birthDate), "d 'de' MMMM, yyyy", { locale: es })} (${age} años)` : 'No especificada'}</p></div></div>
+                        <div className="flex items-center gap-4"><FileText className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Documento</p><p className="font-medium">{displayData.documentType} {displayData.documentNumber || 'No especificado'}</p></div></div>
+                        <div className="flex items-center gap-4"><VenetianMask className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Género</p><p className="font-medium">{displayData.gender || 'No especificado'}</p></div></div>
+                        <div className="flex items-center gap-4"><Droplets className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Tipo de Sangre</p><p className="font-medium">{displayData.bloodType || 'No especificado'}</p></div></div>
+                        <div className="flex items-center gap-4 col-span-1 md:col-span-2 lg:col-span-3"><Phone className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Contacto de Emergencia</p><p className="font-medium">{displayData.emergencyContactName && displayData.emergencyContactPhone ? `${displayData.emergencyContactName} - ${displayData.emergencyContactPhone}` : 'No especificado'}</p></div></div>
+                        <div className="flex items-start gap-4 col-span-1 md:col-span-2 lg:col-span-3"><Hospital className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Información Médica</p><p className="font-medium">{displayData.medicalInformation || 'No especificada'}</p></div></div>
                     </div>
                 </div>
                 )}
@@ -257,25 +266,25 @@ export default function AthleteProfilePage() {
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-headline"><CalendarHeart /> Plan de Entrenamiento Anual</CardTitle>
-                <CardDescription>Focos principales para cada trimestre del año.</CardDescription>
+                <CardDescription>Focos principales para cada trimestre del año (Ejemplo).</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
                         <h4 className="font-semibold text-primary">Primer Trimestre (Ene-Mar)</h4>
-                        <p className="text-muted-foreground">{athlete.trainingPlan.q1}</p>
+                        <p className="text-muted-foreground">Fase de Acondicionamiento Físico General y técnica fundamental.</p>
                     </div>
                     <div>
                         <h4 className="font-semibold text-primary">Segundo Trimestre (Abr-Jun)</h4>
-                        <p className="text-muted-foreground">{athlete.trainingPlan.q2}</p>
+                        <p className="text-muted-foreground">Desarrollo de la fuerza específica, velocidad y táctica de equipo.</p>
                     </div>
                     <div>
                         <h4 className="font-semibold text-primary">Tercer Trimestre (Jul-Sep)</h4>
-                        <p className="text-muted-foreground">{athlete.trainingPlan.q3}</p>
+                        <p className="text-muted-foreground">Periodo competitivo, mantenimiento de la forma física y estrategia de partido.</p>
                     </div>
                     <div>
                         <h4 className="font-semibold text-primary">Cuarto Trimestre (Oct-Dic)</h4>
-                        <p className="text-muted-foreground">{athlete.trainingPlan.q4}</p>
+                        <p className="text-muted-foreground">Transición y recuperación activa, trabajo técnico de baja intensidad.</p>
                     </div>
                  </div>
             </CardContent>
@@ -287,38 +296,9 @@ export default function AthleteProfilePage() {
                 <CardDescription>Tu historial de rendimiento físico.</CardDescription>
             </CardHeader>
             <CardContent>
-                {athlete.physicalEvaluations.length > 0 ? (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Fecha</TableHead>
-                                <TableHead>Peso</TableHead>
-                                <TableHead>Altura</TableHead>
-                                <TableHead>Sprint (20m)</TableHead>
-                                <TableHead>Salto Vertical</TableHead>
-                                <TableHead>Resistencia</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {athlete.physicalEvaluations.map((evalItem, index) => (
-                                <TableRow key={index}>
-                                    <TableCell className="font-medium">{evalItem.date}</TableCell>
-                                    <TableCell>{evalItem.weight}</TableCell>
-                                    <TableCell>{evalItem.height}</TableCell>
-                                    <TableCell>{evalItem.sprint_20m}</TableCell>
-                                    <TableCell>{evalItem.vertical_jump}</TableCell>
-                                    <TableCell>{evalItem.endurance_test}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                ) : (
-                    <p className="text-muted-foreground">Aún no tienes evaluaciones físicas registradas.</p>
-                )}
+                <p className="text-muted-foreground">Aún no tienes evaluaciones físicas registradas.</p>
             </CardContent>
         </Card>
     </div>
   );
 }
-
-    

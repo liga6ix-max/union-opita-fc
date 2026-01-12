@@ -1,37 +1,58 @@
 
-
 'use client';
 
 import Link from "next/link";
-import { athletes, coaches, microcycles } from "@/lib/data";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, User, Target, ArrowRight } from "lucide-react";
-
-// Agrupar atletas por equipo
-const teams = athletes.reduce((acc, athlete) => {
-    const teamName = athlete.team;
-    if (teamName) {
-        if (!acc[teamName]) {
-            acc[teamName] = [];
-        }
-        acc[teamName].push(athlete);
-    }
-    return acc;
-}, {} as Record<string, typeof athletes>);
-
+import { Users, User, Target, ArrowRight, Loader2 } from "lucide-react";
+import { useUser, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
 
 export default function ManagerTeamsPage() {
+    const { profile, firestore, isUserLoading } = useUser();
+
+    const athletesQuery = useMemoFirebase(() => {
+        if (!firestore || !profile?.clubId) return null;
+        return collection(firestore, `clubs/${profile.clubId}/athletes`);
+    }, [firestore, profile?.clubId]);
+    const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
+    
+    const coachesQuery = useMemoFirebase(() => {
+        if (!firestore || !profile?.clubId) return null;
+        return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId), where("role", "==", "coach"));
+    }, [firestore, profile?.clubId]);
+    const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
+
+    const microcyclesQuery = useMemoFirebase(() => {
+        if (!firestore || !profile?.clubId) return null;
+        return collection(firestore, `clubs/${profile.clubId}/microcycles`);
+    }, [firestore, profile?.clubId]);
+    const { data: microcycles, isLoading: cyclesLoading } = useCollection(microcyclesQuery);
+
+    const teams = athletes?.reduce((acc, athlete) => {
+        const teamName = athlete.team;
+        if (teamName) {
+            if (!acc[teamName]) {
+                acc[teamName] = [];
+            }
+            acc[teamName].push(athlete);
+        }
+        return acc;
+    }, {} as Record<string, any[]>) || {};
+
+    if (isUserLoading || athletesLoading || coachesLoading || cyclesLoading) {
+        return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    }
     
     const getCoachForTeam = (teamName: string) => {
-        const athleteInTeam = athletes.find(a => a.team === teamName);
-        if (!athleteInTeam) return 'No asignado';
+        const athleteInTeam = athletes?.find(a => a.team === teamName);
+        if (!athleteInTeam || !coaches) return 'No asignado';
         const coach = coaches.find(c => c.id === athleteInTeam.coachId);
-        return coach?.name || 'No asignado';
+        return coach?.firstName || 'No asignado';
     }
 
     const getObjectiveForTeam = (teamName: string) => {
-        const cycle = microcycles.find(m => m.team === teamName);
+        const cycle = microcycles?.find(m => m.team === teamName);
         return cycle?.mainObjective || 'No hay objetivo principal definido.';
     }
 
@@ -74,6 +95,9 @@ export default function ManagerTeamsPage() {
                     </Card>
                 ))}
             </div>
+             {Object.keys(teams).length === 0 && (
+                <p className="text-center py-8 text-muted-foreground">No hay equipos con deportistas asignados.</p>
+            )}
         </div>
     )
 }

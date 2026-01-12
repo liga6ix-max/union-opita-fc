@@ -1,23 +1,46 @@
 
-import { athletes, tasks, coaches } from "@/lib/data";
+'use client';
+
+import { useFirebase, useUser, useMemoFirebase, useCollection } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, ListTodo, Wallet } from "lucide-react";
+import { Users, ListTodo, Wallet, Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
-// Assuming coach ID 1 is logged in for this demo
-const currentCoachId = 1;
-const assignedAthletesCount = athletes.filter(a => a.coachId === currentCoachId).length;
-const pendingTasksCount = tasks.filter(t => t.assignedTo === currentCoachId && t.status !== 'Completada').length;
-const coachTasks = tasks.filter(t => t.assignedTo === currentCoachId);
-const coach = coaches.find(c => c.id === currentCoachId);
-
-const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
-}
+import { collection, query, where } from 'firebase/firestore';
 
 export default function CoachDashboard() {
+  const { firestore, profile } = useUser();
+
+  const athletesQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId) return null;
+    return query(collection(firestore, `clubs/${profile.clubId}/athletes`), where("coachId", "==", profile.id));
+  }, [firestore, profile?.clubId, profile?.id]);
+  
+  const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
+
+  const tasksQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId) return null;
+    return query(collection(firestore, `clubs/${profile.clubId}/tasks`), where("assigneeId", "==", profile.id));
+  }, [firestore, profile?.clubId, profile?.id]);
+
+  const { data: tasks, isLoading: tasksLoading } = useCollection(tasksQuery);
+
+  if (athletesLoading || tasksLoading) {
+    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
+  
+  const assignedAthletesCount = athletes?.length || 0;
+  const pendingTasksCount = tasks?.filter(t => t.status !== 'Completada').length || 0;
+  
+  // Salary is not available on the user profile in this structure
+  // This would need to be fetched from a separate 'staff' or similar collection if needed.
+  // const coachSalary = profile?.salary || 0; 
+
+  const formatCurrency = (value: number) => {
+      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
+  }
+
   return (
     <div className="space-y-8">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -47,8 +70,8 @@ export default function CoachDashboard() {
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{coach ? formatCurrency(coach.salary) : 'N/A'}</div>
-            <p className="text-xs text-muted-foreground">Remuneración asignada</p>
+            <div className="text-2xl font-bold">N/A</div>
+            <p className="text-xs text-muted-foreground">Información no disponible</p>
           </CardContent>
         </Card>
       </div>
@@ -68,10 +91,10 @@ export default function CoachDashboard() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {coachTasks.map(task => (
+                    {tasks && tasks.map(task => (
                         <TableRow key={task.id}>
-                            <TableCell className="font-medium">{task.title}</TableCell>
-                            <TableCell>{task.deadline}</TableCell>
+                            <TableCell className="font-medium">{task.description}</TableCell>
+                            <TableCell>{task.dueDate}</TableCell>
                             <TableCell>
                                 <Badge variant={task.status === 'Completada' ? 'default' : task.status === 'En Progreso' ? 'secondary' : 'destructive'}>
                                     {task.status}
@@ -86,6 +109,9 @@ export default function CoachDashboard() {
                     ))}
                 </TableBody>
             </Table>
+             {(!tasks || tasks.length === 0) && (
+                <p className="text-center py-8 text-muted-foreground">No tienes tareas asignadas.</p>
+            )}
         </CardContent>
       </Card>
     </div>
