@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, XCircle, Clock, Loader2, MoreVertical } from 'lucide-react';
 import { useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,12 +36,28 @@ export default function ApprovalsPage() {
 
         const userDocRef = doc(firestore, 'users', userId);
         const userName = pendingUsers?.find(u => u.id === userId)?.firstName;
+        const userEmail = pendingUsers?.find(u => u.id === userId)?.email;
+        const userLastName = pendingUsers?.find(u => u.id === userId)?.lastName;
+
 
         try {
             await updateDoc(userDocRef, {
                 role: newRole,
                 clubId: profile.clubId, // Assign the clubId upon approval
             });
+
+            if (newRole === 'athlete') {
+                const athleteDocRef = doc(firestore, `clubs/${profile.clubId}/athletes`, userId);
+                await setDoc(athleteDocRef, {
+                    userId: userId,
+                    clubId: profile.clubId,
+                    email: userEmail,
+                    firstName: userName,
+                    lastName: userLastName,
+                    // Initialize other athlete fields as needed
+                }, { merge: true });
+            }
+
             toast({
                 title: `Usuario Aprobado`,
                 description: `${userName} ha sido aprobado como ${newRole}.`,
