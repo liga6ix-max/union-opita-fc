@@ -173,7 +173,7 @@ service cloud.firestore {
       allow get: if isClubMember(clubId) && (isClubStaff(clubId) || isOwner(athleteId));
       allow list: if isClubStaff(clubId);
       allow create: if isClubManager(clubId) && request.resource.data.clubId == clubId;
-      allow update: if (isClubManager(clubId) || isOwner(athleteId)) && resource != null && request.resource.data.clubId == resource.data.clubId;
+      allow update: if (isClubManager(clubId) || isOwner(athleteId)) && resource != null;
       allow delete: if isClubManager(clubId) && resource != null;
     }
 
