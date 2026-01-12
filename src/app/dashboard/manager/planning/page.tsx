@@ -8,6 +8,7 @@ import * as z from 'zod';
 import { microcycles, coaches, type Microcycle, type MicrocycleMethodology } from '@/lib/data';
 import { createTrainingPlan } from '@/ai/flows/create-training-plan-flow';
 import { TrainingPlanInputSchema, type TrainingPlanInput, type TrainingPlanOutput } from '@/ai/schemas/training-plan-schema';
+import clubConfig from '@/lib/club-config.json';
 
 
 import {
@@ -67,7 +68,7 @@ export default function ManagerPlanningPage() {
   const form = useForm<PlanningFormValues>({
     resolver: zodResolver(PlanningFormSchema),
     defaultValues: {
-      category: 'Sub-17',
+      category: clubConfig.categories[0]?.name || 'Juvenil',
       methodology: 'periodizacion_tactica',
       mesocycleObjective: 'Mejorar la transición defensa-ataque y la finalización.',
       weeks: 4,
@@ -134,7 +135,14 @@ export default function ManagerPlanningPage() {
                          <FormField control={form.control} name="category" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Categoría / Equipo</FormLabel>
-                                <FormControl><Input placeholder="Ej: Sub-17" {...field} /></FormControl>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                    {clubConfig.categories.map(cat => (
+                                        <SelectItem key={cat.name} value={cat.name}>{cat.name}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                             </FormItem>
                         )}/>
