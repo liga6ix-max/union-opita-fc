@@ -26,6 +26,7 @@ const pageTitles: { [key: string]: string } = {
   "/dashboard/manager/tasks": "Gestión de Tareas",
   "/dashboard/manager/planning": "Planificación (IA)",
   "/dashboard/manager/payments": "Gestión de Pagos",
+  "/dashboard/manager/approvals": "Aprobación de Usuarios",
   "/dashboard/manager/landing": "Gestión Página de Inicio",
   "/dashboard/manager/settings": "Configuración del Club",
   "/dashboard/coach": "Resumen del Entrenador",
