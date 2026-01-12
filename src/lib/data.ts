@@ -34,6 +34,7 @@ export type Coach = {
   id: number;
   name:string;
   salary: number;
+  team: string;
 };
 
 export type TaskStatus = 'Pendiente' | 'En Progreso' | 'Completada';
@@ -89,8 +90,8 @@ export type TrainingEvent = {
 
 
 export const coaches: Coach[] = [
-  { id: 1, name: 'Carlos Rodriguez', salary: 1800000 },
-  { id: 2, name: 'Sofia Vargas', salary: 1800000 },
+  { id: 1, name: 'Carlos Rodriguez', salary: 1800000, team: 'Juvenil' },
+  { id: 2, name: 'Sofia Vargas', salary: 1800000, team: 'Mayores' },
 ];
 
 const defaultTrainingPlan = {
@@ -216,6 +217,36 @@ export const athletes: Athlete[] = [
     physicalEvaluations: [],
     trainingPlan: defaultTrainingPlan,
   },
+  {
+    id: 8,
+    name: 'Valentina Rojas',
+    birthDate: '2007-08-20',
+    gender: 'Femenino',
+    bloodType: 'A+',
+    documentType: 'TI',
+    documentNumber: '1008901234',
+    emergencyContact: 'Carlos Rojas - 3178887766',
+    medicalInfo: 'Ninguna',
+    team: 'Juvenil',
+    coachId: 1,
+    physicalEvaluations: [],
+    trainingPlan: defaultTrainingPlan,
+  },
+  {
+    id: 9,
+    name: 'David Silva',
+    birthDate: '2012-04-12',
+    gender: 'Masculino',
+    bloodType: 'O+',
+    documentType: 'TI',
+    documentNumber: '1009012345',
+    emergencyContact: 'Laura Silva - 3189998877',
+    medicalInfo: 'Ninguna',
+    team: 'Pre-Juvenil',
+    coachId: 1,
+    physicalEvaluations: [],
+    trainingPlan: defaultTrainingPlan,
+  },
 ];
 
 export const tasks: Task[] = [
@@ -275,5 +306,3 @@ export const trainingEvents: TrainingEvent[] = [
     { id: 4, date: '2024-08-22', time: '16:00', team: 'Infantil', coachId: 2, title: 'Práctica de Fútbol', location: 'Cancha Principal' },
     { id: 5, date: '2024-08-23', time: '16:00', team: 'Promesas', coachId: 1, title: 'Estrategia y Balón Parado', location: 'Cancha Principal' },
 ];
-
-    

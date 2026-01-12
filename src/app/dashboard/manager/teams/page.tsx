@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from "next/link";
@@ -9,10 +10,13 @@ import { Users, User, Target, ArrowRight } from "lucide-react";
 
 // Agrupar atletas por equipo
 const teams = athletes.reduce((acc, athlete) => {
-    if (!acc[athlete.team]) {
-        acc[athlete.team] = [];
+    const teamName = athlete.team;
+    if (teamName) {
+        if (!acc[teamName]) {
+            acc[teamName] = [];
+        }
+        acc[teamName].push(athlete);
     }
-    acc[athlete.team].push(athlete);
     return acc;
 }, {} as Record<string, typeof athletes>);
 

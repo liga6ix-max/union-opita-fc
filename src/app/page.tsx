@@ -33,9 +33,14 @@ export default function Home() {
             <p className="mt-4 max-w-2xl text-lg md:text-xl">
               {hero.subtitle}
             </p>
-            <Button asChild size="lg" className="mt-8 font-headline">
-              <Link href="/dashboard">¡Inscríbete Ahora! <ArrowRight className="ml-2" /></Link>
-            </Button>
+            <div className="mt-8 flex flex-col sm:flex-row gap-4">
+              <Button asChild size="lg" className="font-headline">
+                <Link href="/login">Iniciar Sesión <ArrowRight className="ml-2" /></Link>
+              </Button>
+              <Button asChild size="lg" variant="secondary" className="font-headline">
+                <Link href="/register">¡Inscríbete Ahora!</Link>
+              </Button>
+            </div>
           </div>
         </section>
 

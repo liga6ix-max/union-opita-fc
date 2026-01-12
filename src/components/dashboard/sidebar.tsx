@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from "next/link";
@@ -27,12 +28,14 @@ import {
   UserCheck,
   Shield,
   BarChart3,
+  UserPlus,
 } from "lucide-react";
 
 const managerNav = [
   { href: "/dashboard/manager", label: "Resumen", icon: LayoutDashboard },
   { href: "/dashboard/manager/reports", label: "Reportes", icon: BarChart3 },
   { href: "/dashboard/manager/teams", label: "Equipos", icon: Shield },
+  { href: "/dashboard/manager/approvals", label: "Aprobaciones", icon: UserPlus },
   { href: "/dashboard/manager/tasks", label: "Tareas", icon: ClipboardList },
   { href: "/dashboard/manager/planning", label: "Planificación", icon: CalendarClock },
   { href: "/dashboard/manager/payments", label: "Pagos", icon: Wallet },
