@@ -28,7 +28,7 @@ import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase/provider';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, getDocs, collection, query, limit } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 
 const registerSchema = z.object({
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres.'),
@@ -66,56 +66,29 @@ export default function RegisterPage() {
     }
 
     try {
-        // Check if any user exists to determine if this is the first registration
-        const usersCollectionRef = collection(firestore, 'users');
-        const q = query(usersCollectionRef, limit(1));
-        const existingUsersSnapshot = await getDocs(q);
-        const isFirstUser = existingUsersSnapshot.empty;
-
         const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
         const user = userCredential.user;
 
         await updateProfile(user, { displayName: data.name });
 
-        // Determine role
-        const role = isFirstUser ? 'manager' : 'pending';
-        const clubId = isFirstUser ? 'club-opita-fc' : ''; // Assign a default clubId for the first manager
-
-        // Create user profile in Firestore
+        // All users are created as 'pending' and without a clubId.
+        // The manager will assign the club and role upon approval.
         const userDocRef = doc(firestore, 'users', user.uid);
         await setDoc(userDocRef, {
             id: user.uid,
             firstName: data.name.split(' ')[0] || '',
             lastName: data.name.split(' ').slice(1).join(' ') || '',
             email: user.email,
-            clubId: clubId,
-            role: role,
+            clubId: '', // No club assigned yet
+            role: 'pending', // All new users are pending approval
         });
-
-        // Create the club if it's the first user
-        if (isFirstUser) {
-            const clubDocRef = doc(firestore, 'clubs', clubId);
-            await setDoc(clubDocRef, {
-                id: clubId,
-                name: "Unión Opita FC",
-                nit: "901.943.142-2"
-            });
-        }
-
 
         setIsLoading(false);
 
-        if (isFirstUser) {
-            toast({
-                title: '¡Administrador Creado!',
-                description: 'Te has registrado como el primer administrador. Ahora puedes iniciar sesión.',
-            });
-        } else {
-            toast({
-                title: '¡Registro Enviado!',
-                description: 'Tu solicitud ha sido enviada. Un administrador la revisará y asignará tu rol pronto.',
-            });
-        }
+        toast({
+            title: '¡Registro Enviado!',
+            description: 'Tu solicitud ha sido enviada. Un administrador la revisará y asignará tu rol pronto.',
+        });
         
         router.push('/login');
 
