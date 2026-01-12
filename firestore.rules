@@ -27,7 +27,7 @@ service cloud.firestore {
      * on denormalization. The `clubId` is denormalized onto every document within a club's
      * subcollections. A user's role and their associated `clubId` are stored directly on their
      * `/users/{userId}` document. This allows rules to authorize requests by performing a single,
-     * efficient `get` on the requesting user's own profile document, avoiding slow or impossible
+     * efficient `get` on the requesting user's own profile, avoiding slow or impossible
      * cross-collection queries.
      *
      * Structural Segregation: The separation of public data (`/landingPageContent`) from private
@@ -125,7 +125,7 @@ service cloud.firestore {
     match /clubs/{clubId} {
       allow get: if isClubMember(clubId);
       allow list: if false;
-      allow create: if isSignedIn() && request.resource.data.id == clubId;
+      allow create: if isSignedIn();
       allow update: if isClubManager(clubId) && resource != null;
       allow delete: if isClubAdmin(clubId) && resource != null;
     }
@@ -221,3 +221,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
