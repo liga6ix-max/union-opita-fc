@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -7,47 +6,73 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, Clock } from 'lucide-react';
-
-// Simulando datos de usuarios pendientes de aprobación
-const initialPendingUsers = [
-    { id: 'user1', name: 'Carlos Mendoza', email: 'carlos.m@example.com', role: 'Deportista', status: 'pending' },
-    { id: 'user2', name: 'Laura Paez', email: 'laura.p@example.com', role: 'Entrenador', status: 'pending' },
-    { id: 'user3', name: 'Pedro Pascal', email: 'pedro.p@example.com', role: 'Deportista', status: 'pending' },
-];
+import { CheckCircle, XCircle, Clock, Loader2, MoreVertical } from 'lucide-react';
+import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 type UserStatus = 'pending' | 'approved' | 'rejected';
-
-type PendingUser = {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    status: UserStatus;
-};
+type UserRole = 'athlete' | 'coach';
 
 export default function ApprovalsPage() {
     const { toast } = useToast();
-    const [users, setUsers] = useState<PendingUser[]>(initialPendingUsers);
+    const { profile, firestore, isUserLoading } = useUser();
 
-    const handleApproval = (userId: string, newStatus: 'approved' | 'rejected') => {
-        // En una app real, aquí llamarías a tu backend/API para actualizar el estado del usuario.
-        const updatedUsers = users.map(user =>
-            user.id === userId ? { ...user, status: newStatus } : user
-        );
+    const pendingUsersQuery = useMemoFirebase(() => {
+        if (!firestore || !profile?.clubId) return null;
+        // Query for users that are pending and don't have a clubId yet, or have our clubId but are pending.
+        return query(collection(firestore, 'users'), where('role', '==', 'pending'));
+    }, [firestore, profile?.clubId]);
 
-        // Filtramos para quitar el usuario de la lista de pendientes si ya fue aprobado o rechazado.
-        const filteredUsers = updatedUsers.filter(user => user.status === 'pending');
-        setUsers(filteredUsers);
+    const { data: pendingUsers, isLoading: usersLoading } = useCollection(pendingUsersQuery);
 
-        const userName = users.find(u => u.id === userId)?.name;
-        toast({
-            title: `Usuario ${newStatus === 'approved' ? 'Aprobado' : 'Rechazado'}`,
-            description: `${userName} ha sido ${newStatus === 'approved' ? 'aprobado' : 'rechazado'}.`,
-        });
+    const handleApproval = async (userId: string, newRole: UserRole) => {
+        if (!firestore || !profile?.clubId) return;
+
+        const userDocRef = doc(firestore, 'users', userId);
+        const userName = pendingUsers?.find(u => u.id === userId)?.firstName;
+
+        try {
+            await updateDoc(userDocRef, {
+                role: newRole,
+                clubId: profile.clubId, // Assign the clubId upon approval
+            });
+            toast({
+                title: `Usuario Aprobado`,
+                description: `${userName} ha sido aprobado como ${newRole}.`,
+            });
+        } catch (error) {
+            console.error("Error approving user:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo aprobar al usuario.' });
+        }
     };
     
-    const pendingUsers = users.filter(user => user.status === 'pending');
+    const handleReject = async (userId: string) => {
+        if (!firestore) return;
+        const userDocRef = doc(firestore, 'users', userId);
+        const userName = pendingUsers?.find(u => u.id === userId)?.firstName;
+
+        try {
+            await deleteDoc(userDocRef);
+            toast({
+                title: `Usuario Rechazado`,
+                description: `La solicitud de ${userName} ha sido rechazada y eliminada.`,
+            });
+             // Note: This does not delete the user from Firebase Auth, only Firestore.
+        } catch (error) {
+            console.error("Error rejecting user:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo rechazar al usuario.' });
+        }
+    };
+    
+    if (isUserLoading || usersLoading) {
+        return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    }
 
     return (
         <Card>
@@ -58,13 +83,12 @@ export default function ApprovalsPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                {pendingUsers.length > 0 ? (
+                {pendingUsers && pendingUsers.length > 0 ? (
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Nombre</TableHead>
                                 <TableHead>Email</TableHead>
-                                <TableHead>Rol Solicitado</TableHead>
                                 <TableHead>Estado</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
@@ -72,9 +96,8 @@ export default function ApprovalsPage() {
                         <TableBody>
                             {pendingUsers.map((user) => (
                                 <TableRow key={user.id}>
-                                    <TableCell className="font-medium">{user.name}</TableCell>
+                                    <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
                                     <TableCell>{user.email}</TableCell>
-                                    <TableCell>{user.role}</TableCell>
                                     <TableCell>
                                         <Badge variant="secondary" className="gap-1">
                                             <Clock className="h-3 w-3" />
@@ -84,19 +107,29 @@ export default function ApprovalsPage() {
                                     <TableCell className="text-right space-x-2">
                                         <Button
                                             size="sm"
-                                            variant="outline"
-                                            onClick={() => handleApproval(user.id, 'rejected')}
+                                            variant="ghost"
+                                            className="text-destructive hover:text-destructive"
+                                            onClick={() => handleReject(user.id)}
                                         >
-                                            <XCircle className="mr-2 h-4 w-4 text-destructive" />
+                                            <XCircle className="mr-2 h-4 w-4" />
                                             Rechazar
                                         </Button>
-                                        <Button
-                                            size="sm"
-                                            onClick={() => handleApproval(user.id, 'approved')}
-                                        >
-                                            <CheckCircle className="mr-2 h-4 w-4" />
-                                            Aprobar
-                                        </Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button size="sm">
+                                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                                    Aprobar Como...
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem onClick={() => handleApproval(user.id, 'athlete')}>
+                                                    Deportista
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleApproval(user.id, 'coach')}>
+                                                    Entrenador
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
                             ))}
