@@ -25,7 +25,6 @@ import {
   Image as ImageIcon,
   CalendarClock,
   UserCheck,
-  Calendar as CalendarIcon,
   Shield,
 } from "lucide-react";
 
@@ -34,7 +33,6 @@ const managerNav = [
   { href: "/dashboard/manager/teams", label: "Equipos", icon: Shield },
   { href: "/dashboard/manager/tasks", label: "Tareas", icon: ClipboardList },
   { href: "/dashboard/manager/planning", label: "Planificación", icon: CalendarClock },
-  { href: "/dashboard/manager/calendar", label: "Calendario", icon: CalendarIcon },
   { href: "/dashboard/manager/payments", label: "Pagos", icon: Wallet },
   { href: "/dashboard/manager/landing", label: "Página Inicio", icon: ImageIcon },
   { href: "/dashboard/manager/settings", label: "Configuración", icon: Settings },

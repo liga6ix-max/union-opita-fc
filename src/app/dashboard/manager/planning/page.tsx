@@ -51,22 +51,30 @@ const methodologyLabels: Record<MicrocycleMethodology, string> = {
     periodizacion_tactica: 'Periodización Táctica (12-20 años)'
 };
 
+// Extend the form schema to include the coach
+const PlanningFormSchema = TrainingPlanInputSchema.extend({
+  coachId: z.string().min(1, "Debes asignar un entrenador."),
+});
+type PlanningFormValues = z.infer<typeof PlanningFormSchema>;
+
+
 export default function ManagerPlanningPage() {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [cycleList, setCycleList] = useState<Microcycle[]>(microcycles);
 
-  const form = useForm<TrainingPlanInput>({
-    resolver: zodResolver(TrainingPlanInputSchema),
+  const form = useForm<PlanningFormValues>({
+    resolver: zodResolver(PlanningFormSchema),
     defaultValues: {
       category: 'Sub-17',
       methodology: 'periodizacion_tactica',
       mesocycleObjective: 'Mejorar la transición defensa-ataque y la finalización.',
       weeks: 4,
+      coachId: '',
     },
   });
 
-  const onSubmit = async (data: TrainingPlanInput) => {
+  const onSubmit = async (data: PlanningFormValues) => {
     setIsGenerating(true);
     toast({
         title: 'Generando planificación...',
@@ -75,13 +83,10 @@ export default function ManagerPlanningPage() {
     try {
         const generatedPlan: TrainingPlanOutput = await createTrainingPlan(data);
         
-        // Simular asignación a un entrenador aleatorio para este ejemplo
-        const randomCoach = coaches[Math.floor(Math.random() * coaches.length)];
-
         const newMicrocycles: Microcycle[] = generatedPlan.microcycles.map((micro, index) => ({
             id: cycleList.length + index + 1,
             week: micro.week,
-            coachId: randomCoach.id,
+            coachId: parseInt(data.coachId),
             team: data.category,
             methodology: data.methodology,
             mainObjective: micro.mainObjective,
@@ -118,13 +123,13 @@ export default function ManagerPlanningPage() {
         <CardHeader>
           <CardTitle className="font-headline">Asistente de Planificación (IA)</CardTitle>
           <CardDescription>
-            Genera un plan de entrenamiento completo (mesociclo) para una categoría específica utilizando inteligencia artificial.
+            Genera y asigna un plan de entrenamiento completo (mesociclo) para una categoría y un entrenador específico.
           </CardDescription>
         </CardHeader>
         <CardContent>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                          <FormField control={form.control} name="category" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Categoría / Equipo</FormLabel>
@@ -146,10 +151,24 @@ export default function ManagerPlanningPage() {
                                 <FormMessage />
                             </FormItem>
                         )}/>
-                        <FormField control={form.control} name="weeks" render={({ field }) => (
+                         <FormField control={form.control} name="weeks" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Semanas de Duración</FormLabel>
+                                <FormLabel>Duración (Semanas)</FormLabel>
                                 <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <FormField control={form.control} name="coachId" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Asignar a Entrenador</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  {coaches.map(coach => (
+                                    <SelectItem key={coach.id} value={coach.id.toString()}>{coach.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                                 <FormMessage />
                             </FormItem>
                         )}/>
@@ -166,7 +185,7 @@ export default function ManagerPlanningPage() {
                     
                     <Button type="submit" disabled={isGenerating}>
                         {isGenerating ? <Loader2 className="animate-spin" /> : <BrainCircuit />}
-                        {isGenerating ? 'Generando Plan...' : 'Generar Plan con IA'}
+                        {isGenerating ? 'Generando Plan...' : 'Generar y Asignar Plan'}
                     </Button>
                 </form>
             </Form>
