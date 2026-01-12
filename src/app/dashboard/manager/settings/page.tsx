@@ -117,6 +117,20 @@ export default function ManagerSettingsPage() {
         description: "Los salarios de los entrenadores han sido actualizados (simulado)."
     });
   };
+  
+  const handleCategoryYearChange = (index: number, field: 'minYear' | 'maxYear', value: string) => {
+    const newCategories = [...clubConfig.categories];
+    newCategories[index] = { ...newCategories[index], [field]: parseInt(value) || 0 };
+    setClubConfig(prev => ({ ...prev, categories: newCategories }));
+  };
+
+  const handleSaveCategories = () => {
+    console.log("Categorías guardadas (simulado):", clubConfig.categories);
+    toast({
+        title: "¡Configuración de Categorías Guardada!",
+        description: "Los rangos de edad para las categorías han sido actualizados (simulado)."
+    });
+  };
 
 
   return (
@@ -145,6 +159,42 @@ export default function ManagerSettingsPage() {
             </div>
             <Button type="submit">Guardar Escudo</Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Gestión de Categorías</CardTitle>
+          <CardDescription>
+            Define los rangos de año de nacimiento para la asignación automática de deportistas.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {clubConfig.categories.map((category, index) => (
+              <div key={category.name} className="grid grid-cols-3 items-center gap-4">
+                <Label htmlFor={`category-${index}`} className="font-semibold">{category.name}</Label>
+                <div className="flex items-center gap-2">
+                    <Input
+                        id={`category-min-${index}`}
+                        type="number"
+                        placeholder="Año Mín."
+                        value={category.minYear}
+                        onChange={(e) => handleCategoryYearChange(index, 'minYear', e.target.value)}
+                    />
+                     <span className="text-muted-foreground">-</span>
+                     <Input
+                        id={`category-max-${index}`}
+                        type="number"
+                        placeholder="Año Máx."
+                        value={category.maxYear}
+                        onChange={(e) => handleCategoryYearChange(index, 'maxYear', e.target.value)}
+                    />
+                </div>
+              </div>
+            ))}
+          </div>
+          <Button onClick={handleSaveCategories} className="mt-6">Guardar Categorías</Button>
         </CardContent>
       </Card>
       

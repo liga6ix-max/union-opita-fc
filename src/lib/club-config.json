@@ -11,5 +11,27 @@
     "Sub-20": 60000,
     "Tecnificación": 40000,
     "Fútbol Medida": 45000
-  }
+  },
+  "categories": [
+    {
+      "name": "Sub-17",
+      "minYear": 2007,
+      "maxYear": 2008
+    },
+    {
+      "name": "Sub-20",
+      "minYear": 2004,
+      "maxYear": 2006
+    },
+    {
+      "name": "Tecnificación",
+      "minYear": 2017,
+      "maxYear": 2020
+    },
+    {
+      "name": "Fútbol Medida",
+      "minYear": 2013,
+      "maxYear": 2016
+    }
+  ]
 }
