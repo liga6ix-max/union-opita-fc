@@ -14,7 +14,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { PlusCircle, Calendar as CalendarIcon, Clock, Users, User } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
