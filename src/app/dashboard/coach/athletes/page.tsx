@@ -24,6 +24,7 @@ export default function CoachAthletesPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline">Gestión de Deportistas</CardTitle>
+                    <CardDescription>Consulta la información y el rendimiento de los deportistas a tu cargo.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -51,7 +52,7 @@ export default function CoachAthletesPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent>
-                                                <DropdownMenuItem onClick={() => openDetailsModal(athlete)}>Ver Detalles</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => openDetailsModal(athlete)}>Ver Evaluaciones</DropdownMenuItem>
                                                 <DropdownMenuItem>Editar Información</DropdownMenuItem>
                                                 <DropdownMenuItem>Añadir Evaluación</DropdownMenuItem>
                                             </DropdownMenuContent>
@@ -67,48 +68,41 @@ export default function CoachAthletesPage() {
              <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Detalles de {selectedAthlete?.name}</DialogTitle>
+                        <DialogTitle>Evaluaciones Físicas de {selectedAthlete?.name}</DialogTitle>
                         <DialogDescription>
-                            Información completa del deportista, incluyendo evaluaciones físicas.
+                            Historial de rendimiento físico del deportista.
                         </DialogDescription>
                     </DialogHeader>
                     {selectedAthlete && (
                         <div className="space-y-6 py-4">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 font-headline text-lg"><ClipboardCheck /> Evaluaciones Físicas</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                     {selectedAthlete.physicalEvaluations.length > 0 ? (
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Fecha</TableHead>
-                                                    <TableHead>Peso</TableHead>
-                                                    <TableHead>Altura</TableHead>
-                                                    <TableHead>Sprint (20m)</TableHead>
-                                                    <TableHead>Salto</TableHead>
-                                                    <TableHead>Resistencia</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {selectedAthlete.physicalEvaluations.map((evalItem, index) => (
-                                                    <TableRow key={index}>
-                                                        <TableCell className="font-medium">{evalItem.date}</TableCell>
-                                                        <TableCell>{evalItem.weight}</TableCell>
-                                                        <TableCell>{evalItem.height}</TableCell>
-                                                        <TableCell>{evalItem.sprint_20m}</TableCell>
-                                                        <TableCell>{evalItem.vertical_jump}</TableCell>
-                                                        <TableCell>{evalItem.endurance_test}</TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground">No hay evaluaciones físicas registradas para este deportista.</p>
-                                    )}
-                                </CardContent>
-                            </Card>
+                             {selectedAthlete.physicalEvaluations.length > 0 ? (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Fecha</TableHead>
+                                            <TableHead>Peso</TableHead>
+                                            <TableHead>Altura</TableHead>
+                                            <TableHead>Sprint (20m)</TableHead>
+                                            <TableHead>Salto Vertical</TableHead>
+                                            <TableHead>Resistencia</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {selectedAthlete.physicalEvaluations.map((evalItem, index) => (
+                                            <TableRow key={index}>
+                                                <TableCell className="font-medium">{evalItem.date}</TableCell>
+                                                <TableCell>{evalItem.weight}</TableCell>
+                                                <TableCell>{evalItem.height}</TableCell>
+                                                <TableCell>{evalItem.sprint_20m}</TableCell>
+                                                <TableCell>{evalItem.vertical_jump}</TableCell>
+                                                <TableCell>{evalItem.endurance_test}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <p className="text-sm text-center text-muted-foreground py-8">No hay evaluaciones físicas registradas para este deportista.</p>
+                            )}
                         </div>
                     )}
                 </DialogContent>
