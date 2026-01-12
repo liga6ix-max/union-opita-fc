@@ -56,7 +56,11 @@ export async function createTrainingPlan(input: TrainingPlanInput): Promise<Trai
     ...input,
     methodologyDescription: methodologyDescriptions[input.methodology],
   };
-  return createTrainingPlanFlow(augmentedInput);
+  const result = await createTrainingPlanFlow(augmentedInput);
+  if (!result) {
+    throw new Error("La IA no pudo generar un plan de entrenamiento.");
+  }
+  return result;
 }
 
 
@@ -105,6 +109,7 @@ const createTrainingPlanFlow = ai.defineFlow(
   async (input) => {
     const { output } = await prompt(input);
     if (!output) {
+      // Throwing an error here is better for handling in the calling function.
       throw new Error("La IA no pudo generar un plan de entrenamiento.");
     }
     return output;
