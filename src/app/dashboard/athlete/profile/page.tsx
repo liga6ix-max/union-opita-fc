@@ -42,11 +42,13 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 // Asumimos que el deportista con ID 1 ha iniciado sesión
 const currentAthleteId = 1;
-const athlete = athletes.find((a) => a.id === currentAthleteId);
+const athleteData = athletes.find((a) => a.id === currentAthleteId);
 
 export default function AthleteProfilePage() {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  // We'll use a local state to simulate updates
+  const [athlete, setAthlete] = useState(athleteData);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -63,12 +65,20 @@ export default function AthleteProfilePage() {
   });
 
   const onSubmit = (data: ProfileFormValues) => {
-    console.log('Perfil actualizado:', data);
-    // En una aplicación real, aquí guardarías los datos en la base de datos.
-    // athletes.find(a => a.id === currentAthleteId) = {...athlete, ...data};
+    // In a real application, you would save this data to Firestore.
+    // For now, we simulate the update by updating the local state.
+    const updatedAthlete = {
+      ...athlete!,
+      ...data,
+      birthDate: data.birthDate // ensure date is a string
+    };
+    setAthlete(updatedAthlete);
+    
+    console.log('Perfil actualizado (simulación):', updatedAthlete);
+    
     toast({
       title: '¡Perfil Actualizado!',
-      description: 'Tu información ha sido guardada correctamente (simulación).',
+      description: 'Tu información ha sido guardada correctamente.',
     });
     setIsEditing(false);
   };
