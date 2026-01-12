@@ -82,8 +82,8 @@ export default function AthleteProfilePage() {
     if (!athleteDocRef || !user?.uid || !profile || !firestore) return;
     
     try {
-      // Use setDoc with merge to create or update the athlete's specific profile
-      await setDoc(athleteDocRef, data, { merge: true });
+      // Use updateDoc to update the athlete's specific profile
+      await updateDoc(athleteDocRef, data);
 
       // Also update the main user document with the first and last name
       const userDocRef = doc(firestore, 'users', user.uid);
@@ -295,3 +295,5 @@ export default function AthleteProfilePage() {
     </div>
   );
 }
+
+    
