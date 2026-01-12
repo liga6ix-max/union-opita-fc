@@ -27,7 +27,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const profileSchema = z.object({
   firstName: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
@@ -69,26 +68,26 @@ export default function AthleteProfilePage() {
       firstName: combinedData.firstName || '',
       lastName: combinedData.lastName || '',
       birthDate: combinedData.birthDate ? format(parseISO(combinedData.birthDate), 'yyyy-MM-dd') : '',
-      gender: combinedData.gender || 'Masculino',
+      gender: combinedData.gender || undefined,
       bloodType: combinedData.bloodType || '',
-      documentType: combinedData.documentType || 'TI',
+      documentType: combinedData.documentType || undefined,
       documentNumber: combinedData.documentNumber || '',
       emergencyContactName: combinedData.emergencyContactName || '',
       emergencyContactPhone: combinedData.emergencyContactPhone || '',
       medicalInformation: combinedData.medicalInformation || '',
     });
-  }, [athleteData, profile, form]);
+  }, [athleteData, profile, form, isEditing]);
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!athleteDocRef || !user?.uid || !profile) return;
+    if (!athleteDocRef || !user?.uid || !profile || !firestore) return;
     
     try {
       // Use setDoc with merge to create or update the athlete's specific profile
-      setDocumentNonBlocking(athleteDocRef, data, { merge: true });
+      await setDoc(athleteDocRef, data, { merge: true });
 
       // Also update the main user document with the first and last name
       const userDocRef = doc(firestore, 'users', user.uid);
-      updateDoc(userDocRef, {
+      await updateDoc(userDocRef, {
         firstName: data.firstName,
         lastName: data.lastName
       });
@@ -103,7 +102,7 @@ export default function AthleteProfilePage() {
         toast({
             variant: "destructive",
             title: "Error al actualizar",
-            description: "No se pudo guardar tu perfil. Inténtalo de nuevo."
+            description: "No se pudo guardar tu perfil. Revisa tus permisos e inténtalo de nuevo."
         })
     }
   };
