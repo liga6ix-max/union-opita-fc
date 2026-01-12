@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -37,6 +38,7 @@ const coachNav = [
     { href: "/dashboard/coach", label: "Resumen", icon: LayoutDashboard },
     { href: "/dashboard/coach/athletes", label: "Mis Deportistas", icon: Users },
     { href: "/dashboard/coach/tasks", label: "Mis Tareas", icon: ListTodo },
+    { href: "/dashboard/coach/profile", label: "Mi Perfil", icon: User },
 ];
 
 const athleteNav = [
@@ -70,7 +72,7 @@ export function DashboardSidebar() {
           <SidebarMenuItem key={item.label}>
             <SidebarMenuButton
               asChild
-              isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard/manager' || pathname === '/dashboard/manager')}
+              isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard/manager' || pathname === '/dashboard/manager') && (item.href !== '/dashboard/coach' || pathname === '/dashboard/coach') && (item.href !== '/dashboard/athlete' || pathname === '/dashboard/athlete')}
               tooltip={item.label}
             >
               <Link href={`${item.href}?role=${role}`}>

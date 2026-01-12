@@ -1,3 +1,4 @@
+
 "use client";
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -59,7 +60,7 @@ export function DashboardHeader() {
             <DropdownMenuLabel>Mi Cuenta ({role})</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-                <Link href={`/dashboard/athlete/profile?role=${role}`}><User className="mr-2" /> Perfil</Link>
+                <Link href={`/dashboard/${role}/profile?role=${role}`}><User className="mr-2" /> Perfil</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
