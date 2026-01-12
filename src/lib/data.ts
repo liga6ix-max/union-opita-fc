@@ -1,3 +1,4 @@
+
 export type PhysicalEvaluation = {
   date: string;
   height: string; // cm
@@ -64,6 +65,16 @@ export type Microcycle = {
     duration: number; // in minutes
     activities: string;
   }[];
+};
+
+export type TrainingEvent = {
+  id: number;
+  date: string;
+  time: string;
+  team: string;
+  coachId: number;
+  title: string;
+  location: string;
 };
 
 
@@ -179,4 +190,12 @@ export const microcycles: Microcycle[] = [
       { day: 'Viernes', focus: 'Estrategia', duration: 75, activities: 'Análisis de video del rival. Práctica de balón parado (ofensivo y defensivo). Partido táctico 11vs11.' }
     ]
   }
+];
+
+export const trainingEvents: TrainingEvent[] = [
+    { id: 1, date: '2024-08-19', time: '16:00', team: 'Sub-17', coachId: 1, title: 'Entrenamiento Táctico', location: 'Cancha Principal' },
+    { id: 2, date: '2024-08-20', time: '16:00', team: 'Sub-20', coachId: 2, title: 'Entrenamiento Físico', location: 'Cancha Principal' },
+    { id: 3, date: '2024-08-21', time: '16:00', team: 'Sub-17', coachId: 1, title: 'Entrenamiento Físico/Táctico', location: 'Cancha Principal' },
+    { id: 4, date: '2024-08-22', time: '16:00', team: 'Sub-20', coachId: 2, title: 'Práctica de Fútbol', location: 'Cancha Principal' },
+    { id: 5, date: '2024-08-23', time: '16:00', team: 'Sub-17', coachId: 1, title: 'Estrategia y Balón Parado', location: 'Cancha Principal' },
 ];

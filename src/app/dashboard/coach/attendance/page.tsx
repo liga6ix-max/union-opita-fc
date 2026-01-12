@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { athletes, microcycles, coaches } from '@/lib/data';
+import { athletes, trainingEvents, coaches } from '@/lib/data';
 import {
   Card,
   CardContent,
@@ -29,36 +29,37 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { UserCheck } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 // Asumimos que el entrenador con ID 1 ha iniciado sesión
 const currentCoachId = 1;
 const coach = coaches.find(c => c.id === currentCoachId);
-const coachAthletes = athletes.filter(a => a.coachId === currentCoachId);
-const coachCycle = microcycles.find(c => c.coachId === currentCoachId);
+// Filtramos los eventos de entrenamiento para el coach actual
+const coachEvents = trainingEvents.filter(e => e.coachId === currentCoachId);
 
 type AttendanceRecord = Record<string, Record<number, boolean>>;
 
 export default function CoachAttendancePage() {
   const { toast } = useToast();
-  const [selectedSession, setSelectedSession] = useState<string | undefined>(
-    coachCycle?.sessions[0]?.day
+  const [selectedEventId, setSelectedEventId] = useState<string | undefined>(
+    coachEvents[0]?.id.toString()
   );
-  // Estado para simular el guardado de la asistencia
   const [attendance, setAttendance] = useState<AttendanceRecord>({});
 
   const handleAttendanceChange = (athleteId: number, isPresent: boolean) => {
-    if (!selectedSession) return;
+    if (!selectedEventId) return;
     setAttendance(prev => ({
         ...prev,
-        [selectedSession]: {
-            ...prev[selectedSession],
+        [selectedEventId]: {
+            ...prev[selectedEventId],
             [athleteId]: isPresent
         }
     }));
   };
 
   const handleSaveAttendance = () => {
-    if(!selectedSession) {
+    if(!selectedEventId) {
         toast({
             variant: "destructive",
             title: "Error",
@@ -66,17 +67,18 @@ export default function CoachAttendancePage() {
         });
         return;
     }
-    // En una app real, esto guardaría los datos en la base de datos.
-    console.log(`Asistencia guardada para la sesión de ${selectedSession}:`, attendance[selectedSession]);
+    const event = coachEvents.find(e => e.id.toString() === selectedEventId);
+    console.log(`Asistencia guardada para el evento ${event?.title}:`, attendance[selectedEventId]);
     toast({
         title: "¡Asistencia Guardada!",
-        description: `Se ha registrado la asistencia para la sesión de ${selectedSession}.`
+        description: `Se ha registrado la asistencia para la sesión seleccionada.`
     });
   }
 
-  const currentSessionAthletes = coachAthletes.filter(athlete => 
-    coachCycle?.team === athlete.team
-  );
+  const selectedEvent = coachEvents.find(e => e.id.toString() === selectedEventId);
+  const currentSessionAthletes = selectedEvent 
+    ? athletes.filter(athlete => athlete.team === selectedEvent.team)
+    : [];
 
   return (
     <div className="space-y-8">
@@ -86,34 +88,34 @@ export default function CoachAttendancePage() {
             <UserCheck /> Registro de Asistencia
           </CardTitle>
           <CardDescription>
-            Selecciona una sesión y marca la asistencia de los deportistas.
+            Selecciona una sesión de entrenamiento programada y marca la asistencia.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {coachCycle ? (
+          {coachEvents.length > 0 ? (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <Select onValueChange={setSelectedSession} value={selectedSession}>
-                  <SelectTrigger className="w-full sm:w-[280px]">
+                <Select onValueChange={setSelectedEventId} value={selectedEventId}>
+                  <SelectTrigger className="w-full sm:w-[380px]">
                     <SelectValue placeholder="Selecciona una sesión de entrenamiento" />
                   </SelectTrigger>
                   <SelectContent>
-                    {coachCycle.sessions.map((session, index) => (
-                      <SelectItem key={index} value={session.day}>
-                        {session.day} - {session.focus}
+                    {coachEvents.map((event) => (
+                      <SelectItem key={event.id} value={event.id.toString()}>
+                        {format(new Date(event.date), "PPP", { locale: es })} a las {event.time} - {event.team}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Button onClick={handleSaveAttendance} className="w-full sm:w-auto" disabled={!selectedSession}>
+                <Button onClick={handleSaveAttendance} className="w-full sm:w-auto" disabled={!selectedEventId}>
                     Guardar Asistencia
                 </Button>
               </div>
 
-              {selectedSession && (
+              {selectedEvent && (
                 <div>
                   <h3 className="text-lg font-semibold mb-4">
-                    Deportistas del Equipo: {coachCycle.team}
+                    Deportistas del Equipo: {selectedEvent.team}
                   </h3>
                    <div className="border rounded-lg">
                      <Table>
@@ -130,7 +132,7 @@ export default function CoachAttendancePage() {
                                         <TableCell className="text-center">
                                             <Checkbox
                                                 id={`athlete-${athlete.id}`}
-                                                checked={attendance[selectedSession]?.[athlete.id] || false}
+                                                checked={attendance[selectedEventId]?.[athlete.id] || false}
                                                 onCheckedChange={(checked) => handleAttendanceChange(athlete.id, !!checked)}
                                                 aria-label={`Marcar asistencia para ${athlete.name}`}
                                             />
@@ -157,7 +159,7 @@ export default function CoachAttendancePage() {
             </div>
           ) : (
             <p className="text-muted-foreground text-center">
-              No tienes un microciclo de entrenamiento asignado para esta semana.
+              No tienes sesiones de entrenamiento programadas.
             </p>
           )}
         </CardContent>

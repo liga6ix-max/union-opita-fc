@@ -23,6 +23,7 @@ const pageTitles: { [key: string]: string } = {
   "/dashboard/manager/athletes": "Gestión de Deportistas",
   "/dashboard/manager/tasks": "Gestión de Tareas",
   "/dashboard/manager/planning": "Planificación de Microciclos",
+  "/dashboard/manager/calendar": "Calendario de Entrenamientos",
   "/dashboard/manager/payments": "Gestión de Pagos",
   "/dashboard/manager/landing": "Gestión Página de Inicio",
   "/dashboard/manager/settings": "Configuración del Club",
