@@ -5,6 +5,7 @@ export type Athlete = {
   medicalInfo: string;
   team: string;
   monthlyFee: number;
+  coachId: number;
 };
 
 export type Coach = {
@@ -35,11 +36,11 @@ export const coaches: Coach[] = [
 ];
 
 export const athletes: Athlete[] = [
-  { id: 1, name: 'Juan Pérez', emergencyContact: 'Maria Pérez - 3101234567', medicalInfo: 'Alergia a la penicilina', team: 'Sub-17', monthlyFee: 50000 },
-  { id: 2, name: 'Ana Gómez', emergencyContact: 'Luis Gómez - 3119876543', medicalInfo: 'Ninguna', team: 'Sub-17', monthlyFee: 50000 },
-  { id: 3, name: 'Luis Fernández', emergencyContact: 'Elena Fernández - 3125550011', medicalInfo: 'Asma (lleva inhalador)', team: 'Sub-20', monthlyFee: 60000 },
-  { id: 4, name: 'Maria Jiménez', emergencyContact: 'Pedro Jiménez - 3134448899', medicalInfo: 'Ninguna', team: 'Sub-20', monthlyFee: 60000 },
-  { id: 5, name: 'Pedro Martinez', emergencyContact: 'Isabel Martinez - 3142223344', medicalInfo: 'Ninguna', team: 'Sub-17', monthlyFee: 50000 },
+  { id: 1, name: 'Juan Pérez', emergencyContact: 'Maria Pérez - 3101234567', medicalInfo: 'Alergia a la penicilina', team: 'Sub-17', monthlyFee: 50000, coachId: 1 },
+  { id: 2, name: 'Ana Gómez', emergencyContact: 'Luis Gómez - 3119876543', medicalInfo: 'Ninguna', team: 'Sub-17', monthlyFee: 50000, coachId: 1 },
+  { id: 3, name: 'Luis Fernández', emergencyContact: 'Elena Fernández - 3125550011', medicalInfo: 'Asma (lleva inhalador)', team: 'Sub-20', monthlyFee: 60000, coachId: 2 },
+  { id: 4, name: 'Maria Jiménez', emergencyContact: 'Pedro Jiménez - 3134448899', medicalInfo: 'Ninguna', team: 'Sub-20', monthlyFee: 60000, coachId: 2 },
+  { id: 5, name: 'Pedro Martinez', emergencyContact: 'Isabel Martinez - 3142223344', medicalInfo: 'Ninguna', team: 'Sub-17', monthlyFee: 50000, coachId: 1 },
 ];
 
 export const tasks: Task[] = [

@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 
-import { payments, athletes } from "@/lib/data";
+import { payments, athletes, coaches } from "@/lib/data";
 import clubConfig from "@/lib/club-config.json";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { DollarSign, Banknote, Landmark, User, Hash, Info } from "lucide-react";
+import { DollarSign, Banknote, Landmark, User, Hash, Info, Shield, Trophy } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
@@ -35,6 +35,7 @@ type PaymentFormValues = z.infer<typeof paymentSchema>;
 const currentAthleteId = 1;
 const athlete = athletes.find(a => a.id === currentAthleteId);
 const athletePayments = payments.filter(p => p.athleteId === currentAthleteId);
+const coach = athlete ? coaches.find(c => c.id === athlete.coachId) : undefined;
 
 export default function AthleteDashboard() {
   const { toast } = useToast();
@@ -67,16 +68,38 @@ export default function AthleteDashboard() {
 
   return (
     <div className="space-y-8">
-      <Card className="bg-primary text-primary-foreground">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tu Cuota Mensual</CardTitle>
-            <DollarSign className="h-4 w-4 text-primary-foreground/70" />
-        </CardHeader>
-        <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(athlete.monthlyFee)}</div>
-            <p className="text-xs text-primary-foreground/70">Este es el valor a pagar cada mes.</p>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="bg-primary text-primary-foreground">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Tu Cuota Mensual</CardTitle>
+                <DollarSign className="h-4 w-4 text-primary-foreground/70" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{formatCurrency(athlete.monthlyFee)}</div>
+                <p className="text-xs text-primary-foreground/70">Este es el valor a pagar cada mes.</p>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Tu Entrenador</CardTitle>
+                <Trophy className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{coach?.name || 'No asignado'}</div>
+                <p className="text-xs text-muted-foreground">Tu guía en el campo.</p>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Tu Equipo</CardTitle>
+                <Shield className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{athlete.team}</div>
+                <p className="text-xs text-muted-foreground">La categoría en la que compites.</p>
+            </CardContent>
+        </Card>
+      </div>
       
       <Card>
         <CardHeader>
