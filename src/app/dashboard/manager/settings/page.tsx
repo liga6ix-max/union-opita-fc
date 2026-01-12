@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 export default function ManagerSettingsPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [logoUrl, setLogoUrl] = useState(searchParams.get('logo') || "");
+    const [logoUrl, setLogoUrl] = useState(searchParams.get('logo') || "https://i.ibb.co/64B4ZpM/Unión-Opita-FC-logo.png");
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
