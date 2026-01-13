@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { createTrainingPlan } from '@/ai/flows/create-training-plan-flow';
 import { TrainingPlanInputSchema, type TrainingPlanOutput } from '@/ai/schemas/training-plan-schema';
 import clubConfig from '@/lib/club-config.json';
-import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, query, where, addDoc } from 'firebase/firestore';
 
 
@@ -65,7 +65,8 @@ type PlanningFormValues = z.infer<typeof PlanningFormSchema>;
 export default function ManagerPlanningPage() {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
-  const { profile, firestore, isUserLoading } = useUser();
+  const { profile, isUserLoading } = useUser();
+  const { firestore } = useFirebase();
 
   const cyclesQuery = useMemoFirebase(() => {
     if (!firestore || !profile?.clubId) return null;

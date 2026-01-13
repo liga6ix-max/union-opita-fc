@@ -6,14 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 
 export default function ManagerAthletesPage() {
     const searchParams = useSearchParams();
     const team = searchParams.get('team');
-    const { profile, firestore, isUserLoading } = useUser();
+    const { profile, isUserLoading } = useUser();
+    const { firestore } = useFirebase();
 
     const teamAthletesQuery = useMemoFirebase(() => {
       if (!firestore || !profile?.clubId || !team) return null;

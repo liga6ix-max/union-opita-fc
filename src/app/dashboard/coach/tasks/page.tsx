@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
 
 type TaskStatus = 'Pendiente' | 'En Progreso' | 'Completada';
@@ -38,7 +38,8 @@ const statusBadgeVariant: Record<TaskStatus, "default" | "secondary" | "destruct
 
 export default function CoachTasksPage() {
   const { toast } = useToast();
-  const { profile, firestore, isUserLoading } = useUser();
+  const { profile, isUserLoading } = useUser();
+  const { firestore } = useFirebase();
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 

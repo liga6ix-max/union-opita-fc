@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useUser, useCollection, useMemoFirebase } from "@/firebase";
+import { useUser, useCollection, useMemoFirebase, useFirebase } from "@/firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Wallet, ClipboardList, BarChart, LineChart, Loader2 } from "lucide-react";
 import {
@@ -20,7 +20,8 @@ const chartConfig = {
 };
 
 export default function ManagerDashboard() {
-  const { profile, firestore, isUserLoading } = useUser();
+  const { profile, isUserLoading } = useUser();
+  const { firestore } = useFirebase();
 
   const athletesQuery = useMemoFirebase(() => {
     if (!firestore || !profile?.clubId) return null;

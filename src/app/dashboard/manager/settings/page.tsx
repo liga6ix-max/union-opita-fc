@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import initialClubConfig from "@/lib/club-config.json";
-import { useUser, useCollection, useMemoFirebase } from "@/firebase";
+import { useUser, useCollection, useMemoFirebase, useFirebase } from "@/firebase";
 import { collection, query, where, doc, updateDoc, setDoc } from "firebase/firestore";
 import { Loader2 } from "lucide-react";
 
@@ -42,7 +42,8 @@ type BankAccountFormValues = z.infer<typeof bankAccountSchema>;
 
 export default function ManagerSettingsPage() {
   const router = useRouter();
-  const { profile, firestore, isUserLoading } = useUser();
+  const { profile, isUserLoading } = useUser();
+  const { firestore } = useFirebase();
   const [logoUrl, setLogoUrl] = useState("https://i.ibb.co/bMRLtG3/Unio-n-Opita-FC-logo.png");
   
   // We use a local state that is initialized from the JSON file.

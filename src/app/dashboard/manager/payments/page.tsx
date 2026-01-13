@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import clubConfig from '@/lib/club-config.json';
-import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, query, where, doc, updateDoc, writeBatch } from 'firebase/firestore';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -52,7 +52,8 @@ type PaymentStatus = 'Pagado' | 'Pendiente' | 'En Verificación' | 'Rechazado';
 export default function ManagerPaymentsPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { profile, firestore, isUserLoading } = useUser();
+  const { profile, isUserLoading } = useUser();
+  const { firestore } = useFirebase();
 
   const athletesQuery = useMemoFirebase(() => {
     if (!firestore || !profile?.clubId) return null;

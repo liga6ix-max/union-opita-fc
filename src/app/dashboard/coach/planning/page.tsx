@@ -26,7 +26,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
 type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica';
@@ -38,12 +38,13 @@ const methodologyLabels: Record<MicrocycleMethodology, string> = {
 };
 
 export default function CoachPlanningPage() {
-  const { profile, firestore, isUserLoading } = useUser();
+  const { profile, isUserLoading } = useUser();
+  const { firestore } = useFirebase();
   const [selectedCycle, setSelectedCycle] = useState<any | null>(null);
   const [isPrintViewOpen, setIsPrintViewOpen] = useState(false);
 
   const microcyclesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId || !profile?.id) return null;
+    if (!firestore || !profile?.clubId || !profile.id) return null;
     return query(collection(firestore, `clubs/${profile.clubId}/microcycles`), where("coachId", "==", profile.id));
   }, [firestore, profile?.clubId, profile?.id]);
 

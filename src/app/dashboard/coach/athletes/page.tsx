@@ -8,11 +8,12 @@ import { MoreHorizontal, ClipboardCheck, Loader2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { parseISO, isValid } from "date-fns";
-import { useUser, useCollection, useMemoFirebase } from "@/firebase";
+import { useUser, useCollection, useMemoFirebase, useFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 
 export default function CoachAthletesPage() {
-    const { profile, firestore, isUserLoading } = useUser();
+    const { profile, isUserLoading } = useUser();
+    const { firestore } = useFirebase();
     const [selectedAthlete, setSelectedAthlete] = useState<any | null>(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     

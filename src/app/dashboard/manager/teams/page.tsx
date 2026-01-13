@@ -5,11 +5,12 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, User, Target, ArrowRight, Loader2 } from "lucide-react";
-import { useUser, useCollection, useMemoFirebase } from "@/firebase";
+import { useUser, useCollection, useMemoFirebase, useFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 
 export default function ManagerTeamsPage() {
-    const { profile, firestore, isUserLoading } = useUser();
+    const { profile, isUserLoading } = useUser();
+    const { firestore } = useFirebase();
 
     const athletesQuery = useMemoFirebase(() => {
         if (!firestore || !profile?.clubId) return null;

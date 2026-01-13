@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, query, where, doc, setDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import {
   Card,
@@ -37,7 +37,8 @@ type AttendanceRecord = Record<string, boolean>; // { [athleteId]: isPresent }
 
 export default function CoachAttendancePage() {
   const { toast } = useToast();
-  const { profile, firestore, isUserLoading } = useUser();
+  const { profile, isUserLoading } = useUser();
+  const { firestore } = useFirebase();
 
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>();
   const [attendance, setAttendance] = useState<AttendanceRecord>({});

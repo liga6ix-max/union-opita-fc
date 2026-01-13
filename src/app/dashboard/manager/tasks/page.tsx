@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const taskSchema = z.object({
@@ -57,7 +57,8 @@ const statusBadgeVariant: Record<TaskStatus, 'default' | 'secondary' | 'destruct
 export default function ManagerTasksPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { profile, firestore, isUserLoading } = useUser();
+  const { profile, isUserLoading } = useUser();
+  const { firestore } = useFirebase();
   
   const tasksQuery = useMemoFirebase(() => {
     if (!firestore || !profile?.clubId) return null;
