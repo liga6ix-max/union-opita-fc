@@ -71,23 +71,22 @@ export default function RegisterPage() {
 
         await updateProfile(user, { displayName: data.name });
 
-        // All users are created as 'pending' and without a clubId.
-        // The manager will assign the club and role upon approval.
         const userDocRef = doc(firestore, 'users', user.uid);
         await setDoc(userDocRef, {
             id: user.uid,
             firstName: data.name.split(' ')[0] || '',
             lastName: data.name.split(' ').slice(1).join(' ') || '',
             email: user.email,
-            clubId: '', // No club assigned yet
-            role: 'pending', // All new users are pending approval
+            clubId: '', // Manager will assign this
+            role: 'athlete', // Default role
+            disabled: true, // User is disabled by default
         });
 
         setIsLoading(false);
 
         toast({
             title: '¡Registro Enviado!',
-            description: 'Tu solicitud ha sido enviada. Un administrador la revisará y asignará tu rol pronto.',
+            description: 'Tu cuenta ha sido creada y está pendiente de habilitación por un administrador.',
         });
         
         router.push('/login');
@@ -113,7 +112,7 @@ export default function RegisterPage() {
             </Link>
           <CardTitle className="font-headline text-2xl">Crear una Cuenta</CardTitle>
           <CardDescription>
-            Tu cuenta será activada por un administrador, quien asignará tu rol en la plataforma.
+            Tu cuenta será activada por un administrador.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -174,3 +173,5 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+    
