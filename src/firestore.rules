@@ -32,7 +32,8 @@ service cloud.firestore {
     }
     
     function isClubMember(clubId) {
-      return isSignedIn() && getUserData().clubId == clubId;
+      // Handles cases where a user might not have a clubId yet.
+      return isSignedIn() && getUserData().clubId != null && getUserData().clubId == clubId;
     }
 
     function isClubManager(clubId) {
@@ -58,6 +59,16 @@ service cloud.firestore {
         let userData = getUserData();
         return isSignedIn() && userData.role in ['admin', 'manager'];
     }
+    
+    function isMemberOfSameClubAsTarget(targetUserId) {
+      let targetUserClubId = get(/databases/$(database)/documents/users/$(targetUserId)).data.clubId;
+      // Allow if target has no clubId yet (pending/new user)
+      if (targetUserClubId == '' || targetUserClubId == null) {
+        return true;
+      }
+      // For a single-club app, any member check is implicitly within the same club
+      return isSignedIn() && getUserData().clubId == targetUserClubId;
+    }
 
 
     // --------------------------------------------------------------------------------
@@ -75,15 +86,15 @@ service cloud.firestore {
     /**
      * @description Manages user profiles.
      *              - Users can read/update their own profile.
-     *              - Managers can read/update/delete any user profile within their club.
-     *              - Managers can list all users for management purposes.
+     *              - Managers can read, list, update, and delete any user profile.
+     *              - Anyone can create a user document during sign-up.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAnyManager();
+      allow get: if isOwner(userId) || isMemberOfSameClubAsTarget(userId) || isAnyManager();
       allow list: if isAnyManager();
-      allow create: if true; // Allow anyone to create their user document during sign-up.
-      allow update: if isOwner(userId) || isClubManager(getUserData().clubId); // Owner can edit their own profile, manager can edit any.
-      allow delete: if isClubManager(getUserData().clubId); // Only managers can delete users.
+      allow create: if true;
+      allow update: if isOwner(userId) || isAnyManager();
+      allow delete: if isAnyManager();
     }
 
     /**
@@ -147,3 +158,4 @@ service cloud.firestore {
      }
   }
 }
+
