@@ -6,16 +6,13 @@ service cloud.firestore {
     /**
      * Core Philosophy: This ruleset enforces a role-based security model for a single-club
      * management application. A user's access to any data is primarily determined by their role
-     * (admin, manager, coach, athlete).
-     *
-     * Data Structure: Data is organized under a top-level `/users` collection and a `/clubs/{clubId}`
-     * document which contains all other club-specific data in subcollections.
+     * (admin, manager, coach, athlete). The default posture is denial; access is only granted explicitly.
      *
      * Key Security Decisions:
-     * - The default security posture is denial; access is only granted explicitly.
-     * - Managers have broad permissions to manage club data.
+     * - Managers have broad permissions to manage club data and users.
      * - Users can generally read/write their own data.
      * - Public landing page content is readable by anyone.
+     * - New users are disabled by default and must be enabled by a manager.
      */
 
     // --------------------------------------------------------------------------------
@@ -52,11 +49,11 @@ service cloud.firestore {
     }
 
     function isClubAthlete(clubId) {
-        let userData = getUserData();
-        return isClubMember(clubId) && userData.role == 'athlete';
+      let userData = getUserData();
+      return isClubMember(clubId) && userData.role == 'athlete';
     }
 
-    // Simplified for single-club app: any manager/admin.
+    // For a single-club app, any manager/admin has top-level permissions.
     function isAnyManager() {
         let userData = getUserData();
         return isSignedIn() && userData.role in ['admin', 'manager'];
@@ -76,12 +73,13 @@ service cloud.firestore {
     }
 
     /**
-     * @description Manages user profiles. Users can create/manage their own profile.
-     *              Managers can list all users of the club.
+     * @description Manages user profiles.
+     *              - Users can read/update their own profile.
+     *              - Managers can read/update/delete any user profile within their club.
+     *              - Managers can list all users for management purposes.
      */
     match /users/{userId} {
-      allow get: if isSignedIn();
-      // A manager can list all users. For a single-club app, this is safe.
+      allow get: if isOwner(userId) || isAnyManager();
       allow list: if isAnyManager();
       allow create: if true; // Allow anyone to create their user document during sign-up.
       allow update: if isOwner(userId) || isClubManager(getUserData().clubId); // Owner can edit their own profile, manager can edit any.
@@ -108,7 +106,7 @@ service cloud.firestore {
       allow get: if isClubStaff(clubId) || (isClubAthlete(clubId) && resource.data.athleteId == request.auth.uid);
       allow list: if isClubStaff(clubId) || (isClubAthlete(clubId) && request.query.where[0][2] == request.auth.uid);
       allow create: if isClubManager(clubId);
-      allow update: if isClubManager(clubId);
+      allow update: if isClubManager(clubId) || (isOwner(resource.data.athleteId));
       allow delete: if isClubAdmin(clubId);
     }
 
@@ -131,5 +129,21 @@ service cloud.firestore {
       allow get, list: if true;
       allow create, update, delete: if isClubManager(clubId);
     }
+
+     match /clubs/{clubId}/microcycles/{cycleId} {
+        allow get, list: if isClubMember(clubId);
+        allow create, update, delete: if isClubManager(clubId);
+     }
+
+     match /clubs/{clubId}/trainingEvents/{eventId} {
+        allow get, list: if isClubMember(clubId);
+        allow create, update, delete: if isClubManager(clubId);
+     }
+
+     match /clubs/{clubId}/attendance/{attendanceId} {
+        allow get, list: if isClubStaff(clubId);
+        allow create: if isClubStaff(clubId);
+        allow update, delete: if isClubManager(clubId);
+     }
   }
 }
