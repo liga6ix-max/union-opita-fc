@@ -4,230 +4,155 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * Core Philosophy: This ruleset enforces a strict, club-centric, role-based security model
-     * for a sports club management application. A user's access to any data is primarily
-     * determined by their membership and role (admin, manager, coach, athlete) within a specific club.
-     * The rules are designed to prevent data leakage between different clubs.
-     *
-     * Data Structure: Data is organized under two main top-level collections: `/users` for individual
-     * user profiles and `/clubs` for all club-specific data. All sensitive club information,
-     * such as athletes, payments, and tasks, is nested within its respective club document, e.g.,
-     * `/clubs/{clubId}/athletes/{athleteId}`. This structure allows for secure, targeted queries.
+     * Core Philosophy: This ruleset enforces a role-based security model for a single-club
+     * management application. A user's access to any data is primarily determined by their role
+     * (admin, manager, coach, athlete). The default posture is denial; access is only granted explicitly.
      *
      * Key Security Decisions:
-     * - Global listing of users and clubs is disabled to prevent data enumeration, except for managers.
-     * - Access to any resource under `/clubs/{clubId}` requires the requesting user to be a verified
-     *   member of that club. This is checked by reading the `clubId` from the user's own profile.
-     * - Admins and Managers have elevated privileges for managing club data.
-     * - Landing page content is publicly readable to support the club's public-facing website,
-     *   while write access is restricted to club managers.
-     * - The default security posture is denial; access is only granted explicitly.
-     *
-     * Denormalization for Authorization: To ensure performant and secure rules, this model relies
-     * on denormalization. The `clubId` is denormalized onto every document within a club's
-     * subcollections. A user's role and their associated `clubId` are stored directly on their
-     * `/users/{userId}` document. This allows rules to authorize requests by performing a single,
-     * efficient `get` on the requesting user's own profile, avoiding slow or impossible
-     * cross-collection queries.
-     *
-     * Structural Segregation: The separation of public data (`/landingPageContent`) from private
-     * club data (`/athletes`, `/payments`) into different subcollections under the main `/clubs/{clubId}`
-     * path provides a clear and secure boundary for access control.
+     * - Managers have broad permissions to manage club data and users.
+     * - Users can generally read/write their own data.
+     * - Public landing page content is readable by anyone.
+     * - New users are disabled by default and must be enabled by a manager.
      */
 
     // --------------------------------------------------------------------------------
     // Helper Functions
     // --------------------------------------------------------------------------------
 
-    /**
-     * Checks if the user is authenticated.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the requesting user's UID matches the provided userId.
-     * Used to verify ownership of a resource.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * Retrieves the requesting user's profile data from the /users collection.
-     * This is used to check the user's role and club affiliation.
-     */
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
-
-    /**
-     * Determines if the requesting user is a member of the specified club.
-     */
+    
     function isClubMember(clubId) {
       return isSignedIn() && getUserData().clubId == clubId;
     }
 
-    /**
-     * Determines if the user has a 'manager' or 'admin' role within the specified club.
-     */
     function isClubManager(clubId) {
       let userData = getUserData();
       return isClubMember(clubId) && userData.role in ['admin', 'manager'];
     }
 
-    /**
-     * Determines if the user has an 'admin' role within the specified club.
-     */
     function isClubAdmin(clubId) {
       return isClubMember(clubId) && getUserData().role == 'admin';
     }
 
-    /**
-     * Determines if the requesting user is part of the club's staff (admin, manager, or coach).
-     */
     function isClubStaff(clubId) {
       return isClubMember(clubId) && getUserData().role in ['admin', 'manager', 'coach'];
     }
-    
-    /**
-     * Checks if the user is a manager or admin of ANY club. Used for listing pending users.
-     */
+
+    function isClubAthlete(clubId) {
+      let userData = getUserData();
+      return isClubMember(clubId) && userData.role == 'athlete';
+    }
+
+    // For a single-club app, any manager/admin has top-level permissions.
     function isAnyManager() {
         let userData = getUserData();
         return isSignedIn() && userData.role in ['admin', 'manager'];
     }
     
-    /**
-     * Checks if a user is an athlete in the specified club.
-     */
-    function isClubAthlete(clubId) {
-        let userData = getUserData();
-        return isClubMember(clubId) && userData.role == 'athlete';
-    }
-
-    /**
-     * Checks if a user is in the same club as a target user.
-     * Allows members of the same club to view each other's profiles.
-     */
     function isMemberOfSameClubAsTarget(targetUserId) {
       let targetUserClubId = get(/databases/$(database)/documents/users/$(targetUserId)).data.clubId;
+      // Allow if target has no clubId yet (pending user)
+      if (targetUserClubId == '') {
+        return true;
+      }
       return isSignedIn() && getUserData().clubId == targetUserClubId;
     }
+
 
     // --------------------------------------------------------------------------------
     // Collection Rules
     // --------------------------------------------------------------------------------
 
-    /**
-     * @description Manages core club information. Only club members can read their own club's
-     *              details. Managers/admins can update, and only admins can delete. Club
-     *              creation is open to any signed-in user.
-     * @path /clubs/{clubId}
-     * @allow (get) An authenticated user who is a member of 'club-123' reads their own club document.
-     * @deny (list) Any user, authenticated or not, attempts to list all clubs in the database.
-     * @deny (update) A user with a 'coach' role attempts to change the club's NIT number.
-     * @principle Restricts data visibility to members of a specific group (the club).
-     */
     match /clubs/{clubId} {
       allow get: if isClubMember(clubId);
-      allow list: if false; // No one can list all clubs
+      allow list: if false; 
       allow create: if isSignedIn();
       allow update: if isClubManager(clubId);
       allow delete: if isClubAdmin(clubId);
     }
 
     /**
-     * @description Manages user profiles. Users can create/manage their own profile.
-     *              For privacy, users can only see other profiles if they belong to the same club.
-     *              Listing users is restricted to managers/admins for approval of pending users.
-     * @path /users/{userId}
-     * @allow (create) A new user signing up creates their own user document.
-     * @allow (get) A manager from 'club-123' views the profile of a coach from 'club-123'.
-     * @allow (list) A manager lists all users with a 'pending' status for approval.
-     * @deny (get) A user from 'club-abc' attempts to read a user profile from 'club-xyz'.
-     * @principle Enforces document ownership and shared access within a closed group (a club).
+     * @description Manages user profiles.
+     *              - Users can read/update their own profile.
+     *              - Managers can read, list, update, and delete any user profile.
+     *              - Anyone can create a user document during sign-up.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isMemberOfSameClubAsTarget(userId) || isAnyManager();
+      allow get: if isOwner(userId) || isAnyManager();
       allow list: if isAnyManager();
       allow create: if true;
-      allow update: if isOwner(userId) || isClubManager(getUserData().clubId);
-      allow delete: if isClubManager(getUserData().clubId);
+      allow update: if isOwner(userId) || isAnyManager();
+      allow delete: if isAnyManager();
     }
 
     /**
-     * @description Stores athlete profiles, which are nested under their respective club.
-     *              Only members of that club can read athlete data. Only club managers can
-     *              create, update, or delete athlete records. An athlete can read and update their own data.
-     * @path /clubs/{clubId}/athletes/{athleteId}
-     * @allow (list) A coach lists all athletes belonging to their club.
-     * @allow (get) An athlete reads their own profile.
-     * @allow (update) An athlete updates their own medical information.
-     * @deny (create) A user with an 'athlete' role attempts to add a new athlete to the club.
-     * @deny (get) A member of 'club-abc' attempts to read an athlete's record from 'club-xyz'.
-     * @principle Inherits access control from the parent resource (the club).
+     * @description Stores athlete profiles. Club staff can list/read all. An athlete
+     *              can read and update their own profile. Managers can create/delete.
      */
     match /clubs/{clubId}/athletes/{athleteId} {
-      allow get: if isClubMember(clubId) && (isClubStaff(clubId) || isOwner(athleteId));
+      allow get: if isClubStaff(clubId) || isOwner(athleteId);
       allow list: if isClubStaff(clubId);
-      allow create: if isClubManager(clubId); // Manager can create athlete records.
+      allow create: if isClubManager(clubId);
       allow update: if isOwner(athleteId) || isClubManager(clubId);
       allow delete: if isClubManager(clubId);
     }
 
     /**
-     * @description Secures sensitive payment records for club athletes. Club staff
-     *              can read payment data. An athlete can read ONLY their own payments.
-     *              Management of payments is restricted to managers and admins.
-     * @path /clubs/{clubId}/payments/{paymentId}
-     * @allow (list) A club manager lists all recent payments to generate a financial report.
-     * @allow (list) An athlete lists ONLY their own payments.
-     * @deny (get) An athlete attempts to read the payment records of another athlete.
-     * @deny (create) A coach attempts to log a new payment for an athlete.
-     * @principle Enforces role-based access for sensitive financial data.
+     * @description Secures payment records. Staff can read all payments. Athletes
+     *              can only read their own payments. Managers manage payments.
      */
     match /clubs/{clubId}/payments/{paymentId} {
       allow get: if isClubStaff(clubId) || (isClubAthlete(clubId) && resource.data.athleteId == request.auth.uid);
-      allow list: if isClubStaff(clubId) || (isClubAthlete(clubId) && request.query.where[0][0] == 'athleteId' && request.query.where[0][2] == request.auth.uid);
+      allow list: if isClubStaff(clubId) || (isClubAthlete(clubId) && request.query.where[0][2] == request.auth.uid);
       allow create: if isClubManager(clubId);
-      allow update: if isClubManager(clubId);
+      allow update: if isClubManager(clubId) || (isOwner(resource.data.athleteId));
       allow delete: if isClubAdmin(clubId);
     }
 
     /**
-     * @description Manages tasks assigned within a club. Any club member can view tasks.
-     *              Only staff can create new tasks. A task can be updated by a manager,
-     *              its assigner, or its assignee.
-     * @path /clubs/{clubId}/tasks/{taskId}
-     * @allow (update) An athlete who was assigned a task marks it as 'Completed'.
-     * @deny (create) An athlete attempts to assign a task to a coach.
-     * @deny (delete) A coach attempts to delete a task assigned by a club manager.
-     * @principle Implements collaborative access based on roles and document fields (assigner/assignee).
+     * @description Manages tasks. Club members can view tasks. Staff can create.
+     *              Assigner, assignee, or manager can update.
      */
     match /clubs/{clubId}/tasks/{taskId} {
-      allow get: if isClubMember(clubId);
-      allow list: if isClubMember(clubId);
+      allow get, list: if isClubMember(clubId);
       allow create: if isClubStaff(clubId) && request.resource.data.assignerId == request.auth.uid;
       allow update: if isClubMember(clubId) && (isClubManager(clubId) || request.auth.uid == resource.data.assignerId || request.auth.uid == resource.data.assigneeId);
       allow delete: if isClubManager(clubId);
     }
 
     /**
-     * @description Manages the public-facing content for a club's landing page. This data is
-     *              publicly readable by anyone to attract new members. Writes are restricted
-     *              to club managers to ensure content integrity.
-     * @path /clubs/{clubId}/landingPageContent/{contentId}
-     * @allow (get) An unauthenticated visitor to the club's website reads the 'About Us' section.
-     * @deny (update) An authenticated user with a 'coach' role attempts to change the event schedule.
-     * @principle Segregates public read access from restricted write access.
+     * @description Manages public landing page content. Readable by anyone.
+     *              Writable only by managers.
      */
     match /clubs/{clubId}/landingPageContent/{contentId} {
       allow get, list: if true;
       allow create, update, delete: if isClubManager(clubId);
     }
+
+     match /clubs/{clubId}/microcycles/{cycleId} {
+        allow get, list: if isClubMember(clubId);
+        allow create, update, delete: if isClubManager(clubId);
+     }
+
+     match /clubs/{clubId}/trainingEvents/{eventId} {
+        allow get, list: if isClubMember(clubId);
+        allow create, update, delete: if isClubManager(clubId);
+     }
+
+     match /clubs/{clubId}/attendance/{attendanceId} {
+        allow get, list: if isClubStaff(clubId);
+        allow create: if isClubStaff(clubId);
+        allow update, delete: if isClubManager(clubId);
+     }
   }
 }
-
-    

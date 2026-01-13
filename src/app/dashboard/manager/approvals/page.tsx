@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, UserCog, MoreVertical, Trash2, ShieldCheck, ShieldOff } from 'lucide-react';
+import { UserCog, MoreVertical, Trash2, ShieldCheck, ShieldOff } from 'lucide-react';
 import { useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import {
@@ -35,20 +35,24 @@ export default function ApprovalsPage() {
     const { profile, firestore, isUserLoading } = useUser();
 
     // Since it's a single club app, a manager can list all users.
-    // The security rules ensure only a manager can do this.
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
+        // The security rules ensure only a manager can list all users.
         return collection(firestore, 'users');
     }, [firestore]);
 
     const { data: userList, isLoading: usersLoading } = useCollection(usersQuery);
     
     const handleToggleDisable = async (userId: string, currentStatus: boolean) => {
-        if (!firestore) return;
+        if (!firestore || !profile?.clubId) return;
         const userDocRef = doc(firestore, 'users', userId);
         const newStatus = !currentStatus;
         try {
-            await updateDoc(userDocRef, { disabled: newStatus });
+            await updateDoc(userDocRef, { 
+              disabled: newStatus,
+              // If we are enabling a user for the first time, assign the manager's clubId
+              ...(currentStatus === true && { clubId: profile.clubId }) 
+            });
             toast({
                 title: `Usuario ${newStatus ? 'Deshabilitado' : 'Habilitado'}`,
                 description: `El acceso del usuario ha sido actualizado.`
@@ -69,16 +73,14 @@ export default function ApprovalsPage() {
 
         const userDocRef = doc(firestore, 'users', userId);
         try {
-            // If we're assigning the athlete role, ensure the clubId is set
             await updateDoc(userDocRef, {
                 role: newRole,
-                clubId: clubId
+                clubId: clubId // Ensure clubId is set when role changes
             });
 
              // If the new role is 'athlete', ensure the subcollection document exists.
             if (newRole === 'athlete') {
                 const athleteDocRef = doc(firestore, `clubs/${clubId}/athletes`, userId);
-                // We need to fetch the user data to pass it along
                 const userToUpdate = userList?.find(u => u.id === userId);
                 if (userToUpdate) {
                     await setDoc(athleteDocRef, {
@@ -87,7 +89,7 @@ export default function ApprovalsPage() {
                         email: userToUpdate.email,
                         firstName: userToUpdate.firstName,
                         lastName: userToUpdate.lastName,
-                    }, { merge: true }); // Use merge to not overwrite existing athlete data
+                    }, { merge: true });
                 }
             }
             toast({ title: 'Rol Actualizado', description: `El usuario ahora tiene el rol de ${roleLabels[newRole]}.` });
@@ -102,7 +104,7 @@ export default function ApprovalsPage() {
          const userDocRef = doc(firestore, 'users', userId);
          try {
             await deleteDoc(userDocRef);
-             // Optionally, delete from athlete subcollection if they were one
+            // Optionally, delete from athlete subcollection if they were one
             if (profile?.clubId) {
                 const athleteDocRef = doc(firestore, `clubs/${profile.clubId}/athletes`, userId);
                 await deleteDoc(athleteDocRef).catch(() => {}); // Ignore error if it doesn't exist

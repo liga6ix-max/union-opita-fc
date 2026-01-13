@@ -77,9 +77,9 @@ export default function RegisterPage() {
             firstName: data.name.split(' ')[0] || '',
             lastName: data.name.split(' ').slice(1).join(' ') || '',
             email: user.email,
-            clubId: '', // Manager will assign this
-            role: 'athlete', // Default role
-            disabled: true, // User is disabled by default
+            clubId: '', // Manager will assign this upon enabling
+            role: 'athlete', // Default role is athlete
+            disabled: true, // User is disabled by default until a manager enables them
         });
 
         setIsLoading(false);
@@ -89,6 +89,9 @@ export default function RegisterPage() {
             description: 'Tu cuenta ha sido creada y está pendiente de habilitación por un administrador.',
         });
         
+        // Sign the user out immediately after registration
+        await auth.signOut();
+
         router.push('/login');
 
     } catch (error: any) {
@@ -173,5 +176,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-
-    

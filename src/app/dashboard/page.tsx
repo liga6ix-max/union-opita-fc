@@ -6,16 +6,25 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardRedirectPage() {
-  const { profile, isUserLoading } = useUser();
+  const { profile, isUserLoading, user } = useUser();
   const { auth } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!isUserLoading) {
+    // Wait until loading is complete
+    if (isUserLoading) {
+      return;
+    }
+
+    // If there's an authenticated user...
+    if (user) {
+      // ...but their profile indicates they are disabled...
       if (profile?.disabled) {
-        // If user is disabled, sign them out and show a message
-        if (auth) auth.signOut();
+        // ...sign them out, show a toast, and redirect to login.
+        if (auth) {
+          auth.signOut();
+        }
         toast({
           variant: "destructive",
           title: "Cuenta Inhabilitada",
@@ -23,15 +32,18 @@ export default function DashboardRedirectPage() {
         });
         router.replace('/login');
       } else if (profile?.role) {
-        // If enabled and has a role, redirect to their specific dashboard
+        // ...and they are enabled with a role, redirect to their specific dashboard.
         router.replace(`/dashboard/${profile.role}`);
       } else {
-        // If there's no profile or role, but they are authenticated somehow,
-        // send them to login to be safe.
+        // ...but they have no profile or role (e.g., during registration process),
+        // it's safest to send them to login.
         router.replace('/login');
       }
+    } else {
+      // If there is no authenticated user, send them to login.
+      router.replace('/login');
     }
-  }, [profile, isUserLoading, router, auth, toast]);
+  }, [profile, user, isUserLoading, router, auth, toast]);
 
   // Display a loading indicator while checking the user's role and status.
   return (
@@ -40,5 +52,3 @@ export default function DashboardRedirectPage() {
     </div>
   );
 }
-
-    
