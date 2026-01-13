@@ -132,16 +132,16 @@ service cloud.firestore {
      */
     match /clubs/{clubId} {
       allow get: if isClubMember(clubId);
-      allow list: if false;
+      allow list: if false; // No one can list all clubs
       allow create: if isSignedIn();
-      allow update: if isClubManager(clubId) && resource != null;
-      allow delete: if isClubAdmin(clubId) && resource != null;
+      allow update: if isClubManager(clubId);
+      allow delete: if isClubAdmin(clubId);
     }
 
     /**
-     * @description Manages user profiles. Users can manage their own profile. For privacy,
-     *              users can only see other profiles if they belong to the same club.
-     *              Listing users is restricted to managers/admins for approval purposes.
+     * @description Manages user profiles. Users can create/manage their own profile.
+     *              For privacy, users can only see other profiles if they belong to the same club.
+     *              Listing users is restricted to managers/admins for approval of pending users.
      * @path /users/{userId}
      * @allow (create) A new user signing up creates their own user document.
      * @allow (get) A manager from 'club-123' views the profile of a coach from 'club-123'.
@@ -151,7 +151,8 @@ service cloud.firestore {
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isMemberOfSameClubAsTarget(userId);
-      allow list: if isAnyManager() && (request.query.where[0][2] == "pending" || request.query.where[0][2] == getUserData().clubId);
+      // SIMPLIFIED RULE FOR SINGLE-CLUB APP: A manager can list users that are pending OR in their club.
+      allow list: if isAnyManager() && (request.query.where[0][2] == "pending" || request.query.where[2] == getUserData().clubId);
       allow create: if request.auth.uid == userId;
       allow update: if isOwner(userId) || isClubManager(getUserData().clubId);
       allow delete: if isOwner(userId) || isClubManager(getUserData().clubId);
@@ -172,9 +173,9 @@ service cloud.firestore {
     match /clubs/{clubId}/athletes/{athleteId} {
       allow get: if isClubMember(clubId) && (isClubStaff(clubId) || isOwner(athleteId));
       allow list: if isClubStaff(clubId);
-      allow create: if isClubManager(clubId) && request.resource.data.clubId == clubId;
+      allow create: if isClubManager(clubId); // Manager can create athlete records.
       allow update: if isOwner(athleteId) || isClubManager(clubId);
-      allow delete: if isClubManager(clubId) && resource != null;
+      allow delete: if isClubManager(clubId);
     }
 
     /**
@@ -191,9 +192,9 @@ service cloud.firestore {
     match /clubs/{clubId}/payments/{paymentId} {
       allow get: if isClubStaff(clubId) || (isClubAthlete(clubId) && resource.data.athleteId == request.auth.uid);
       allow list: if isClubStaff(clubId) || (isClubAthlete(clubId) && request.query.where[0][0] == 'athleteId' && request.query.where[0][2] == request.auth.uid);
-      allow create: if isClubManager(clubId) && request.resource.data.clubId == clubId;
-      allow update: if (isClubManager(clubId) || (isClubAthlete(clubId) && resource.data.athleteId == request.auth.uid)) && resource != null;
-      allow delete: if isClubAdmin(clubId) && resource != null;
+      allow create: if isClubManager(clubId);
+      allow update: if isClubManager(clubId);
+      allow delete: if isClubAdmin(clubId);
     }
 
     /**
@@ -209,9 +210,9 @@ service cloud.firestore {
     match /clubs/{clubId}/tasks/{taskId} {
       allow get: if isClubMember(clubId);
       allow list: if isClubMember(clubId);
-      allow create: if isClubStaff(clubId) && request.resource.data.clubId == clubId && request.resource.data.assignerId == request.auth.uid;
-      allow update: if resource != null && isClubMember(clubId) && (isClubManager(clubId) || request.auth.uid == resource.data.assignerId || request.auth.uid == resource.data.assigneeId);
-      allow delete: if isClubManager(clubId) && resource != null;
+      allow create: if isClubStaff(clubId) && request.resource.data.assignerId == request.auth.uid;
+      allow update: if isClubMember(clubId) && (isClubManager(clubId) || request.auth.uid == resource.data.assignerId || request.auth.uid == resource.data.assigneeId);
+      allow delete: if isClubManager(clubId);
     }
 
     /**
@@ -224,11 +225,8 @@ service cloud.firestore {
      * @principle Segregates public read access from restricted write access.
      */
     match /clubs/{clubId}/landingPageContent/{contentId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isClubManager(clubId) && request.resource.data.clubId == clubId;
-      allow update: if isClubManager(clubId) && resource != null;
-      allow delete: if isClubManager(clubId) && resource != null;
+      allow get, list: if true;
+      allow create, update, delete: if isClubManager(clubId);
     }
   }
 }

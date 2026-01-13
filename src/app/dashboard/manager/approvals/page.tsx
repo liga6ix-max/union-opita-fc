@@ -17,50 +17,59 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 type UserStatus = 'pending' | 'approved' | 'rejected';
-type UserRole = 'athlete' | 'coach';
+type UserRole = 'athlete' | 'coach' | 'manager';
 
 export default function ApprovalsPage() {
     const { toast } = useToast();
     const { profile, firestore, isUserLoading } = useUser();
 
+    // Simplified query for a single-club app: just get all pending users.
     const pendingUsersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        // Query for users that are pending
         return query(collection(firestore, 'users'), where('role', '==', 'pending'));
     }, [firestore]);
 
     const { data: pendingUsers, isLoading: usersLoading } = useCollection(pendingUsersQuery);
 
     const handleApproval = async (userId: string, newRole: UserRole) => {
-        if (!firestore || !profile?.clubId) return;
+        if (!firestore || !profile?.clubId) {
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo obtener la información del club del gerente.' });
+            return;
+        }
+
+        const userToApprove = pendingUsers?.find(u => u.id === userId);
+        if (!userToApprove) return;
 
         const userDocRef = doc(firestore, 'users', userId);
-        const userName = pendingUsers?.find(u => u.id === userId)?.firstName;
-        const userEmail = pendingUsers?.find(u => u.id === userId)?.email;
-        const userLastName = pendingUsers?.find(u => u.id === userId)?.lastName;
-
 
         try {
             await updateDoc(userDocRef, {
                 role: newRole,
-                clubId: profile.clubId, // Assign the clubId upon approval
+                clubId: profile.clubId, // Assign the manager's clubId upon approval
             });
 
+            // If the new role is 'athlete', create a corresponding document in the athletes subcollection
             if (newRole === 'athlete') {
                 const athleteDocRef = doc(firestore, `clubs/${profile.clubId}/athletes`, userId);
                 await setDoc(athleteDocRef, {
                     userId: userId,
                     clubId: profile.clubId,
-                    email: userEmail,
-                    firstName: userName,
-                    lastName: userLastName,
-                    // Initialize other athlete fields as needed
+                    email: userToApprove.email,
+                    firstName: userToApprove.firstName,
+                    lastName: userToApprove.lastName,
+                    // Initialize other athlete fields as needed (e.g., empty strings or null)
+                    team: null,
+                    coachId: null,
+                    birthDate: null,
+                    emergencyContactName: '',
+                    emergencyContactPhone: '',
+                    medicalInformation: '',
                 }, { merge: true });
             }
 
             toast({
                 title: `Usuario Aprobado`,
-                description: `${userName} ha sido aprobado como ${newRole}.`,
+                description: `${userToApprove.firstName} ha sido aprobado como ${newRole}.`,
             });
         } catch (error) {
             console.error("Error approving user:", error);
@@ -74,12 +83,15 @@ export default function ApprovalsPage() {
         const userName = pendingUsers?.find(u => u.id === userId)?.firstName;
 
         try {
+            // Instead of deleting, you might want to set their role to 'rejected'
+            // For now, we delete the user document as per original logic.
             await deleteDoc(userDocRef);
             toast({
                 title: `Usuario Rechazado`,
                 description: `La solicitud de ${userName} ha sido rechazada y eliminada.`,
             });
              // Note: This does not delete the user from Firebase Auth, only Firestore.
+             // A manual step in the Firebase Console would be required for full deletion.
         } catch (error) {
             console.error("Error rejecting user:", error);
             toast({ variant: 'destructive', title: 'Error', description: 'No se pudo rechazar al usuario.' });
@@ -143,6 +155,9 @@ export default function ApprovalsPage() {
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleApproval(user.id, 'coach')}>
                                                     Entrenador
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleApproval(user.id, 'manager')}>
+                                                    Gerente
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
