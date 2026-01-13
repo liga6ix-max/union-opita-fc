@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -37,6 +38,8 @@ const registerSchema = z.object({
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
+const MAIN_CLUB_ID = 'OpitaClub';
+
 
 export default function RegisterPage() {
   const { toast } = useToast();
@@ -77,7 +80,7 @@ export default function RegisterPage() {
             firstName: data.name.split(' ')[0] || '',
             lastName: data.name.split(' ').slice(1).join(' ') || '',
             email: user.email,
-            clubId: '', // Manager will assign this upon enabling
+            clubId: MAIN_CLUB_ID, // Assign main club ID on registration
             role: 'athlete', // Default role is athlete
             disabled: true, // User is disabled by default until a manager enables them
         });

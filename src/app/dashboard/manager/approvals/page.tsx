@@ -30,6 +30,9 @@ const roleLabels: Record<UserRole, string> = {
     manager: 'Gerente'
 }
 
+// THIS IS A SINGLE-CLUB APP, so we can hardcode the main club ID
+const MAIN_CLUB_ID = 'OpitaClub';
+
 export default function ApprovalsPage() {
     const { toast } = useToast();
     const { profile, firestore, isUserLoading } = useUser();
@@ -47,17 +50,18 @@ export default function ApprovalsPage() {
     }
     
     const handleToggleDisable = async (userId: string, currentStatus: boolean) => {
-        if (!firestore || !profile?.clubId) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido identificar el club.' });
+        if (!firestore) {
+            toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido conectar a la base de datos.' });
             return;
         }
+        
         const userDocRef = doc(firestore, 'users', userId);
         const newStatus = !currentStatus;
         try {
             await updateDoc(userDocRef, { 
               disabled: newStatus,
               // If we are enabling a user, ensure they have the clubId.
-              ...(!newStatus && { clubId: profile.clubId }) 
+              ...(!newStatus && { clubId: MAIN_CLUB_ID }) 
             });
             toast({
                 title: `Usuario ${newStatus ? 'Deshabilitado' : 'Habilitado'}`,
@@ -71,27 +75,22 @@ export default function ApprovalsPage() {
 
     const handleChangeRole = async (userId: string, newRole: UserRole) => {
         if (!firestore) return;
-        const clubId = profile?.clubId; 
-        if (!clubId) {
-             toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido identificar el club del administrador.' });
-             return;
-        }
-
+        
         const userDocRef = doc(firestore, 'users', userId);
         try {
             await updateDoc(userDocRef, {
                 role: newRole,
-                clubId: clubId // Ensure clubId is set when role changes
+                clubId: MAIN_CLUB_ID // Ensure clubId is set when role changes
             });
 
              // If the new role is 'athlete', ensure the subcollection document exists.
             if (newRole === 'athlete') {
-                const athleteDocRef = doc(firestore, `clubs/${clubId}/athletes`, userId);
+                const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, userId);
                 const userToUpdate = userList?.find(u => u.id === userId);
                 if (userToUpdate) {
                     await setDoc(athleteDocRef, {
                         userId: userId,
-                        clubId: clubId,
+                        clubId: MAIN_CLUB_ID,
                         email: userToUpdate.email,
                         firstName: userToUpdate.firstName,
                         lastName: userToUpdate.lastName,
@@ -111,10 +110,9 @@ export default function ApprovalsPage() {
          try {
             await deleteDoc(userDocRef);
             // Optionally, delete from athlete subcollection if they were one
-            if (profile?.clubId) {
-                const athleteDocRef = doc(firestore, `clubs/${profile.clubId}/athletes`, userId);
-                await deleteDoc(athleteDocRef).catch(() => {}); // Ignore error if it doesn't exist
-            }
+            const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, userId);
+            await deleteDoc(athleteDocRef).catch(() => {}); // Ignore error if it doesn't exist
+            
             toast({ title: 'Usuario Eliminado', description: 'El usuario ha sido eliminado permanentemente.' });
          } catch (e) {
             console.error("Error deleting user:", e);
