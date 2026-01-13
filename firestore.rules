@@ -60,12 +60,12 @@ service cloud.firestore {
     }
     
     function isMemberOfSameClubAsTarget(targetUserId) {
-      let targetUserClubId = get(/databases/$(database)/documents/users/$(targetUserId)).data.clubId;
-      // Allow if target has no clubId yet (pending user)
-      if (targetUserClubId == '') {
+      let targetUserDoc = get(/databases/$(database)/documents/users/$(targetUserId));
+      // Allow if target doesn't exist or has no clubId yet (pending user)
+      if (!targetUserDoc.exists() || !('clubId' in targetUserDoc.data) || targetUserDoc.data.clubId == '') {
         return true;
       }
-      return isSignedIn() && getUserData().clubId == targetUserClubId;
+      return isSignedIn() && getUserData().clubId == targetUserDoc.data.clubId;
     }
 
 
@@ -140,7 +140,8 @@ service cloud.firestore {
     }
 
      match /clubs/{clubId}/microcycles/{cycleId} {
-        allow get, list: if isClubMember(clubId);
+        allow get: if isClubMember(clubId);
+        allow list: if isClubManager(clubId) || (isClubStaff(clubId) && request.query.where[0][2] == request.auth.uid);
         allow create, update, delete: if isClubManager(clubId);
      }
 
