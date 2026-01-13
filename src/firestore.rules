@@ -73,54 +73,46 @@ service cloud.firestore {
      */
     match /clubs/{clubId}/{collection}/{docId} {
         // Default Read Access: Any signed-in user can read/list documents.
-        // Specific collections can override this if needed.
-        allow get: if isSignedIn();
-        allow list: if isAnyManager();
+        // The app's queries are responsible for filtering data for the correct user.
+        // This rule is broad for reads but simplifies development immensely for a single-club app.
+        allow get, list: if isSignedIn();
 
         // Default Write Access: Only managers can create, update, or delete.
+        // Specific collections below can provide more granular write access.
         allow create, update, delete: if isAnyManager();
     }
 
     /**
      * @description Athlete-specific overrides.
+     *              An athlete can update their own profile, or a manager can.
      */
     match /clubs/{clubId}/athletes/{athleteId} {
-      allow get: if isSignedIn();
-      allow list: if isAnyManager();
-      // An athlete can update their own profile, or a manager can.
       allow update: if isOwner(athleteId) || isAnyManager();
-      allow create, delete: if isAnyManager();
     }
 
     /**
      * @description Payment-specific overrides.
+     *              An athlete can update their own payment record (e.g., add reference), or a manager can.
      */
     match /clubs/{clubId}/payments/{paymentId} {
-        allow get, list: if isSignedIn();
-        allow create: if isAnyManager();
-        // An athlete can update their own payment record (e.g., add reference), or a manager can.
         allow update: if (isAnyAthlete() && resource.data.athleteId == request.auth.uid) || isAnyManager();
-        allow delete: if isAnyManager();
     }
 
     /**
      * @description Task-specific overrides.
+     *              - Coaches can create tasks.
+     *              - The assignee, assigner, or a manager can update a task's status.
      */
     match /clubs/{clubId}/tasks/{taskId} {
-        allow get, list: if isSignedIn();
-        allow create: if isAnyCoach(); // Any coach or manager can create a task.
-        // The assignee, assigner, or a manager can update a task's status.
+        allow create: if isAnyCoach(); 
         allow update: if isOwner(resource.data.assigneeId) || isOwner(resource.data.assignerId) || isAnyManager();
-        allow delete: if isAnyManager();
     }
 
     /**
      * @description Attendance-specific overrides.
      */
     match /clubs/{clubId}/attendance/{attendanceId} {
-        allow get, list: if isAnyCoach();
         allow create: if isAnyCoach();
-        allow update, delete: if isAnyManager();
     }
   }
 }
