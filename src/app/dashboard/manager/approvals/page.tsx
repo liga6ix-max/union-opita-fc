@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, XCircle, Clock, Loader2, MoreVertical, Trash2, UserCog, Users } from 'lucide-react';
 import { useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, query, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,12 +41,12 @@ export default function ApprovalsPage() {
     const { toast } = useToast();
     const { profile, firestore, isUserLoading } = useUser();
 
-    // Query for all users associated with the manager's club, OR users who are pending (and might not have a clubId yet)
-    // For a single-club app, this effectively gets all relevant users.
+    // For a single-club app, it's safe for a manager to list all users.
+    // The security rules will enforce that only managers can perform this list operation.
     const usersQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.clubId) return null;
-        return query(collection(firestore, 'users'), where('clubId', 'in', [profile.clubId, '']));
-    }, [firestore, profile?.clubId]);
+        if (!firestore) return null;
+        return collection(firestore, 'users');
+    }, [firestore]);
 
     const { data: userList, isLoading: usersLoading } = useCollection(usersQuery);
     
@@ -55,7 +55,9 @@ export default function ApprovalsPage() {
 
 
     const handleUserAction = async (userId: string, newRoleOrAction: UserRole | 'delete') => {
-        if (!firestore || !profile?.clubId) {
+        // Since this is a single club app, we can assume the manager's clubId is the one to assign.
+        const clubId = profile?.clubId;
+        if (!firestore || !clubId) {
             toast({ variant: 'destructive', title: 'Error', description: 'No se pudo obtener la información del club.' });
             return;
         }
@@ -70,7 +72,7 @@ export default function ApprovalsPage() {
                 await deleteDoc(userDocRef);
                 // Also delete the athlete subcollection document if they were an athlete
                 if (userToUpdate.role === 'athlete') {
-                    const athleteDocRef = doc(firestore, `clubs/${profile.clubId}/athletes`, userId);
+                    const athleteDocRef = doc(firestore, `clubs/${clubId}/athletes`, userId);
                     await deleteDoc(athleteDocRef);
                 }
                 toast({ title: `Usuario Eliminado`, description: `${userToUpdate.firstName} ha sido eliminado de la plataforma.` });
@@ -86,15 +88,15 @@ export default function ApprovalsPage() {
         try {
             await updateDoc(userDocRef, {
                 role: newRole,
-                clubId: profile.clubId, // Assign manager's clubId on any role change/approval
+                clubId: clubId, // Assign manager's clubId on any role change/approval
             });
 
             // If the new role is 'athlete', create/ensure the subcollection document exists.
             if (newRole === 'athlete') {
-                const athleteDocRef = doc(firestore, `clubs/${profile.clubId}/athletes`, userId);
+                const athleteDocRef = doc(firestore, `clubs/${clubId}/athletes`, userId);
                 await setDoc(athleteDocRef, {
                     userId: userId,
-                    clubId: profile.clubId,
+                    clubId: clubId,
                     email: userToUpdate.email,
                     firstName: userToUpdate.firstName,
                     lastName: userToUpdate.lastName,

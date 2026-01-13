@@ -6,8 +6,7 @@ service cloud.firestore {
     /**
      * Core Philosophy: This ruleset enforces a role-based security model for a single-club
      * management application. A user's access to any data is primarily determined by their role
-     * (admin, manager, coach, athlete). Since this is a single-club app, the complexity of
-     * multi-club data segregation is removed.
+     * (admin, manager, coach, athlete).
      *
      * Data Structure: Data is organized under a top-level `/users` collection and a `/clubs/{clubId}`
      * document which contains all other club-specific data in subcollections.
@@ -16,7 +15,6 @@ service cloud.firestore {
      * - The default security posture is denial; access is only granted explicitly.
      * - Managers have broad permissions to manage club data.
      * - Users can generally read/write their own data.
-     * - Specific roles have specific permissions (e.g., coaches can read athlete data).
      * - Public landing page content is readable by anyone.
      */
 
@@ -79,12 +77,12 @@ service cloud.firestore {
 
     /**
      * @description Manages user profiles. Users can create/manage their own profile.
-     *              Managers can list all users of their club and pending users.
+     *              Managers can list all users of the club.
      */
     match /users/{userId} {
-      allow get: if isSignedIn(); // Any signed-in user can get another user's profile in a single-club app.
-      // A manager can list all users in their club, or users who are pending.
-      allow list: if isAnyManager() && (request.query.where[0][2] == getUserData().clubId || request.query.where[1][2] == '');
+      allow get: if isSignedIn();
+      // A manager can list all users. For a single-club app, this is safe.
+      allow list: if isAnyManager();
       allow create: if true; // Allow anyone to create their user document during sign-up.
       allow update: if isOwner(userId) || isClubManager(getUserData().clubId); // Owner can edit their own profile, manager can edit any.
       allow delete: if isClubManager(getUserData().clubId); // Only managers can delete users.
