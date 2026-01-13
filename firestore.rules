@@ -151,9 +151,9 @@ service cloud.firestore {
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isMemberOfSameClubAsTarget(userId);
-      allow list: if isAnyManager() && request.query.where[0][2] == "pending";
+      allow list: if isAnyManager() && (request.query.where[0][2] == "pending");
       allow create: if request.auth.uid == userId;
-      allow update: if (isOwner(userId) && request.resource.data.keys().hasOnly(['firstName', 'lastName'])) || isClubManager(getUserData().clubId);
+      allow update: if isOwner(userId) || isClubManager(getUserData().clubId);
       allow delete: if isOwner(userId) || isClubManager(getUserData().clubId);
     }
 
@@ -173,7 +173,7 @@ service cloud.firestore {
       allow get: if isClubMember(clubId) && (isClubStaff(clubId) || isOwner(athleteId));
       allow list: if isClubStaff(clubId);
       allow create: if isClubManager(clubId) && request.resource.data.clubId == clubId;
-      allow update: if (isClubManager(clubId) || isOwner(athleteId)) && resource != null;
+      allow update: if isClubManager(clubId) || isOwner(athleteId);
       allow delete: if isClubManager(clubId) && resource != null;
     }
 
