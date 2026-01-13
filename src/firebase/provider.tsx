@@ -104,6 +104,10 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         } else {
           // User is signed out
           setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: null });
+          const isPublicPage = ['/login', '/register', '/'].includes(pathname);
+          if (!isPublicPage) {
+            router.push('/login');
+          }
         }
       },
       (error) => {
@@ -113,7 +117,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     );
     
     return () => authUnsubscribe();
-  }, [auth, firestore]);
+  }, [auth, firestore, pathname, router]);
 
   // Effect to handle redirection on auth state change
   useEffect(() => {
