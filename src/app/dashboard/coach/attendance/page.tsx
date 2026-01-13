@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
+import { useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, setDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import {
   Card,
@@ -37,8 +37,7 @@ type AttendanceRecord = Record<string, boolean>; // { [athleteId]: isPresent }
 
 export default function CoachAttendancePage() {
   const { toast } = useToast();
-  const { profile, isUserLoading } = useUser();
-  const { firestore } = useFirebase();
+  const { profile, isUserLoading, firestore } = useUser();
 
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>();
   const [attendance, setAttendance] = useState<AttendanceRecord>({});
@@ -69,7 +68,7 @@ export default function CoachAttendancePage() {
   };
 
   const handleSaveAttendance = async () => {
-    if(!selectedEventId || !firestore || !profile?.clubId) {
+    if(!selectedEventId || !firestore || !profile?.clubId || !profile.id) {
         toast({
             variant: "destructive",
             title: "Error",

@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { createTrainingPlan } from '@/ai/flows/create-training-plan-flow';
 import { TrainingPlanInputSchema, type TrainingPlanOutput } from '@/ai/schemas/training-plan-schema';
 import clubConfig from '@/lib/club-config.json';
-import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
+import { useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, addDoc } from 'firebase/firestore';
 
 
@@ -65,8 +65,7 @@ type PlanningFormValues = z.infer<typeof PlanningFormSchema>;
 export default function ManagerPlanningPage() {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
-  const { profile, isUserLoading } = useUser();
-  const { firestore } = useFirebase();
+  const { profile, isUserLoading, firestore } = useUser();
 
   const cyclesQuery = useMemoFirebase(() => {
     if (!firestore || !profile?.clubId) return null;
@@ -189,11 +188,11 @@ export default function ManagerPlanningPage() {
                             <FormItem>
                                 <FormLabel>Asignar a Entrenador</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger></FormControl>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar entrenador..." /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                  {coaches?.map(coach => (
+                                  {coaches && coaches.length > 0 ? coaches.map(coach => (
                                     <SelectItem key={coach.id} value={coach.id}>{coach.firstName} {coach.lastName}</SelectItem>
-                                  ))}
+                                  )) : <p className="p-2 text-xs text-muted-foreground">No hay entrenadores.</p>}
                                 </SelectContent>
                               </Select>
                                 <FormMessage />

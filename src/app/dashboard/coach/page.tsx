@@ -10,23 +10,23 @@ import { Button } from "@/components/ui/button";
 import { collection, query, where } from 'firebase/firestore';
 
 export default function CoachDashboard() {
-  const { firestore, profile } = useUser();
+  const { profile, isUserLoading, firestore } = useUser();
 
   const athletesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId) return null;
+    if (!firestore || !profile?.clubId || !profile.id) return null;
     return query(collection(firestore, `clubs/${profile.clubId}/athletes`), where("coachId", "==", profile.id));
   }, [firestore, profile?.clubId, profile?.id]);
   
   const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
 
   const tasksQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId) return null;
+    if (!firestore || !profile?.clubId || !profile.id) return null;
     return query(collection(firestore, `clubs/${profile.clubId}/tasks`), where("assigneeId", "==", profile.id));
   }, [firestore, profile?.clubId, profile?.id]);
 
   const { data: tasks, isLoading: tasksLoading } = useCollection(tasksQuery);
 
-  if (athletesLoading || tasksLoading) {
+  if (isUserLoading || athletesLoading || tasksLoading) {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
   

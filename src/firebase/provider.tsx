@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -14,7 +15,8 @@ export interface UserProfile {
   lastName: string;
   email: string;
   clubId: string;
-  role: 'manager' | 'coach' | 'athlete' | 'pending';
+  role: 'manager' | 'coach' | 'athlete';
+  disabled?: boolean;
 }
 
 interface UserAuthState {
@@ -25,35 +27,23 @@ interface UserAuthState {
 }
 
 // Combined state for the Firebase context
-export interface FirebaseContextState {
+export interface FirebaseContextState extends UserAuthState {
   areServicesAvailable: boolean;
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
   auth: Auth | null;
-  // User authentication state
-  user: User | null;
-  profile: UserProfile | null; // Add profile to context
-  isUserLoading: boolean;
-  userError: Error | null;
 }
 
 // Return type for useFirebase()
-export interface FirebaseServicesAndUser {
+export interface FirebaseServicesAndUser extends UserAuthState {
   firebaseApp: FirebaseApp;
   firestore: Firestore;
   auth: Auth;
-  user: User | null;
-  profile: UserProfile | null; // Add profile to hook return
-  isUserLoading: boolean;
-  userError: Error | null;
 }
 
 // Return type for useUser() - specific to user auth state
-export interface UserHookResult {
-  user: User | null;
-  profile: UserProfile | null; // Add profile to hook return
-  isUserLoading: boolean;
-  userError: Error | null;
+export interface UserHookResult extends UserAuthState {
+  firestore: Firestore | null;
 }
 
 interface FirebaseProviderProps {
@@ -209,6 +199,6 @@ export const useUser = (): UserHookResult => {
     if (context === undefined) {
         throw new Error('useUser must be used within a FirebaseProvider.');
     }
-  const { user, profile, isUserLoading, userError } = context;
-  return { user, profile, isUserLoading, userError };
+  const { user, profile, isUserLoading, userError, firestore } = context;
+  return { user, profile, isUserLoading, userError, firestore };
 };

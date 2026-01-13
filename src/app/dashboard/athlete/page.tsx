@@ -24,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useCollection, useDoc, useFirebase, useMemoFirebase, useUser } from '@/firebase';
+import { useCollection, useDoc, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 
@@ -40,21 +40,20 @@ type PaymentStatus = 'Pagado' | 'Pendiente' | 'En Verificación' | 'Rechazado';
 export default function AthleteDashboard() {
   const { toast } = useToast();
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
-  const { firestore, user } = useFirebase();
-  const { profile, isUserLoading } = useUser();
+  const { profile, isUserLoading, firestore } = useUser();
 
   const athleteDocRef = useMemoFirebase(() => {
-    if (!firestore || !user?.uid || !profile?.clubId) return null;
-    return doc(firestore, `clubs/${profile.clubId}/athletes`, user.uid);
-  }, [firestore, user?.uid, profile?.clubId]);
+    if (!firestore || !profile?.id || !profile?.clubId) return null;
+    return doc(firestore, `clubs/${profile.clubId}/athletes`, profile.id);
+  }, [firestore, profile?.id, profile?.clubId]);
 
   const { data: athlete, isLoading: isAthleteLoading } = useDoc(athleteDocRef);
 
   const paymentsQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid || !profile?.clubId) return null;
+    if (!firestore || !profile?.id || !profile?.clubId) return null;
     const paymentsCollection = collection(firestore, `clubs/${profile.clubId}/payments`);
-    return query(paymentsCollection, where("athleteId", "==", user.uid));
-  }, [firestore, user?.uid, profile?.clubId]);
+    return query(paymentsCollection, where("athleteId", "==", profile.id));
+  }, [firestore, profile?.id, profile?.clubId]);
   
   const { data: athletePayments, isLoading: arePaymentsLoading } = useCollection(paymentsQuery);
 

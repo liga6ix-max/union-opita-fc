@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -6,9 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { UserCog, MoreVertical, Trash2, ShieldCheck, ShieldOff } from 'lucide-react';
+import { UserCog, MoreVertical, Trash2, ShieldCheck, ShieldOff, Loader2 } from 'lucide-react';
 import { useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +21,6 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger
 } from '@/components/ui/dropdown-menu';
-import { Loader2 } from 'lucide-react';
 
 type UserRole = 'athlete' | 'coach' | 'manager';
 
@@ -34,24 +34,30 @@ export default function ApprovalsPage() {
     const { toast } = useToast();
     const { profile, firestore, isUserLoading } = useUser();
 
-    // Since it's a single club app, a manager can list all users.
+    // With simplified rules, a manager can list all users.
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        // The security rules ensure only a manager can list all users.
         return collection(firestore, 'users');
     }, [firestore]);
 
-    const { data: userList, isLoading: usersLoading } = useCollection(usersQuery);
+    const { data: userList, isLoading: usersLoading, error } = useCollection(usersQuery);
+    
+    if (error) {
+        console.error("Firestore Error fetching users:", error);
+    }
     
     const handleToggleDisable = async (userId: string, currentStatus: boolean) => {
-        if (!firestore || !profile?.clubId) return;
+        if (!firestore || !profile?.clubId) {
+            toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido identificar el club.' });
+            return;
+        }
         const userDocRef = doc(firestore, 'users', userId);
         const newStatus = !currentStatus;
         try {
             await updateDoc(userDocRef, { 
               disabled: newStatus,
-              // If we are enabling a user for the first time, assign the manager's clubId
-              ...(currentStatus === true && { clubId: profile.clubId }) 
+              // If we are enabling a user, ensure they have the clubId.
+              ...(!newStatus && { clubId: profile.clubId }) 
             });
             toast({
                 title: `Usuario ${newStatus ? 'Deshabilitado' : 'Habilitado'}`,
@@ -59,15 +65,15 @@ export default function ApprovalsPage() {
             });
         } catch (e) {
             console.error("Error toggling user status:", e);
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cambiar el estado del usuario.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cambiar el estado del usuario. Revisa los permisos.' });
         }
     };
 
     const handleChangeRole = async (userId: string, newRole: UserRole) => {
         if (!firestore) return;
-        const clubId = profile?.clubId; // Get the manager's clubId
+        const clubId = profile?.clubId; 
         if (!clubId) {
-             toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido identificar el club.' });
+             toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido identificar el club del administrador.' });
              return;
         }
 
@@ -95,7 +101,7 @@ export default function ApprovalsPage() {
             toast({ title: 'Rol Actualizado', description: `El usuario ahora tiene el rol de ${roleLabels[newRole]}.` });
         } catch (e) {
              console.error("Error changing user role:", e);
-             toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cambiar el rol del usuario.' });
+             toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cambiar el rol del usuario. Revisa los permisos.' });
         }
     };
     
@@ -112,13 +118,11 @@ export default function ApprovalsPage() {
             toast({ title: 'Usuario Eliminado', description: 'El usuario ha sido eliminado permanentemente.' });
          } catch (e) {
             console.error("Error deleting user:", e);
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar al usuario.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar al usuario. Revisa los permisos.' });
          }
     };
     
-    if (isUserLoading || usersLoading) {
-        return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-    }
+    const isLoading = isUserLoading || usersLoading;
 
     return (
         <div className="space-y-8">
@@ -130,58 +134,62 @@ export default function ApprovalsPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Nombre</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>Rol</TableHead>
-                                <TableHead>Estado</TableHead>
-                                <TableHead className="text-right">Acciones</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {userList && userList.map((user) => (
-                                <TableRow key={user.id}>
-                                    <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
-                                    <TableCell>{user.email}</TableCell>
-                                    <TableCell><Badge variant="outline">{roleLabels[user.role as UserRole] || user.role}</Badge></TableCell>
-                                    <TableCell>
-                                        <Badge variant={user.disabled ? 'destructive' : 'default'}>
-                                            {user.disabled ? 'Inhabilitado' : 'Habilitado'}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent>
-                                                <DropdownMenuLabel>Gestionar Usuario</DropdownMenuLabel>
-                                                <DropdownMenuItem onClick={() => handleToggleDisable(user.id, user.disabled)}>
-                                                    {user.disabled ? <ShieldCheck className="mr-2 h-4 w-4"/> : <ShieldOff className="mr-2 h-4 w-4"/>}
-                                                    {user.disabled ? 'Habilitar' : 'Inhabilitar'}
-                                                </DropdownMenuItem>
-                                                 <DropdownMenuSub>
-                                                    <DropdownMenuSubTrigger>Cambiar Rol</DropdownMenuSubTrigger>
-                                                    <DropdownMenuSubContent>
-                                                        <DropdownMenuItem onClick={() => handleChangeRole(user.id, 'athlete')} disabled={user.role === 'athlete'}>Asignar como Deportista</DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleChangeRole(user.id, 'coach')} disabled={user.role === 'coach'}>Asignar como Entrenador</DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleChangeRole(user.id, 'manager')} disabled={user.role === 'manager'}>Asignar como Gerente</DropdownMenuItem>
-                                                    </DropdownMenuSubContent>
-                                                </DropdownMenuSub>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(user.id)}>
-                                                    <Trash2 className="mr-2 h-4 w-4"/>Eliminar Usuario
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
+                    {isLoading ? (
+                         <div className="flex h-40 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Nombre</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Rol</TableHead>
+                                    <TableHead>Estado</TableHead>
+                                    <TableHead className="text-right">Acciones</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                    {(!userList || userList.length === 0) && (
+                            </TableHeader>
+                            <TableBody>
+                                {userList && userList.map((user) => (
+                                    <TableRow key={user.id}>
+                                        <TableCell className="font-medium">{user.firstName || ''} {user.lastName || ''}</TableCell>
+                                        <TableCell>{user.email}</TableCell>
+                                        <TableCell><Badge variant="outline">{roleLabels[user.role as UserRole] || user.role || 'N/A'}</Badge></TableCell>
+                                        <TableCell>
+                                            <Badge variant={user.disabled ? 'destructive' : 'default'}>
+                                                {user.disabled ? 'Inhabilitado' : 'Habilitado'}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent>
+                                                    <DropdownMenuLabel>Gestionar Usuario</DropdownMenuLabel>
+                                                    <DropdownMenuItem onClick={() => handleToggleDisable(user.id, user.disabled)}>
+                                                        {user.disabled ? <ShieldCheck className="mr-2 h-4 w-4"/> : <ShieldOff className="mr-2 h-4 w-4"/>}
+                                                        {user.disabled ? 'Habilitar' : 'Inhabilitar'}
+                                                    </DropdownMenuItem>
+                                                     <DropdownMenuSub>
+                                                        <DropdownMenuSubTrigger>Cambiar Rol</DropdownMenuSubTrigger>
+                                                        <DropdownMenuSubContent>
+                                                            <DropdownMenuItem onClick={() => handleChangeRole(user.id, 'athlete')} disabled={user.role === 'athlete'}>Asignar como Deportista</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleChangeRole(user.id, 'coach')} disabled={user.role === 'coach'}>Asignar como Entrenador</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleChangeRole(user.id, 'manager')} disabled={user.role === 'manager'}>Asignar como Gerente</DropdownMenuItem>
+                                                        </DropdownMenuSubContent>
+                                                    </DropdownMenuSub>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(user.id)}>
+                                                        <Trash2 className="mr-2 h-4 w-4"/>Eliminar Usuario
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                    {(!isLoading && (!userList || userList.length === 0)) && (
                         <p className="text-center py-8 text-muted-foreground">No hay usuarios registrados en el sistema.</p>
                     )}
                 </CardContent>
@@ -189,4 +197,3 @@ export default function ApprovalsPage() {
         </div>
     );
 }
-    
