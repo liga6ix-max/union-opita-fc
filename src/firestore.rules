@@ -60,8 +60,8 @@ service cloud.firestore {
      *              - Anyone can create a user during sign-up.
      */
     match /users/{userId} {
-      allow get: if isSignedIn(); // Allow any signed-in user to read any other user's profile.
-      allow list: if isAnyManager(); // Managers can list all users for the management panel.
+      allow get: if isAnyManager() || isOwner(userId);
+      allow list: if isAnyManager();
       allow create: if true; // Anyone can create a user document during sign-up.
       allow update: if isOwner(userId) || isAnyManager(); // A user can update their own doc, or a manager can update any doc.
       allow delete: if isAnyManager();
@@ -74,7 +74,8 @@ service cloud.firestore {
     match /clubs/{clubId}/{collection}/{docId} {
         // Default Read Access: Any signed-in user can read/list documents.
         // Specific collections can override this if needed.
-        allow get, list: if isSignedIn();
+        allow get: if isSignedIn();
+        allow list: if isAnyManager();
 
         // Default Write Access: Only managers can create, update, or delete.
         allow create, update, delete: if isAnyManager();
@@ -84,11 +85,11 @@ service cloud.firestore {
      * @description Athlete-specific overrides.
      */
     match /clubs/{clubId}/athletes/{athleteId} {
-      allow get, list: if isSignedIn();
-      allow create: if isAnyManager();
+      allow get: if isSignedIn();
+      allow list: if isAnyManager();
       // An athlete can update their own profile, or a manager can.
       allow update: if isOwner(athleteId) || isAnyManager();
-      allow delete: if isAnyManager();
+      allow create, delete: if isAnyManager();
     }
 
     /**
