@@ -75,8 +75,8 @@ export default function ManagerPlanningPage() {
   
   const coachesQuery = useMemoFirebase(() => {
     if (!firestore || !profile?.clubId) return null;
-    // Query for all users that are not athletes (e.g., coaches, managers, etc.)
-    return query(collection(firestore, 'users'), where("role", "!=", "athlete"));
+    // Query for all users that can be assigned a plan (coaches or managers).
+    return query(collection(firestore, 'users'), where("role", "in", ["coach", "manager"]));
   }, [firestore, profile?.clubId]);
   const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
