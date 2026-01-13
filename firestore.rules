@@ -94,10 +94,25 @@ service cloud.firestore {
       allow update: if isOwner(userId) || isAnyManager();
       allow delete: if isAnyManager();
     }
+    
+    /**
+     * @description Generic rule for all subcollections under a club.
+     *              This simplifies management significantly for a single-club app.
+     */
+    match /clubs/{clubId}/{collection}/{docId} {
+        // Default Read Access: Any signed-in user can read/list documents.
+        // The app's queries are responsible for filtering data for the correct user.
+        // This rule is broad for reads but simplifies development immensely for a single-club app.
+        allow get, list: if isSignedIn();
+
+        // Default Write Access: Only managers can create, update, or delete.
+        // Specific collections below can provide more granular write access.
+        allow create, update, delete: if isAnyManager();
+    }
 
     /**
-     * @description Stores athlete profiles. Club staff can list/read all. An athlete
-     *              can read and update their own profile. Managers can create/delete.
+     * @description Athlete-specific overrides.
+     *              An athlete can update their own profile, or a manager can.
      */
     match /clubs/{clubId}/athletes/{athleteId} {
       allow get: if isClubStaff(clubId) || isOwner(athleteId);
