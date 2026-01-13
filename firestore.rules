@@ -101,7 +101,7 @@ service cloud.firestore {
      */
     match /clubs/{clubId}/athletes/{athleteId} {
       allow get: if isClubStaff(clubId) || isOwner(athleteId);
-      allow list: if isClubStaff(clubId);
+      allow list: if isClubManager(clubId) || isClubStaff(clubId);
       allow create: if isClubManager(clubId);
       allow update: if isOwner(athleteId) || isClubManager(clubId);
       allow delete: if isClubManager(clubId);
