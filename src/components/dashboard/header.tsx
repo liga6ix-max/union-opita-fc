@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUser } from "@/firebase";
@@ -41,7 +41,7 @@ const pageTitles: { [key: string]: string } = {
 
 export function DashboardHeader() {
   const pathname = usePathname();
-  const { profile } = useUser();
+  const { profile, isUserLoading } = useUser();
   const { auth } = useFirebase();
   const title = pageTitles[pathname] || "Dashboard";
 
@@ -65,31 +65,35 @@ export function DashboardHeader() {
       </div>
       
       <div className="ml-auto flex items-center gap-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="overflow-hidden rounded-full"
-            >
-              <Avatar>
-                <AvatarImage src={`https://picsum.photos/seed/${profile?.id || 'user'}/100/100`} alt="Avatar" />
-                <AvatarFallback>{profile?.firstName?.charAt(0) || 'U'}</AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Mi Cuenta ({profile?.role})</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-                <Link href={getProfileLink()}><User className="mr-2" /> Perfil</Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
-                <LogOut className="mr-2" /> Cerrar Sesión
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {isUserLoading ? (
+            <Loader2 className="animate-spin" />
+        ) : profile ? (
+            <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                variant="outline"
+                size="icon"
+                className="overflow-hidden rounded-full"
+                >
+                <Avatar>
+                    <AvatarImage src={`https://picsum.photos/seed/${profile?.id || 'user'}/100/100`} alt="Avatar" />
+                    <AvatarFallback>{profile?.firstName?.charAt(0) || 'U'}</AvatarFallback>
+                </Avatar>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Mi Cuenta ({profile?.role})</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                    <Link href={getProfileLink()}><User className="mr-2" /> Perfil</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                    <LogOut className="mr-2" /> Cerrar Sesión
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+            </DropdownMenu>
+        ) : null}
       </div>
     </header>
   );
