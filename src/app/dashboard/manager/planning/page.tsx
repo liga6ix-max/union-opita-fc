@@ -75,8 +75,8 @@ export default function ManagerPlanningPage() {
   
   const coachesQuery = useMemoFirebase(() => {
     if (!firestore || !profile?.clubId) return null;
-    // Query for all users that can be assigned a plan (coaches or managers).
-    return query(collection(firestore, 'users'), where("role", "in", ["coach", "manager"]));
+    // Query for all users that are staff (coaches or managers).
+    return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId), where("role", "in", ["coach", "manager"]));
   }, [firestore, profile?.clubId]);
   const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
@@ -193,7 +193,7 @@ export default function ManagerPlanningPage() {
                                 <SelectContent>
                                   {coaches && coaches.length > 0 ? coaches.map(coach => (
                                     <SelectItem key={coach.id} value={coach.id}>{coach.firstName} {coach.lastName}</SelectItem>
-                                  )) : <p className="p-2 text-xs text-muted-foreground">No hay entrenadores.</p>}
+                                  )) : <SelectItem value="none" disabled>No hay entrenadores</SelectItem>}
                                 </SelectContent>
                               </Select>
                                 <FormMessage />

@@ -83,12 +83,12 @@ service cloud.firestore {
 
     /**
      * @description Manages user profiles.
+     *              - Managers can list and read any user.
      *              - Users can read/update their own profile.
-     *              - Managers can read, list, update, and delete any user profile.
      *              - Anyone can create a user document during sign-up.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAnyManager();
+      allow get: if isAnyManager() || isOwner(userId);
       allow list: if isAnyManager();
       allow create: if true;
       allow update: if isOwner(userId) || isAnyManager();
