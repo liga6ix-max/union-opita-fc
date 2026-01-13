@@ -1,0 +1,137 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * Core Philosophy: This ruleset enforces a role-based security model for a single-club
+     * management application. A user's access to any data is primarily determined by their role
+     * (admin, manager, coach, athlete). Since this is a single-club app, the complexity of
+     * multi-club data segregation is removed.
+     *
+     * Data Structure: Data is organized under a top-level `/users` collection and a `/clubs/{clubId}`
+     * document which contains all other club-specific data in subcollections.
+     *
+     * Key Security Decisions:
+     * - The default security posture is denial; access is only granted explicitly.
+     * - Managers have broad permissions to manage club data.
+     * - Users can generally read/write their own data.
+     * - Specific roles have specific permissions (e.g., coaches can read athlete data).
+     * - Public landing page content is readable by anyone.
+     */
+
+    // --------------------------------------------------------------------------------
+    // Helper Functions
+    // --------------------------------------------------------------------------------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isClubMember(clubId) {
+      return isSignedIn() && getUserData().clubId == clubId;
+    }
+
+    function isClubManager(clubId) {
+      let userData = getUserData();
+      return isClubMember(clubId) && userData.role in ['admin', 'manager'];
+    }
+
+    function isClubAdmin(clubId) {
+      return isClubMember(clubId) && getUserData().role == 'admin';
+    }
+
+    function isClubStaff(clubId) {
+      return isClubMember(clubId) && getUserData().role in ['admin', 'manager', 'coach'];
+    }
+
+    function isClubAthlete(clubId) {
+        let userData = getUserData();
+        return isClubMember(clubId) && userData.role == 'athlete';
+    }
+
+    // Simplified for single-club app: any manager/admin.
+    function isAnyManager() {
+        let userData = getUserData();
+        return isSignedIn() && userData.role in ['admin', 'manager'];
+    }
+
+
+    // --------------------------------------------------------------------------------
+    // Collection Rules
+    // --------------------------------------------------------------------------------
+
+    match /clubs/{clubId} {
+      allow get: if isClubMember(clubId);
+      allow list: if false; 
+      allow create: if isSignedIn();
+      allow update: if isClubManager(clubId);
+      allow delete: if isClubAdmin(clubId);
+    }
+
+    /**
+     * @description Manages user profiles. Users can create/manage their own profile.
+     *              Managers can list all users of their club and pending users.
+     */
+    match /users/{userId} {
+      allow get: if isSignedIn(); // Any signed-in user can get another user's profile in a single-club app.
+      // A manager can list all users in their club, or users who are pending.
+      allow list: if isAnyManager() && (request.query.where[0][2] == getUserData().clubId || request.query.where[1][2] == '');
+      allow create: if true; // Allow anyone to create their user document during sign-up.
+      allow update: if isOwner(userId) || isClubManager(getUserData().clubId); // Owner can edit their own profile, manager can edit any.
+      allow delete: if isClubManager(getUserData().clubId); // Only managers can delete users.
+    }
+
+    /**
+     * @description Stores athlete profiles. Club staff can list/read all. An athlete
+     *              can read and update their own profile. Managers can create/delete.
+     */
+    match /clubs/{clubId}/athletes/{athleteId} {
+      allow get: if isClubStaff(clubId) || isOwner(athleteId);
+      allow list: if isClubStaff(clubId);
+      allow create: if isClubManager(clubId);
+      allow update: if isOwner(athleteId) || isClubManager(clubId);
+      allow delete: if isClubManager(clubId);
+    }
+
+    /**
+     * @description Secures payment records. Staff can read all payments. Athletes
+     *              can only read their own payments. Managers manage payments.
+     */
+    match /clubs/{clubId}/payments/{paymentId} {
+      allow get: if isClubStaff(clubId) || (isClubAthlete(clubId) && resource.data.athleteId == request.auth.uid);
+      allow list: if isClubStaff(clubId) || (isClubAthlete(clubId) && request.query.where[0][2] == request.auth.uid);
+      allow create: if isClubManager(clubId);
+      allow update: if isClubManager(clubId);
+      allow delete: if isClubAdmin(clubId);
+    }
+
+    /**
+     * @description Manages tasks. Club members can view tasks. Staff can create.
+     *              Assigner, assignee, or manager can update.
+     */
+    match /clubs/{clubId}/tasks/{taskId} {
+      allow get, list: if isClubMember(clubId);
+      allow create: if isClubStaff(clubId) && request.resource.data.assignerId == request.auth.uid;
+      allow update: if isClubMember(clubId) && (isClubManager(clubId) || request.auth.uid == resource.data.assignerId || request.auth.uid == resource.data.assigneeId);
+      allow delete: if isClubManager(clubId);
+    }
+
+    /**
+     * @description Manages public landing page content. Readable by anyone.
+     *              Writable only by managers.
+     */
+    match /clubs/{clubId}/landingPageContent/{contentId} {
+      allow get, list: if true;
+      allow create, update, delete: if isClubManager(clubId);
+    }
+  }
+}
