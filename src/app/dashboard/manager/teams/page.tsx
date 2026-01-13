@@ -22,7 +22,8 @@ export default function ManagerTeamsPage() {
 
     const athletesQuery = useMemoFirebase(() => {
         if (!firestore || !profile?.clubId) return null;
-        return collection(firestore, `clubs/${profile.clubId}/athletes`);
+        // The query now explicitly filters by clubId, matching the security rule.
+        return query(collection(firestore, `clubs/${profile.clubId}/athletes`), where("clubId", "==", profile.clubId));
     }, [firestore, profile?.clubId]);
     const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
     

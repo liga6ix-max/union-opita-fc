@@ -101,7 +101,8 @@ service cloud.firestore {
      */
     match /clubs/{clubId}/athletes/{athleteId} {
       allow get: if isClubStaff(clubId) || isOwner(athleteId);
-      allow list: if isClubManager(clubId) || isClubStaff(clubId);
+      // A manager can list all athletes if the query is scoped to their club.
+      allow list: if isClubManager(clubId) && request.query.where[0][2] == clubId;
       allow create: if isClubManager(clubId);
       allow update: if isOwner(athleteId) || isClubManager(clubId);
       allow delete: if isClubManager(clubId);
