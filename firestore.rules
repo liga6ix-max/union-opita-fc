@@ -150,12 +150,11 @@ service cloud.firestore {
      * @principle Enforces document ownership and shared access within a closed group (a club).
      */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isMemberOfSameClubAsTarget(userId);
-      // SIMPLIFIED RULE FOR SINGLE-CLUB APP: A manager can list users that are pending OR in their club.
-      allow list: if isAnyManager() && (request.query.where[0][2] == "pending" || request.query.where[2] == getUserData().clubId);
+      allow get: if isOwner(userId) || isMemberOfSameClubAsTarget(userId) || isAnyManager();
+      allow list: if isAnyManager();
       allow create: if request.auth.uid == userId;
       allow update: if isOwner(userId) || isClubManager(getUserData().clubId);
-      allow delete: if isOwner(userId) || isClubManager(getUserData().clubId);
+      allow delete: if isClubManager(getUserData().clubId);
     }
 
     /**
