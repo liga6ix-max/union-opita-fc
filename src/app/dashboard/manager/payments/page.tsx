@@ -31,17 +31,9 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 const paymentScheduleSchema = z.object({
   month: z.string().min(3, 'El mes es requerido.'),
-  team: z.string().min(1, 'Debes seleccionar un equipo.'),
   amount: z.coerce.number().min(1, 'El monto debe ser mayor a 0.'),
 });
 
@@ -68,33 +60,26 @@ export default function ManagerPaymentsPage() {
   }, [firestore]);
   const { data: paymentList, isLoading: paymentsLoading } = useCollection(paymentsQuery);
 
-  const teams = Array.from(new Set(athletes?.map(a => a.team).filter(Boolean) || []));
-
   const form = useForm<PaymentScheduleFormValues>({
     resolver: zodResolver(paymentScheduleSchema),
-    defaultValues: { month: '', team: '', amount: 0 },
+    defaultValues: { month: '', amount: 50000 }, // Default fee
   });
 
-  const handleTeamChange = (team: string) => {
-    const fee = (clubConfig.monthlyFees as Record<string, number>)[team] || 0;
-    form.setValue('amount', fee);
-    form.setValue('team', team);
-  };
-
   const onScheduleSubmit = async (data: PaymentScheduleFormValues) => {
-    if (!firestore || !athletes) return;
+    if (!firestore || !athletes) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron cargar los deportistas.' });
+        return;
+    }
     
-    const athletesInTeam = athletes.filter(a => a.team === data.team);
-    if (athletesInTeam.length === 0) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No hay deportistas en el equipo seleccionado.' });
+    if (athletes.length === 0) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No hay deportistas registrados en el club.' });
       return;
     }
 
     const batch = writeBatch(firestore);
     const paymentsCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
     
-    let paymentsCount = 0;
-    athletesInTeam.forEach(athlete => {
+    athletes.forEach(athlete => {
       const newPaymentRef = doc(paymentsCollection);
       batch.set(newPaymentRef, {
         athleteId: athlete.id,
@@ -103,14 +88,13 @@ export default function ManagerPaymentsPage() {
         status: 'Pendiente',
         clubId: MAIN_CLUB_ID
       });
-      paymentsCount++;
     });
 
     try {
       await batch.commit();
       toast({
         title: 'Pagos Programados',
-        description: `Se crearon ${paymentsCount} cuotas de pago para el equipo ${data.team}.`,
+        description: `Se crearon ${athletes.length} cuotas de pago para todos los deportistas.`,
       });
       setIsDialogOpen(false);
       form.reset();
@@ -162,19 +146,6 @@ export default function ManagerPaymentsPage() {
                       <FormItem>
                         <FormLabel>Mes a Cobrar</FormLabel>
                         <FormControl><Input placeholder="Ej: Septiembre 2024" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField control={form.control} name="team" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Asignar a Equipo</FormLabel>
-                        <Select onValueChange={handleTeamChange} defaultValue={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un equipo" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {teams.map(team => (<SelectItem key={team} value={team}>{team}</SelectItem>))}
-                          </SelectContent>
-                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
