@@ -59,6 +59,13 @@ export default function ManagerPaymentsPage() {
     return collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
   }, [firestore]);
   const { data: paymentList, isLoading: paymentsLoading } = useCollection(paymentsQuery);
+  
+  // Query all users to map IDs to names
+  const usersQuery = useMemoFirebase(() => {
+      if (!firestore) return null;
+      return collection(firestore, 'users');
+  }, [firestore]);
+  const { data: allUsers, isLoading: usersLoading } = useCollection(usersQuery);
 
   const form = useForm<PaymentScheduleFormValues>({
     resolver: zodResolver(paymentScheduleSchema),
@@ -107,8 +114,8 @@ export default function ManagerPaymentsPage() {
   const pendingVerifications = paymentList?.filter(p => p.status === 'En Verificación') || [];
 
   const getAthleteName = (athleteId: string) => {
-    const athlete = athletes?.find(a => a.id === athleteId);
-    return athlete ? `${athlete.firstName} ${athlete.lastName}` : 'Desconocido';
+    const user = allUsers?.find(u => u.id === athleteId);
+    return user ? `${user.firstName} ${user.lastName}` : 'Desconocido';
   };
 
   const handlePaymentAction = async (paymentId: string, newStatus: 'Pagado' | 'Rechazado') => {
@@ -124,7 +131,7 @@ export default function ManagerPaymentsPage() {
     }
   };
   
-  const isLoading = isUserLoading || athletesLoading || paymentsLoading;
+  const isLoading = isUserLoading || athletesLoading || paymentsLoading || usersLoading;
   
   if (isLoading) {
       return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
