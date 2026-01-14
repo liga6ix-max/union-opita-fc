@@ -33,14 +33,15 @@ const profileSchema = z.object({
   firstName: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
   lastName: z.string().min(3, { message: 'El apellido debe tener al menos 3 caracteres.' }),
   birthDate: z.string().optional(),
-  gender: z.enum(['Masculino', 'Femenino'], { required_error: 'El género es requerido.'}).optional(),
+  gender: z.enum(['Masculino', 'Femenino']).optional(),
   bloodType: z.string().optional(),
-  documentType: z.enum(['TI', 'CC', 'RC'], { required_error: 'El tipo de documento es requerido.'}).optional(),
+  documentType: z.enum(['TI', 'CC', 'RC']).optional(),
   documentNumber: z.string().optional(),
   emergencyContactName: z.string().optional(),
   emergencyContactPhone: z.string().optional(),
   medicalInformation: z.string().optional(),
   team: z.string().min(1, "El equipo es requerido."),
+  coachId: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -61,9 +62,15 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
     if(!firestore || !athleteId) return null;
     return doc(firestore, 'users', athleteId);
   }, [firestore, athleteId]);
+  
+  const coachesQuery = useMemoFirebase(() => {
+    if (!firestore || !managerProfile?.clubId) return null;
+    return query(collection(firestore, 'users'), where("clubId", "==", managerProfile.clubId), where("role", "==", "coach"));
+  }, [firestore, managerProfile?.clubId]);
 
   const { data: athleteData, isLoading: isAthleteLoading, error: athleteError } = useDoc(athleteDocRef);
   const { data: userData, isLoading: isUserDocLoading, error: userError } = useDoc(userDocRef);
+  const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
 
   const form = useForm<ProfileFormValues>({
@@ -80,6 +87,7 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
       emergencyContactPhone: '',
       medicalInformation: '',
       team: '',
+      coachId: '',
     },
   });
 
@@ -91,7 +99,7 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
       reset({
         firstName: combinedData.firstName || '',
         lastName: combinedData.lastName || '',
-        birthDate: combinedData.birthDate ? format(parseISO(combinedData.birthDate), 'yyyy-MM-dd') : '',
+        birthDate: combinedData.birthDate && isValid(parseISO(combinedData.birthDate)) ? format(parseISO(combinedData.birthDate), 'yyyy-MM-dd') : '',
         gender: combinedData.gender || undefined,
         bloodType: combinedData.bloodType || '',
         documentType: combinedData.documentType || undefined,
@@ -100,6 +108,7 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
         emergencyContactPhone: combinedData.emergencyContactPhone || '',
         medicalInformation: combinedData.medicalInformation || '',
         team: combinedData.team || '',
+        coachId: combinedData.coachId || '',
       });
     }
   }, [userData, athleteData, reset]);
@@ -114,6 +123,15 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
       return;
     }
     
+    // Find the coach for the selected team if not directly assigned
+    let finalCoachId = data.coachId;
+    if (!finalCoachId) {
+        const teamCoach = coaches?.find(c => c.id === athleteData?.coachId);
+        if (teamCoach) {
+            finalCoachId = teamCoach.id;
+        }
+    }
+    
     setDocumentNonBlocking(athleteDocRef, {
         birthDate: data.birthDate,
         gender: data.gender,
@@ -124,6 +142,7 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
         emergencyContactPhone: data.emergencyContactPhone,
         medicalInformation: data.medicalInformation,
         team: data.team,
+        coachId: finalCoachId,
     }, { merge: true });
 
     updateDocumentNonBlocking(userDocRef, {
@@ -138,7 +157,7 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
     setIsEditing(false);
   };
   
-  if (isUserLoading || isAthleteLoading || isUserDocLoading) {
+  if (isUserLoading || isAthleteLoading || isUserDocLoading || coachesLoading) {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
   }
   
@@ -160,6 +179,7 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
   };
   
   const age = displayData.birthDate ? getAge(displayData.birthDate) : null;
+  const assignedCoach = coaches?.find(c => c.id === athleteData?.coachId);
 
   return (
     <div className="space-y-8">
@@ -200,6 +220,20 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
                                         <SelectContent>
                                             {clubConfig.categories.map(cat => (
                                                 <SelectItem key={cat.name} value={cat.name}>{cat.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                             <FormField control={control} name="coachId" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Entrenador Asignado</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Asignar Entrenador" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            {coaches?.map(c => (
+                                                <SelectItem key={c.id} value={c.id}>{c.firstName} {c.lastName}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
@@ -289,6 +323,7 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
                         <div className="flex items-center gap-4"><User className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Nombre Completo</p><p className="font-medium">{displayData.firstName} {displayData.lastName}</p></div></div>
                         <div className="flex items-center gap-4"><Shield className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Equipo</p><p className="font-medium">{athleteData?.team || 'No asignado'}</p></div></div>
+                        <div className="flex items-center gap-4"><User className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Entrenador</p><p className="font-medium">{assignedCoach ? `${assignedCoach.firstName} ${assignedCoach.lastName}` : 'No asignado'}</p></div></div>
                         <div className="flex items-center gap-4"><Cake className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Fecha de Nacimiento</p><p className="font-medium">{displayData.birthDate ? `${format(parseISO(displayData.birthDate), "d 'de' MMMM, yyyy", { locale: es })} (${age} años)` : 'No especificada'}</p></div></div>
                         <div className="flex items-center gap-4"><FileText className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Documento</p><p className="font-medium">{displayData.documentType} {displayData.documentNumber || 'No especificado'}</p></div></div>
                         <div className="flex items-center gap-4"><VenetianMask className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Género</p><p className="font-medium">{displayData.gender || 'No especificado'}</p></div></div>

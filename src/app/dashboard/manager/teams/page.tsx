@@ -2,9 +2,9 @@
 'use client';
 
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, User, Target, ArrowRight, Loader2, ChevronDown } from "lucide-react";
+import { Users, User, Target, ArrowRight, Loader2, MoreVertical } from "lucide-react";
 import { useUser, useCollection, useMemoFirebase, useFirebase } from "@/firebase";
 import { collection, query, where, writeBatch, getDocs, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger
 } from "@/components/ui/dropdown-menu";
 
 export default function ManagerTeamsPage() {
@@ -21,21 +24,22 @@ export default function ManagerTeamsPage() {
     const { toast } = useToast();
 
     const athletesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.clubId) return null;
+        if (!firestore || !profile) return null;
         return query(collection(firestore, `clubs/${profile.clubId}/athletes`), where("clubId", "==", profile.clubId));
-    }, [firestore, profile?.clubId]);
+    }, [firestore, profile]);
+    
     const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
     
     const coachesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.clubId) return null;
+        if (!firestore || !profile) return null;
         return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId), where("role", "in", ["coach", "manager"]));
-    }, [firestore, profile?.clubId]);
+    }, [firestore, profile]);
     const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
     const microcyclesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.clubId) return null;
+        if (!firestore || !profile) return null;
         return collection(firestore, `clubs/${profile.clubId}/microcycles`);
-    }, [firestore, profile?.clubId]);
+    }, [firestore, profile]);
     const { data: microcycles, isLoading: cyclesLoading } = useCollection(microcyclesQuery);
 
     const teams = athletes?.reduce((acc, athlete) => {
@@ -99,37 +103,45 @@ export default function ManagerTeamsPage() {
                 <h1 className="text-3xl font-bold font-headline">Gestión de Equipos</h1>
                 <p className="text-muted-foreground">Gestiona y supervisa cada categoría del club de forma individual.</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Object.entries(teams).map(([teamName, teamAthletes]) => {
                     const currentCoach = getCoachForTeam(teamName);
                     return (
                         <Card key={teamName} className="flex flex-col">
-                            <CardHeader>
-                                <CardTitle className="font-headline text-2xl">{teamName}</CardTitle>
+                            <CardHeader className="flex flex-row items-start justify-between">
+                                <div>
+                                    <CardTitle className="font-headline text-2xl">{teamName}</CardTitle>
+                                    <CardDescription>{teamAthletes.length} deportistas</CardDescription>
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="-mt-2">
+                                            <MoreVertical className="h-5 w-5" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem asChild>
+                                            <Link href={`/dashboard/manager/athletes?team=${encodeURIComponent(teamName)}`}>
+                                                Ver Deportistas
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSub>
+                                            <DropdownMenuSubTrigger>Asignar Entrenador</DropdownMenuSubTrigger>
+                                            <DropdownMenuSubContent>
+                                                {coaches && coaches.map(coach => (
+                                                    <DropdownMenuItem key={coach.id} onClick={() => handleAssignCoach(teamName, coach)} disabled={currentCoach?.id === coach.id}>
+                                                        {coach.firstName} {coach.lastName}
+                                                    </DropdownMenuItem>
+                                                ))}
+                                            </DropdownMenuSubContent>
+                                        </DropdownMenuSub>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </CardHeader>
                             <CardContent className="flex-grow space-y-4">
                                 <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Users className="h-5 w-5" />
-                                    <span>{teamAthletes.length} Deportistas</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-muted-foreground">
                                     <User className="h-5 w-5" />
-                                    <span>Entrenador:</span>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="flex items-center gap-1 -ml-2">
-                                                {currentCoach ? `${currentCoach.firstName} ${currentCoach.lastName}` : 'No asignado'}
-                                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent>
-                                            {coaches && coaches.map(coach => (
-                                                <DropdownMenuItem key={coach.id} onClick={() => handleAssignCoach(teamName, coach)} disabled={currentCoach?.id === coach.id}>
-                                                    {coach.firstName} {coach.lastName}
-                                                </DropdownMenuItem>
-                                            ))}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                    <span>Entrenador: <span className="font-semibold text-foreground">{currentCoach ? `${currentCoach.firstName} ${currentCoach.lastName}` : 'No asignado'}</span></span>
                                 </div>
                                 <div className="flex items-start gap-2 text-muted-foreground">
                                     <Target className="h-5 w-5 mt-1 flex-shrink-0" />
@@ -139,19 +151,17 @@ export default function ManagerTeamsPage() {
                                     </div>
                                 </div>
                             </CardContent>
-                            <div className="p-6 pt-0">
-                                <Button asChild className="w-full">
-                                    <Link href={`/dashboard/manager/athletes?team=${encodeURIComponent(teamName)}`}>
-                                        Ver Deportistas <ArrowRight className="ml-2"/>
-                                    </Link>
-                                </Button>
-                            </div>
                         </Card>
                     )
                 })}
             </div>
              {Object.keys(teams).length === 0 && (
-                <p className="text-center py-8 text-muted-foreground">No hay equipos con deportistas asignados.</p>
+                <Card>
+                    <CardContent className="p-8 text-center text-muted-foreground">
+                        <p>No hay equipos con deportistas asignados actualmente.</p>
+                        <p className="text-sm">Puedes asignar equipos a los deportistas desde la sección de <Link href="/dashboard/manager/approvals" className="text-primary underline">Aprobaciones</Link>.</p>
+                    </CardContent>
+                </Card>
             )}
         </div>
     )
