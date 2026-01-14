@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MoreVertical, Pencil } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export default function ManagerAthletesPage() {
     const searchParams = useSearchParams();
@@ -62,6 +63,7 @@ export default function ManagerAthletesPage() {
                                 <TableHead>Nombre</TableHead>
                                 <TableHead>Entrenador Asignado</TableHead>
                                 <TableHead>Contacto de Emergencia</TableHead>
+                                <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -70,6 +72,23 @@ export default function ManagerAthletesPage() {
                                     <TableCell className="font-medium">{athlete.firstName} {athlete.lastName}</TableCell>
                                     <TableCell>{getCoachName(athlete.coachId)}</TableCell>
                                     <TableCell>{athlete.emergencyContactName} - {athlete.emergencyContactPhone}</TableCell>
+                                    <TableCell className="text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/dashboard/manager/athletes/${athlete.id}`}>
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        Editar Perfil
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>

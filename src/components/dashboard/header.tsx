@@ -39,12 +39,22 @@ const pageTitles: { [key: string]: string } = {
   "/dashboard/athlete/profile": "Mi Perfil",
 };
 
+const getDynamicTitle = (pathname: string): string => {
+  if (pathname.startsWith('/dashboard/manager/athletes/')) {
+    return "Perfil del Deportista (Gerente)";
+  }
+  if (pathname.startsWith('/dashboard/coach/athletes/')) {
+    return "Perfil del Deportista (Entrenador)";
+  }
+  return pageTitles[pathname] || "Dashboard";
+};
+
 export function DashboardHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const { profile, isUserLoading } = useUser();
   const { auth } = useFirebase();
-  const title = pageTitles[pathname] || "Dashboard";
+  const title = getDynamicTitle(pathname);
 
   const getProfileLink = () => {
     if (!profile?.role) return "#";
