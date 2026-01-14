@@ -79,7 +79,7 @@ export function DashboardSidebar() {
 
   const role = profile?.role;
 
-  if (isUserLoading || !profile?.clubId) { // Wait for clubId as well
+  if (isUserLoading) {
     return (
         <Sidebar>
             <SidebarHeader>
