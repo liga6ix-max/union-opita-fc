@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { useUser, useCollection, useMemoFirebase, useFirebase, useDoc } from "@/firebase";
+import { useUser, useMemoFirebase, useFirebase, useCollection, useDoc } from "@/firebase";
 import { collection, query, where, doc, updateDoc, writeBatch } from "firebase/firestore";
 import { Loader2 } from "lucide-react";
 
@@ -81,11 +81,22 @@ export default function ManagerSettingsPage() {
 
   const bankAccountForm = useForm<BankAccountFormValues>({
     resolver: zodResolver(bankAccountSchema),
+    defaultValues: {
+      bankName: '',
+      accountType: '',
+      accountNumber: '',
+      accountHolder: '',
+    },
   });
 
   useEffect(() => {
     if (clubData) {
-        bankAccountForm.reset(clubData.bankAccount);
+        bankAccountForm.reset({
+          bankName: clubData.bankAccount?.bankName || '',
+          accountType: clubData.bankAccount?.accountType || '',
+          accountNumber: clubData.bankAccount?.accountNumber || '',
+          accountHolder: clubData.bankAccount?.accountHolder || '',
+        });
         setClubName(clubData.name || '');
         setCategories(clubData.categories || []);
     }
