@@ -62,8 +62,8 @@ service cloud.firestore {
 
     // Override for specific write permissions
     match /clubs/{clubId}/athletes/{athleteId} {
-        // Allow a user to update their own athlete profile data.
-        allow update: if isAnyManager() || isOwner(athleteId);
+        // Allow a user to create and update their own athlete profile data.
+        allow create, update: if isAnyManager() || isOwner(athleteId);
     }
     
     match /clubs/{clubId}/payments/{paymentId} {
