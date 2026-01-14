@@ -124,7 +124,9 @@ export default function ManagerPaymentsPage() {
     }
   };
   
-  if (isUserLoading || athletesLoading || paymentsLoading) {
+  const isLoading = isUserLoading || athletesLoading || paymentsLoading;
+  
+  if (isLoading) {
       return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
