@@ -21,22 +21,22 @@ export default function ManagerTeamsPage() {
     const { toast } = useToast();
 
     const athletesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.clubId) return null;
+        if (!firestore || !profile) return null;
         // The query now explicitly filters by clubId, matching the security rule.
         return query(collection(firestore, `clubs/${profile.clubId}/athletes`), where("clubId", "==", profile.clubId));
-    }, [firestore, profile?.clubId]);
+    }, [firestore, profile]);
     const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
     
     const coachesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.clubId) return null;
+        if (!firestore || !profile) return null;
         return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId), where("role", "in", ["coach", "manager"]));
-    }, [firestore, profile?.clubId]);
+    }, [firestore, profile]);
     const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
     const microcyclesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.clubId) return null;
+        if (!firestore || !profile) return null;
         return collection(firestore, `clubs/${profile.clubId}/microcycles`);
-    }, [firestore, profile?.clubId]);
+    }, [firestore, profile]);
     const { data: microcycles, isLoading: cyclesLoading } = useCollection(microcyclesQuery);
 
     const teams = athletes?.reduce((acc, athlete) => {

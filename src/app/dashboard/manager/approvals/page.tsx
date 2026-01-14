@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -38,8 +37,8 @@ export default function ApprovalsPage() {
     const { profile, firestore, isUserLoading } = useUser();
 
     // With simplified rules, a manager can list all users.
+    // IMPORTANT: Check for profile ensures this query doesn't run during logout.
     const usersQuery = useMemoFirebase(() => {
-        // IMPORTANT: Check for profile ensures this query doesn't run during logout.
         if (!firestore || !profile) return null;
         return collection(firestore, 'users');
     }, [firestore, profile]);

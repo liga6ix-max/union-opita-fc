@@ -25,7 +25,7 @@ export default function ManagerAthletesPage() {
     const coachesQuery = useMemoFirebase(() => {
         if (!firestore || !profile?.clubId) return null;
         return query(collection(firestore, `users`), where("clubId", "==", profile.clubId), where("role", "==", "coach"));
-    }, [firestore, profile?.clubId]);
+    }, [firestore, profile]);
     const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
     if (isUserLoading || athletesLoading || coachesLoading) {

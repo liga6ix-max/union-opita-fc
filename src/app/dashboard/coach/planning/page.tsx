@@ -43,7 +43,7 @@ export default function CoachPlanningPage() {
   const [isPrintViewOpen, setIsPrintViewOpen] = useState(false);
 
   const microcyclesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId || !profile.id) return null;
+    if (!firestore || !profile?.id) return null;
     return query(collection(firestore, `clubs/${profile.clubId}/microcycles`), where("coachId", "==", profile.id));
   }, [firestore, profile?.clubId, profile?.id]);
 

@@ -43,7 +43,7 @@ export default function CoachAttendancePage() {
   const [attendance, setAttendance] = useState<AttendanceRecord>({});
 
   const trainingEventsQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId || !profile.id) return null;
+    if (!firestore || !profile?.id) return null;
     return query(collection(firestore, `clubs/${profile.clubId}/trainingEvents`), where("coachId", "==", profile.id));
   }, [firestore, profile?.clubId, profile?.id]);
 

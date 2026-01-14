@@ -18,7 +18,7 @@ export default function CoachAthletesPage() {
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     
     const athletesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.clubId || !profile.id) return null;
+        if (!firestore || !profile?.id) return null;
         return query(collection(firestore, `clubs/${profile.clubId}/athletes`), where("coachId", "==", profile.id));
     }, [firestore, profile?.clubId, profile?.id]);
 

@@ -13,14 +13,14 @@ export default function CoachDashboard() {
   const { profile, isUserLoading, firestore } = useUser();
 
   const athletesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId || !profile.id) return null;
+    if (!firestore || !profile?.id) return null;
     return query(collection(firestore, `clubs/${profile.clubId}/athletes`), where("coachId", "==", profile.id));
   }, [firestore, profile?.clubId, profile?.id]);
   
   const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
 
   const tasksQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId || !profile.id) return null;
+    if (!firestore || !profile?.id) return null;
     return query(collection(firestore, `clubs/${profile.clubId}/tasks`), where("assigneeId", "==", profile.id));
   }, [firestore, profile?.clubId, profile?.id]);
 

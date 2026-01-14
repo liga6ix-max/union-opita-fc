@@ -43,7 +43,7 @@ export default function CoachTasksPage() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const tasksQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId || !profile.id) return null;
+    if (!firestore || !profile?.id) return null;
     return query(collection(firestore, `clubs/${profile.clubId}/tasks`), where("assigneeId", "==", profile.id));
   }, [firestore, profile?.clubId, profile?.id]);
 
