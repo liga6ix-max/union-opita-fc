@@ -102,8 +102,8 @@ export default function AthleteProfilePage() {
     }
     
     try {
-      // 1. Update the specific athlete document
-      await updateDoc(athleteDocRef, {
+      // 1. Use setDoc with merge:true to create or update the athlete subcollection document
+      await setDoc(athleteDocRef, {
           birthDate: data.birthDate,
           gender: data.gender,
           bloodType: data.bloodType,
@@ -112,7 +112,7 @@ export default function AthleteProfilePage() {
           emergencyContactName: data.emergencyContactName,
           emergencyContactPhone: data.emergencyContactPhone,
           medicalInformation: data.medicalInformation,
-      });
+      }, { merge: true });
 
       // 2. Update the main user document
       const userDocRef = doc(firestore, 'users', user.uid);
