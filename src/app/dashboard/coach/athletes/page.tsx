@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { parseISO, isValid } from "date-fns";
 import { useUser, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
+import Link from "next/link";
 
 export default function CoachAthletesPage() {
     const { profile, isUserLoading, firestore } = useUser();
@@ -77,7 +78,9 @@ export default function CoachAthletesPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent>
                                                 <DropdownMenuItem onClick={() => openDetailsModal(athlete)}>Ver Evaluaciones</DropdownMenuItem>
-                                                <DropdownMenuItem>Editar Información</DropdownMenuItem>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/dashboard/coach/athletes/${athlete.id}`}>Editar Información</Link>
+                                                </DropdownMenuItem>
                                                 <DropdownMenuItem>Añadir Evaluación</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>

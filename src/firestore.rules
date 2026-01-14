@@ -39,6 +39,12 @@ service cloud.firestore {
         return isSignedIn() && getUserData().role == 'athlete';
     }
 
+    // New helper function to check if the requester is the coach of the target user
+    function isTheirCoach(athleteId) {
+      let athleteDoc = get(/databases/$(database)/documents/clubs/OpitaClub/athletes/$(athleteId)).data;
+      return isSignedIn() && isAnyCoach() && athleteDoc.coachId == request.auth.uid;
+    }
+
 
     // --------------------------------------------------------------------------------
     // Collection Rules
@@ -57,13 +63,14 @@ service cloud.firestore {
      * @description Manages user profiles. This is the most critical collection for management.
      *              - ANY manager can list, read, update, and delete ANY user. This is required for the user management page.
      *              - Users can read/update their own profile.
+     *              - Coaches can read the profiles of athletes assigned to them.
      *              - Anyone can create a user during sign-up.
      */
     match /users/{userId} {
-      allow get: if isAnyManager() || isOwner(userId);
+      allow get: if isAnyManager() || isOwner(userId) || isTheirCoach(userId);
       allow list: if isAnyManager();
       allow create: if true; // Anyone can create a user document during sign-up.
-      allow update: if isOwner(userId) || isAnyManager(); // A user can update their own doc, or a manager can update any doc.
+      allow update: if isOwner(userId) || isAnyManager() || isTheirCoach(userId); // A user can update their own doc, a manager can update any, a coach can update their athlete's
       allow delete: if isAnyManager();
     }
 
@@ -79,15 +86,17 @@ service cloud.firestore {
 
         // Default Write Access: Only managers can create, update, or delete.
         // Specific collections below can provide more granular write access.
-        allow create, update, delete: if isAnyManager();
+        allow create, delete: if isAnyManager();
+        allow update: if isAnyManager();
     }
 
     /**
      * @description Athlete-specific overrides.
-     *              An athlete can update their own profile, or a manager can.
+     *              An athlete can update their own profile, a manager can, or their coach can.
      */
     match /clubs/{clubId}/athletes/{athleteId} {
-      allow update: if isOwner(athleteId) || isAnyManager();
+      allow get: if isAnyManager() || isOwner(athleteId) || isTheirCoach(athleteId);
+      allow update: if isOwner(athleteId) || isAnyManager() || isTheirCoach(athleteId);
     }
 
     /**
