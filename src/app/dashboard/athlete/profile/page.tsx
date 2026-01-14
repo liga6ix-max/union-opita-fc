@@ -78,10 +78,10 @@ export default function AthleteProfilePage() {
   
   // Payment data hooks
   const paymentsQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.id || !profile?.clubId) return null;
+    if (!firestore || !user?.uid || !profile?.clubId) return null;
     const paymentsCollection = collection(firestore, `clubs/${profile.clubId}/payments`);
-    return query(paymentsCollection, where("athleteId", "==", profile.id));
-  }, [firestore, profile?.id, profile?.clubId]);
+    return query(paymentsCollection, where("athleteId", "==", user.uid));
+  }, [firestore, user?.uid, profile?.clubId]);
   const { data: athletePayments, isLoading: arePaymentsLoading } = useCollection(paymentsQuery);
 
   const coachQuery = useMemoFirebase(() => {
@@ -367,3 +367,5 @@ export default function AthleteProfilePage() {
     </div>
   );
 }
+
+    
