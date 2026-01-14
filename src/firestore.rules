@@ -31,15 +31,18 @@ service cloud.firestore {
         return isSignedIn() && getUserData().role in ['admin', 'manager'];
     }
 
+    function isClubStaff(clubId) {
+      return getUserData().role in ['admin', 'manager', 'coach'];
+    }
+
     function isAnyCoach() {
         return isSignedIn() && getUserData().role in ['admin', 'manager', 'coach'];
     }
     
-    function isAnyAthlete() {
+    function isClubAthlete(clubId) {
         return isSignedIn() && getUserData().role == 'athlete';
     }
 
-    // New helper function to check if the requester is the coach of the target user
     function isTheirCoach(athleteId) {
       let athleteDoc = get(/databases/$(database)/documents/clubs/OpitaClub/athletes/$(athleteId)).data;
       return isSignedIn() && isAnyCoach() && athleteDoc.coachId == request.auth.uid;
@@ -51,77 +54,78 @@ service cloud.firestore {
     // --------------------------------------------------------------------------------
 
     match /clubs/{clubId} {
-      // Any signed-in user can read the single club document.
       allow get: if isSignedIn();
-      allow list: if false; // Only one club doc, no need to list.
-      allow create: if isSignedIn(); // Allow initial club creation
+      allow list: if false; 
+      allow create: if isSignedIn();
       allow update: if isAnyManager();
-      allow delete: if false; // Prevent accidental deletion of the main club doc.
+      allow delete: if false;
     }
 
     /**
-     * @description Manages user profiles. This is the most critical collection for management.
-     *              - ANY manager can list, read, update, and delete ANY user. This is required for the user management page.
+     * @description Manages user profiles.
+     *              - Managers can list and read any user.
      *              - Users can read/update their own profile.
      *              - Coaches can read the profiles of athletes assigned to them.
-     *              - Anyone can create a user during sign-up.
      */
     match /users/{userId} {
       allow get: if isAnyManager() || isOwner(userId) || isTheirCoach(userId);
       allow list: if isAnyManager();
-      allow create: if true; // Anyone can create a user document during sign-up.
-      allow update: if isOwner(userId) || isAnyManager() || isTheirCoach(userId); // A user can update their own doc, a manager can update any, a coach can update their athlete's
+      allow create: if true;
+      allow update: if isOwner(userId) || isAnyManager() || isTheirCoach(userId);
       allow delete: if isAnyManager();
     }
-
+    
     /**
      * @description Generic rule for all subcollections under a club.
-     *              This simplifies management significantly for a single-club app.
      */
     match /clubs/{clubId}/{collection}/{docId} {
-        // Default Read Access: Any signed-in user can read/list documents.
-        // The app's queries are responsible for filtering data for the correct user.
-        // This rule is broad for reads but simplifies development immensely for a single-club app.
         allow get, list: if isSignedIn();
-
-        // Default Write Access: Only managers can create, update, or delete.
-        // Specific collections below can provide more granular write access.
-        allow create, delete: if isAnyManager();
-        allow update: if isAnyManager();
+        allow create, update, delete: if isAnyManager();
     }
 
     /**
      * @description Athlete-specific overrides.
-     *              An athlete can update their own profile, a manager can, or their coach can.
      */
     match /clubs/{clubId}/athletes/{athleteId} {
       allow get: if isAnyManager() || isOwner(athleteId) || isTheirCoach(athleteId);
+      allow list: if isAnyManager();
       allow update: if isOwner(athleteId) || isAnyManager() || isTheirCoach(athleteId);
     }
 
     /**
-     * @description Payment-specific overrides.
-     *              An athlete can update their own payment record (e.g., add reference), or a manager can.
+     * @description Secures payment records.
      */
     match /clubs/{clubId}/payments/{paymentId} {
-        allow update: if (isAnyAthlete() && resource.data.athleteId == request.auth.uid) || isAnyManager();
+      allow get: if isClubStaff(clubId) || (isClubAthlete(clubId) && resource.data.athleteId == request.auth.uid);
+      allow list: if isClubStaff(clubId) || (isClubAthlete(clubId) && request.query.filters.size() == 1 && request.query.filters[0].field == "athleteId" && request.query.filters[0].value == request.auth.uid);
+      allow create: if isAnyManager();
+      allow update: if isAnyManager() || (isClubAthlete(clubId) && resource.data.athleteId == request.auth.uid);
+      allow delete: if isAnyManager();
     }
 
     /**
-     * @description Task-specific overrides.
-     *              - Coaches can create tasks.
-     *              - The assignee, assigner, or a manager can update a task's status.
+     * @description Manages tasks.
      */
     match /clubs/{clubId}/tasks/{taskId} {
-        allow create: if isAnyCoach(); 
-        allow update: if isOwner(resource.data.assigneeId) || isOwner(resource.data.assignerId) || isAnyManager();
+      allow create: if isAnyCoach();
+      allow update: if isOwner(resource.data.assigneeId) || isOwner(resource.data.assignerId) || isAnyManager();
     }
 
     /**
-     * @description Attendance-specific overrides.
+     * @description Manages public landing page content. Readable by anyone.
      */
-    match /clubs/{clubId}/attendance/{attendanceId} {
-        allow create: if isAnyCoach();
+    match /clubs/{clubId}/landingPageContent/{contentId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAnyManager();
     }
+
+     match /clubs/{clubId}/trainingEvents/{eventId} {
+        allow get, list: if isSignedIn();
+        allow create, update, delete: if isAnyManager();
+     }
+
+     match /clubs/{clubId}/attendance/{attendanceId} {
+        allow create: if isAnyCoach();
+     }
   }
 }
