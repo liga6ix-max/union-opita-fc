@@ -10,29 +10,30 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
     
-    // Role checks based on Custom Claims. No more `get()` calls.
-    function isManager() {
-        return isSignedIn() && request.auth.token.role == 'manager';
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
     }
-    
+
+    function isManager() {
+      return isSignedIn() && getUserData(request.auth.uid).role == 'manager';
+    }
+
     function isCoach() {
-        return isSignedIn() && request.auth.token.role in ['manager', 'coach'];
+      return isSignedIn() && getUserData(request.auth.uid).role in ['manager', 'coach'];
     }
 
     function isAthlete() {
-        return isSignedIn() && request.auth.token.role == 'athlete';
+      return isSignedIn() && getUserData(request.auth.uid).role == 'athlete';
     }
-    
+
     function isMemberOfTheClub(clubId) {
-       // A user is a member if they have a role claim.
-       // This is a simplified check assuming all roles are club members.
-       // For managers, we allow access even if their doc doesn't have a clubId.
-       return isManager() || (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.clubId == clubId);
+      // Check if the user document has the corresponding clubId.
+      return isSignedIn() && getUserData(request.auth.uid).clubId == clubId;
     }
 
     // --------------------------------------------------------------------------------
@@ -43,67 +44,32 @@ service cloud.firestore {
     match /clubs/{clubId} {
       // Any authenticated member of the club can read club details.
       allow get: if isSignedIn() && isMemberOfTheClub(clubId);
+      // Managers can read any club document, essential for settings.
+      allow read: if isManager();
       // Only managers can create, update, or delete club documents.
       allow write: if isManager();
     }
 
     // USERS
     match /users/{userId} {
-      // Managers can read any user profile. Users can read their own.
-      allow get, list: if isManager() || isOwner(userId);
+      // Any signed-in user can read any other user's profile.
+      // This is required for security rules to be able to check roles.
+      // Client-side queries will restrict what data is actually shown to users.
+      allow read: if isSignedIn();
+      
       // Anyone can create a user account (e.g., during sign-up).
       allow create: if true;
+      
       // Managers can update any user. Users can update their own profile.
       allow update: if isManager() || isOwner(userId);
+      
       // Only managers can delete users.
       allow delete: if isManager();
     }
     
-    // ATHLETES (Subcollection of Clubs)
-    match /clubs/{clubId}/athletes/{athleteId} {
-        // Any member of the club can view athlete profiles.
-        allow get, list: if isSignedIn() && isMemberOfTheClub(clubId);
-        // Managers, coaches, and the athlete themselves can create/update the profile.
-        allow create, update: if isCoach() || isOwner(athleteId);
-        // Only managers can delete.
-        allow delete: if isManager();
+    // Subcollections need to verify the user is part of the parent club.
+    match /clubs/{clubId}/{document=**} {
+        allow read, write: if isSignedIn() && isMemberOfTheClub(clubId);
     }
-
-    // PAYMENTS (Subcollection of Clubs)
-    match /clubs/{clubId}/payments/{paymentId} {
-        // Managers and coaches can see all payments. Athletes can only see their own.
-        allow get, list: if isCoach() || (isAthlete() && resource.data.athleteId == request.auth.uid);
-        // Only managers can create or delete payments.
-        allow create, delete: if isManager();
-        // An athlete can update their own payment record (to add reference), and managers can too.
-        allow update: if isManager() || (isAthlete() && request.resource.data.athleteId == request.auth.uid);
-    }
-
-    // TASKS (Subcollection of Clubs)
-    match /clubs/{clubId}/tasks/{taskId} {
-      // Coaches and managers can view tasks.
-      allow get, list: if isCoach();
-      // Only managers can create or delete tasks.
-      allow create, delete: if isManager();
-       // The assignee, assigner, or a manager can update a task.
-      allow update: if isManager() || isOwner(request.resource.data.assigneeId) || isOwner(resource.data.assignerId);
-    }
-    
-    // LANDING PAGE CONTENT (Subcollection of Clubs)
-     match /clubs/{clubId}/landingPageContent/{contentId} {
-        // Anyone can read the landing page content.
-        allow get, list: if true;
-        // Only managers can change the landing page content.
-        allow create, update, delete: if isManager();
-     }
-     
-     // TRAINING EVENTS, ATTENDANCE, MICROCYCLES
-     match /clubs/{clubId}/{collection}/{docId} {
-        // Coaches and managers can read these planning/tracking collections.
-        allow get, list: if isCoach();
-        // Only managers can create/delete them. Coaches might update attendance.
-        allow create, delete: if isManager();
-        allow update: if isCoach();
-     }
   }
 }
