@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
@@ -8,6 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Users, User, DollarSign, Wallet, BarChart3, LineChart, Loader2 } from 'lucide-react';
+
+const MAIN_CLUB_ID = 'OpitaClub';
 
 const chartConfig = {
     Deportistas: { label: 'Deportistas', color: 'hsl(var(--chart-1))' },
@@ -19,21 +20,21 @@ export default function ManagerReportsPage() {
     const { firestore } = useFirebase();
 
     const athletesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.clubId) return null;
-        return collection(firestore, `clubs/${profile.clubId}/athletes`);
-    }, [firestore, profile?.clubId]);
+        if (!firestore) return null;
+        return collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`);
+    }, [firestore]);
     const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
 
     const coachesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.clubId) return null;
-        return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId), where("role", "in", ["coach", "manager"]));
-    }, [firestore, profile?.clubId]);
+        if (!firestore) return null;
+        return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "in", ["coach", "manager"]));
+    }, [firestore]);
     const { data: staff, isLoading: staffLoading } = useCollection(coachesQuery);
 
     const paymentsQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.clubId) return null;
-        return collection(firestore, `clubs/${profile.clubId}/payments`);
-    }, [firestore, profile?.clubId]);
+        if (!firestore) return null;
+        return collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
+    }, [firestore]);
     const { data: payments, isLoading: paymentsLoading } = useCollection(paymentsQuery);
 
     if (isUserLoading || athletesLoading || staffLoading || paymentsLoading) {

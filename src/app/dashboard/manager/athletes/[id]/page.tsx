@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -24,8 +23,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { User, Shield, Phone, Hospital, Cake, Droplets, VenetianMask, FileText, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useUser, useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, setDoc } from 'firebase/firestore';
+import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, updateDoc, setDoc, query, collection, where } from 'firebase/firestore';
 import clubConfig from '@/lib/club-config.json';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
@@ -45,6 +44,7 @@ const profileSchema = z.object({
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
+const MAIN_CLUB_ID = 'OpitaClub';
 
 export default function ManagerAthleteProfilePage({ params }: { params: { id: string } }) {
   const { toast } = useToast();
@@ -54,9 +54,9 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
   const athleteId = params.id;
 
   const athleteDocRef = useMemoFirebase(() => {
-    if (!firestore || !managerProfile?.clubId || !athleteId) return null;
-    return doc(firestore, `clubs/${managerProfile.clubId}/athletes`, athleteId);
-  }, [firestore, managerProfile?.clubId, athleteId]);
+    if (!firestore || !athleteId) return null;
+    return doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, athleteId);
+  }, [firestore, athleteId]);
   
   const userDocRef = useMemoFirebase(() => {
     if(!firestore || !athleteId) return null;
@@ -64,9 +64,9 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
   }, [firestore, athleteId]);
   
   const coachesQuery = useMemoFirebase(() => {
-    if (!firestore || !managerProfile?.clubId) return null;
-    return query(collection(firestore, 'users'), where("clubId", "==", managerProfile.clubId), where("role", "==", "coach"));
-  }, [firestore, managerProfile?.clubId]);
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "coach"));
+  }, [firestore]);
 
   const { data: athleteData, isLoading: isAthleteLoading, error: athleteError } = useDoc(athleteDocRef);
   const { data: userData, isLoading: isUserDocLoading, error: userError } = useDoc(userDocRef);
@@ -114,7 +114,7 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
   }, [userData, athleteData, reset]);
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!managerProfile || !firestore || !athleteDocRef || !userDocRef) {
+    if (!firestore || !athleteDocRef || !userDocRef) {
       toast({
         variant: "destructive",
         title: "Error",

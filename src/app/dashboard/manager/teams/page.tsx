@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from "next/link";
@@ -18,28 +17,30 @@ import {
   DropdownMenuSubTrigger
 } from "@/components/ui/dropdown-menu";
 
+const MAIN_CLUB_ID = 'OpitaClub';
+
 export default function ManagerTeamsPage() {
     const { profile, isUserLoading } = useUser();
     const { firestore } = useFirebase();
     const { toast } = useToast();
 
     const athletesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile) return null;
-        return query(collection(firestore, `clubs/${profile.clubId}/athletes`), where("clubId", "==", profile.clubId));
-    }, [firestore, profile]);
+        if (!firestore) return null;
+        return query(collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`), where("clubId", "==", MAIN_CLUB_ID));
+    }, [firestore]);
     
     const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
     
     const coachesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile) return null;
-        return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId), where("role", "in", ["coach", "manager"]));
-    }, [firestore, profile]);
+        if (!firestore) return null;
+        return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "in", ["coach", "manager"]));
+    }, [firestore]);
     const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
     const microcyclesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile) return null;
-        return collection(firestore, `clubs/${profile.clubId}/microcycles`);
-    }, [firestore, profile]);
+        if (!firestore) return null;
+        return collection(firestore, `clubs/${MAIN_CLUB_ID}/microcycles`);
+    }, [firestore]);
     const { data: microcycles, isLoading: cyclesLoading } = useCollection(microcyclesQuery);
 
     const teams = athletes?.reduce((acc, athlete) => {
@@ -69,19 +70,19 @@ export default function ManagerTeamsPage() {
     }
 
     const handleAssignCoach = async (teamName: string, coach: any) => {
-        if (!firestore || !profile?.clubId) {
+        if (!firestore) {
             toast({ variant: "destructive", title: "Error", description: "No se pudo conectar a la base de datos." });
             return;
         }
 
-        const athletesToUpdateQuery = query(collection(firestore, `clubs/${profile.clubId}/athletes`), where("team", "==", teamName));
+        const athletesToUpdateQuery = query(collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`), where("team", "==", teamName));
 
         try {
             const querySnapshot = await getDocs(athletesToUpdateQuery);
             const batch = writeBatch(firestore);
 
             querySnapshot.forEach(athleteDoc => {
-                const athleteRef = doc(firestore, `clubs/${profile.clubId}/athletes`, athleteDoc.id);
+                const athleteRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, athleteDoc.id);
                 batch.update(athleteRef, { coachId: coach.id });
             });
 

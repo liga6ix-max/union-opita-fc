@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -84,6 +83,16 @@ export default function RegisterPage() {
             role: 'athlete', // Default role is athlete
             disabled: true, // User is disabled by default until a manager enables them
         });
+        
+        // Also create the initial athlete document in the subcollection
+        const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, user.uid);
+        await setDoc(athleteDocRef, {
+            userId: user.uid,
+            clubId: MAIN_CLUB_ID,
+            email: user.email,
+            firstName: data.name.split(' ')[0] || '',
+            lastName: data.name.split(' ').slice(1).join(' ') || '',
+        }, { merge: true });
 
         setIsLoading(false);
 

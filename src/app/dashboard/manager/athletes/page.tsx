@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useSearchParams } from 'next/navigation';
@@ -11,6 +10,8 @@ import { collection, query, where } from 'firebase/firestore';
 import { Loader2, MoreVertical, Pencil } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
+const MAIN_CLUB_ID = 'OpitaClub';
+
 export default function ManagerAthletesPage() {
     const searchParams = useSearchParams();
     const team = searchParams.get('team');
@@ -18,15 +19,15 @@ export default function ManagerAthletesPage() {
     const { firestore } = useFirebase();
 
     const teamAthletesQuery = useMemoFirebase(() => {
-      if (!firestore || !profile?.clubId || !team) return null;
-      return query(collection(firestore, `clubs/${profile.clubId}/athletes`), where("team", "==", team));
-    }, [firestore, profile?.clubId, team]);
+      if (!firestore || !team) return null;
+      return query(collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`), where("team", "==", team));
+    }, [firestore, team]);
     const { data: teamAthletes, isLoading: athletesLoading } = useCollection(teamAthletesQuery);
 
     const coachesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile?.clubId) return null;
-        return query(collection(firestore, `users`), where("clubId", "==", profile.clubId), where("role", "==", "coach"));
-    }, [firestore, profile?.clubId]);
+        if (!firestore) return null;
+        return query(collection(firestore, `users`), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "coach"));
+    }, [firestore]);
     const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
     if (isUserLoading || athletesLoading || coachesLoading) {

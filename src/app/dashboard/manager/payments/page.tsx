@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -49,6 +48,8 @@ const paymentScheduleSchema = z.object({
 type PaymentScheduleFormValues = z.infer<typeof paymentScheduleSchema>;
 type PaymentStatus = 'Pagado' | 'Pendiente' | 'En Verificación' | 'Rechazado';
 
+const MAIN_CLUB_ID = 'OpitaClub';
+
 export default function ManagerPaymentsPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -56,18 +57,18 @@ export default function ManagerPaymentsPage() {
   const { firestore } = useFirebase();
 
   const athletesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId) return null;
-    return collection(firestore, `clubs/${profile.clubId}/athletes`);
-  }, [firestore, profile?.clubId]);
+    if (!firestore) return null;
+    return collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`);
+  }, [firestore]);
   const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
 
   const paymentsQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId) return null;
-    return collection(firestore, `clubs/${profile.clubId}/payments`);
-  }, [firestore, profile?.clubId]);
+    if (!firestore) return null;
+    return collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
+  }, [firestore]);
   const { data: paymentList, isLoading: paymentsLoading } = useCollection(paymentsQuery);
 
-  const teams = Array.from(new Set(athletes?.map(a => a.team) || []));
+  const teams = Array.from(new Set(athletes?.map(a => a.team).filter(Boolean) || []));
 
   const form = useForm<PaymentScheduleFormValues>({
     resolver: zodResolver(paymentScheduleSchema),
@@ -81,7 +82,7 @@ export default function ManagerPaymentsPage() {
   };
 
   const onScheduleSubmit = async (data: PaymentScheduleFormValues) => {
-    if (!firestore || !profile?.clubId || !athletes) return;
+    if (!firestore || !athletes) return;
     
     const athletesInTeam = athletes.filter(a => a.team === data.team);
     if (athletesInTeam.length === 0) {
@@ -90,7 +91,7 @@ export default function ManagerPaymentsPage() {
     }
 
     const batch = writeBatch(firestore);
-    const paymentsCollection = collection(firestore, `clubs/${profile.clubId}/payments`);
+    const paymentsCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
     
     let paymentsCount = 0;
     athletesInTeam.forEach(athlete => {
@@ -100,7 +101,7 @@ export default function ManagerPaymentsPage() {
         month: data.month,
         amount: data.amount,
         status: 'Pendiente',
-        clubId: profile.clubId
+        clubId: MAIN_CLUB_ID
       });
       paymentsCount++;
     });
@@ -127,8 +128,8 @@ export default function ManagerPaymentsPage() {
   };
 
   const handlePaymentAction = async (paymentId: string, newStatus: 'Pagado' | 'Rechazado') => {
-    if (!firestore || !profile?.clubId) return;
-    const paymentRef = doc(firestore, `clubs/${profile.clubId}/payments`, paymentId);
+    if (!firestore) return;
+    const paymentRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/payments`, paymentId);
     try {
       await updateDoc(paymentRef, { status: newStatus });
       const actionText = newStatus === 'Pagado' ? 'aprobado' : 'rechazado';

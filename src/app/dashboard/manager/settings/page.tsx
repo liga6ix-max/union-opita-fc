@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -40,6 +39,8 @@ const bankAccountSchema = z.object({
 
 type BankAccountFormValues = z.infer<typeof bankAccountSchema>;
 
+const MAIN_CLUB_ID = 'OpitaClub';
+
 export default function ManagerSettingsPage() {
   const router = useRouter();
   const { profile, isUserLoading } = useUser();
@@ -50,16 +51,16 @@ export default function ManagerSettingsPage() {
   const [clubConfig, setClubConfig] = useState(initialClubConfig);
 
   const clubConfigRef = useMemoFirebase(() => {
-      if (!firestore || !profile?.clubId) return null;
-      return doc(firestore, `clubs/${profile.clubId}`);
-  },[firestore, profile?.clubId]);
+      if (!firestore) return null;
+      return doc(firestore, `clubs/${MAIN_CLUB_ID}`);
+  },[firestore]);
 
-  const {data: clubData, isLoading: clubLoading} = useCollection(clubConfigRef ? [clubConfigRef] : null);
+  const {data: clubData, isLoading: clubLoading} = useDoc(clubConfigRef);
 
   const coachesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId) return null;
-    return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId), where("role", "==", "coach"));
-  }, [firestore, profile?.clubId]);
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "coach"));
+  }, [firestore]);
   const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
   const [salaries, setSalaries] = useState<Record<string, number>>({});
@@ -78,7 +79,7 @@ export default function ManagerSettingsPage() {
   useEffect(() => {
     if (clubData) {
         // @ts-ignore
-        setClubConfig(clubData[0]);
+        setClubConfig(clubData);
     }
   }, [clubData])
 

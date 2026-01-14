@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -61,6 +60,7 @@ const PlanningFormSchema = TrainingPlanInputSchema.extend({
 });
 type PlanningFormValues = z.infer<typeof PlanningFormSchema>;
 
+const MAIN_CLUB_ID = 'OpitaClub';
 
 export default function ManagerPlanningPage() {
   const { toast } = useToast();
@@ -68,16 +68,16 @@ export default function ManagerPlanningPage() {
   const { profile, isUserLoading, firestore } = useUser();
 
   const cyclesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId) return null;
-    return collection(firestore, `clubs/${profile.clubId}/microcycles`);
-  }, [firestore, profile?.clubId]);
+    if (!firestore) return null;
+    return collection(firestore, `clubs/${MAIN_CLUB_ID}/microcycles`);
+  }, [firestore]);
   const { data: cycleList, isLoading: cyclesLoading } = useCollection(cyclesQuery);
   
   const coachesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId) return null;
+    if (!firestore) return null;
     // Query for all users that are staff (coaches or managers).
-    return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId), where("role", "in", ["coach", "manager"]));
-  }, [firestore, profile?.clubId]);
+    return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "in", ["coach", "manager"]));
+  }, [firestore]);
   const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
   const form = useForm<PlanningFormValues>({
@@ -94,7 +94,7 @@ export default function ManagerPlanningPage() {
   const onSubmit = async (data: PlanningFormValues) => {
     setIsGenerating(true);
     toast({ title: 'Generando planificación...', description: 'La IA está creando el plan de entrenamiento. Esto puede tardar un momento.' });
-    if (!firestore || !profile?.clubId) {
+    if (!firestore) {
         toast({ variant: 'destructive', title: 'Error', description: 'No se pudo conectar a la base de datos.'});
         setIsGenerating(false);
         return;
@@ -103,7 +103,7 @@ export default function ManagerPlanningPage() {
     try {
         const generatedPlan: TrainingPlanOutput = await createTrainingPlan(data);
         
-        const microcyclesCollection = collection(firestore, `clubs/${profile.clubId}/microcycles`);
+        const microcyclesCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/microcycles`);
         for (const micro of generatedPlan.microcycles) {
             await addDoc(microcyclesCollection, {
                 week: micro.week,
@@ -112,7 +112,7 @@ export default function ManagerPlanningPage() {
                 methodology: data.methodology,
                 mainObjective: micro.mainObjective,
                 sessions: micro.sessions,
-                clubId: profile.clubId,
+                clubId: MAIN_CLUB_ID,
             });
         }
 
@@ -237,7 +237,7 @@ export default function ManagerPlanningPage() {
                                     <h4 className="font-bold text-lg">{cycle.week} - {cycle.team}</h4>
                                     <p className='text-sm text-muted-foreground'>Asignado a: {coach?.firstName || 'N/A'}</p>
                                 </div>
-                                <Badge variant="secondary" className="mt-2 md:mt-0">{methodologyLabels[cycle.methodology]}</Badge>
+                                <Badge variant="secondary" className="mt-2 md:mt-0">{methodologyLabels[cycle.methodology as MicrocycleMethodology]}</Badge>
                            </div>
                         </AccordionTrigger>
                         <AccordionContent className="p-6 pt-0">

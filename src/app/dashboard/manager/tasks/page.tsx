@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -54,6 +53,8 @@ const statusBadgeVariant: Record<TaskStatus, 'default' | 'secondary' | 'destruct
   'Pendiente': 'destructive',
 };
 
+const MAIN_CLUB_ID = 'OpitaClub';
+
 export default function ManagerTasksPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -61,15 +62,15 @@ export default function ManagerTasksPage() {
   const { firestore } = useFirebase();
   
   const tasksQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId) return null;
-    return collection(firestore, `clubs/${profile.clubId}/tasks`);
-  }, [firestore, profile?.clubId]);
+    if (!firestore) return null;
+    return collection(firestore, `clubs/${MAIN_CLUB_ID}/tasks`);
+  }, [firestore]);
   const { data: taskList, isLoading: tasksLoading } = useCollection(tasksQuery);
 
   const coachesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId) return null;
-    return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId), where("role", "==", "coach"));
-  }, [firestore, profile?.clubId]);
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "coach"));
+  }, [firestore]);
   const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
   const form = useForm<TaskFormValues>({
@@ -78,14 +79,14 @@ export default function ManagerTasksPage() {
   });
 
   const onSubmit = async (data: TaskFormValues) => {
-    if (!firestore || !profile?.clubId) return;
+    if (!firestore || !profile?.id) return;
 
     try {
-      await addDoc(collection(firestore, `clubs/${profile.clubId}/tasks`), {
+      await addDoc(collection(firestore, `clubs/${MAIN_CLUB_ID}/tasks`), {
         ...data,
         status: 'Pendiente',
         assignerId: profile.id,
-        clubId: profile.clubId,
+        clubId: MAIN_CLUB_ID,
         createdAt: serverTimestamp(),
       });
       toast({ title: '¡Tarea Creada!', description: `La tarea ha sido asignada.` });
