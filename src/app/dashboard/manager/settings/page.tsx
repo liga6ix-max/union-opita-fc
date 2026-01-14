@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import initialClubConfig from "@/lib/club-config.json";
-import { useUser, useCollection, useMemoFirebase, useFirebase } from "@/firebase";
+import { useUser, useCollection, useMemoFirebase, useFirebase, useDoc } from "@/firebase";
 import { collection, query, where, doc, updateDoc, setDoc } from "firebase/firestore";
 import { Loader2 } from "lucide-react";
 
