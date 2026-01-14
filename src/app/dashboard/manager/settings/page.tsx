@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -25,9 +24,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import initialClubConfig from "@/lib/club-config.json";
 import { useUser, useCollection, useMemoFirebase, useFirebase, useDoc } from "@/firebase";
-import { collection, query, where, doc, updateDoc, setDoc } from "firebase/firestore";
+import { collection, query, where, doc, updateDoc, writeBatch } from "firebase/firestore";
 import { Loader2 } from "lucide-react";
 
 const bankAccountSchema = z.object({
@@ -37,25 +35,41 @@ const bankAccountSchema = z.object({
     accountHolder: z.string().min(1, "El titular es requerido."),
 });
 
+const categorySchema = z.object({
+  name: z.string(),
+  minYear: z.number(),
+  maxYear: z.number(),
+});
+
+const clubSettingsSchema = z.object({
+  name: z.string().min(1, "El nombre del club es requerido."),
+  bankAccount: bankAccountSchema,
+  categories: z.array(categorySchema),
+  monthlyFees: z.record(z.number()),
+});
+
+type ClubSettings = z.infer<typeof clubSettingsSchema>;
 type BankAccountFormValues = z.infer<typeof bankAccountSchema>;
 
 const MAIN_CLUB_ID = 'OpitaClub';
 
 export default function ManagerSettingsPage() {
-  const router = useRouter();
-  const { profile, isUserLoading } = useUser();
+  const { isUserLoading } = useUser();
   const { firestore } = useFirebase();
-  const [logoUrl, setLogoUrl] = useState("https://i.ibb.co/bMRLtG3/Unio-n-Opita-FC-logo.png");
   
-  // We use a local state that is initialized from the JSON file.
-  const [clubConfig, setClubConfig] = useState(initialClubConfig);
+  const [isSavingBank, setIsSavingBank] = useState(false);
+  const [isSavingSalaries, setIsSavingSalaries] = useState(false);
+  const [isSavingCategories, setIsSavingCategories] = useState(false);
+  const [isSavingName, setIsSavingName] = useState(false);
+  
+  const [clubName, setClubName] = useState('');
+  const [categories, setCategories] = useState<z.infer<typeof categorySchema>[]>([]);
 
   const clubConfigRef = useMemoFirebase(() => {
       if (!firestore) return null;
-      return doc(firestore, `clubs/${MAIN_CLUB_ID}`);
+      return doc(firestore, 'clubs', MAIN_CLUB_ID);
   },[firestore]);
-
-  const {data: clubData, isLoading: clubLoading} = useDoc(clubConfigRef);
+  const {data: clubData, isLoading: clubLoading} = useDoc<ClubSettings>(clubConfigRef);
 
   const coachesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -65,7 +79,16 @@ export default function ManagerSettingsPage() {
 
   const [salaries, setSalaries] = useState<Record<string, number>>({});
 
+  const bankAccountForm = useForm<BankAccountFormValues>({
+    resolver: zodResolver(bankAccountSchema),
+  });
+
   useEffect(() => {
+    if (clubData) {
+        bankAccountForm.reset(clubData.bankAccount);
+        setClubName(clubData.name || '');
+        setCategories(clubData.categories || []);
+    }
     if (coaches) {
       const initialSalaries = coaches.reduce((acc, coach) => {
         // @ts-ignore
@@ -74,31 +97,18 @@ export default function ManagerSettingsPage() {
       }, {} as Record<string, number>);
       setSalaries(initialSalaries);
     }
-  }, [coaches]);
-  
-  useEffect(() => {
-    if (clubData) {
-        // @ts-ignore
-        setClubConfig(clubData);
-    }
-  }, [clubData])
-
-  const bankAccountForm = useForm<BankAccountFormValues>({
-    resolver: zodResolver(bankAccountSchema),
-    defaultValues: clubConfig.bankAccount,
-  });
-  
-  useEffect(() => {
-      bankAccountForm.reset(clubConfig.bankAccount);
-  }, [clubConfig, bankAccountForm]);
+  }, [clubData, coaches, bankAccountForm]);
 
   const onBankAccountSubmit = async (data: BankAccountFormValues) => {
     if (!clubConfigRef) return;
+    setIsSavingBank(true);
     try {
         await updateDoc(clubConfigRef, { bankAccount: data });
         toast({ title: "¡Datos Bancarios Guardados!", description: "La información de la cuenta ha sido actualizada." });
     } catch(e) {
         toast({ variant: 'destructive', title: "Error", description: "No se pudieron guardar los datos bancarios." });
+    } finally {
+        setIsSavingBank(false);
     }
   };
 
@@ -108,34 +118,54 @@ export default function ManagerSettingsPage() {
 
   const handleSaveSalaries = async () => {
     if (!firestore || !coaches) return;
+    setIsSavingSalaries(true);
     try {
-        const batch = coaches.map(coach => {
+        const batch = writeBatch(firestore);
+        coaches.forEach(coach => {
             const coachRef = doc(firestore, 'users', coach.id);
-            // @ts-ignore
-            return updateDoc(coachRef, { salary: salaries[coach.id] });
+            batch.update(coachRef, { salary: salaries[coach.id] || 0 });
         });
-        await Promise.all(batch);
+        await batch.commit();
         toast({ title: "¡Salarios Guardados!", description: "Los salarios de los entrenadores han sido actualizados." });
     } catch(e) {
+        console.error("Error saving salaries:", e);
         toast({ variant: 'destructive', title: "Error", description: "No se pudieron guardar los salarios." });
+    } finally {
+        setIsSavingSalaries(false);
     }
   };
   
   const handleCategoryYearChange = (index: number, field: 'minYear' | 'maxYear', value: string) => {
-    const newCategories = [...clubConfig.categories];
+    const newCategories = [...categories];
     newCategories[index] = { ...newCategories[index], [field]: parseInt(value) || 0 };
-    setClubConfig(prev => ({ ...prev, categories: newCategories }));
+    setCategories(newCategories);
   };
 
   const handleSaveCategories = async () => {
     if (!clubConfigRef) return;
+    setIsSavingCategories(true);
     try {
-        await updateDoc(clubConfigRef, { categories: clubConfig.categories });
+        await updateDoc(clubConfigRef, { categories: categories });
         toast({ title: "¡Configuración de Categorías Guardada!", description: "Los rangos de edad para las categorías han sido actualizados." });
     } catch (e) {
         toast({ variant: 'destructive', title: "Error", description: "No se pudo guardar la configuración de categorías." });
+    } finally {
+        setIsSavingCategories(false);
     }
   };
+  
+  const handleSaveName = async () => {
+    if (!clubConfigRef) return;
+    setIsSavingName(true);
+    try {
+        await updateDoc(clubConfigRef, { name: clubName });
+        toast({title: "Nombre del club actualizado"});
+    } catch (e) {
+        toast({variant: 'destructive', title: 'Error', description: 'No se pudo guardar el nombre del club.'});
+    } finally {
+        setIsSavingName(false);
+    }
+  }
   
   if (isUserLoading || clubLoading || coachesLoading) {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -151,17 +181,15 @@ export default function ManagerSettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="clubName">Nombre del Club</Label>
-              <Input id="clubName" value={clubConfig.name} onChange={(e) => setClubConfig(c => ({...c, name: e.target.value}))} />
+              <Input id="clubName" value={clubName} onChange={(e) => setClubName(e.target.value)} />
             </div>
-            <Button onClick={async () => {
-                 if (!clubConfigRef) return;
-                 await updateDoc(clubConfigRef, { name: clubConfig.name });
-                 toast({title: "Nombre del club actualizado"})
-            }}>Guardar Nombre</Button>
-          </form>
+            <Button onClick={handleSaveName} disabled={isSavingName}>
+              {isSavingName ? <Loader2 className="animate-spin" /> : "Guardar Nombre"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -174,7 +202,7 @@ export default function ManagerSettingsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {clubConfig.categories.map((category, index) => (
+            {categories.map((category, index) => (
               <div key={category.name} className="grid grid-cols-3 items-center gap-4">
                 <Label htmlFor={`category-${index}`} className="font-semibold">{category.name}</Label>
                 <div className="flex items-center gap-2">
@@ -197,7 +225,9 @@ export default function ManagerSettingsPage() {
               </div>
             ))}
           </div>
-          <Button onClick={handleSaveCategories} className="mt-6">Guardar Categorías</Button>
+          <Button onClick={handleSaveCategories} className="mt-6" disabled={isSavingCategories}>
+            {isSavingCategories ? <Loader2 className="animate-spin" /> : "Guardar Categorías"}
+          </Button>
         </CardContent>
       </Card>
       
@@ -215,7 +245,9 @@ export default function ManagerSettingsPage() {
               <FormField control={bankAccountForm.control} name="accountType" render={({ field }) => (<FormItem><FormLabel>Tipo de Cuenta</FormLabel><FormControl><Input placeholder="Ej: Ahorros" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={bankAccountForm.control} name="accountNumber" render={({ field }) => (<FormItem><FormLabel>Número de Cuenta</FormLabel><FormControl><Input placeholder="000-000000-00" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={bankAccountForm.control} name="accountHolder" render={({ field }) => (<FormItem><FormLabel>Titular de la Cuenta</FormLabel><FormControl><Input placeholder="Ej: Nombre Club NIT 000.000.000-0" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <Button type="submit">Guardar Datos Bancarios</Button>
+              <Button type="submit" disabled={isSavingBank}>
+                {isSavingBank ? <Loader2 className="animate-spin" /> : "Guardar Datos Bancarios"}
+              </Button>
             </form>
           </Form>
         </CardContent>
@@ -247,7 +279,9 @@ export default function ManagerSettingsPage() {
               </div>
             ))}
           </div>
-           <Button onClick={handleSaveSalaries} className="mt-6">Guardar Salarios</Button>
+           <Button onClick={handleSaveSalaries} className="mt-6" disabled={isSavingSalaries}>
+            {isSavingSalaries ? <Loader2 className="animate-spin" /> : "Guardar Salarios"}
+           </Button>
         </CardContent>
       </Card>
     </div>
