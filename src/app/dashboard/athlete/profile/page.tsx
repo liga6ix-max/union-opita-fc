@@ -32,7 +32,6 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import clubConfig from "@/lib/club-config.json";
 import { cn } from "@/lib/utils";
 
 
@@ -61,6 +60,7 @@ const paymentSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 type PaymentFormValues = z.infer<typeof paymentSchema>;
 type PaymentStatus = 'Pagado' | 'Pendiente' | 'En Verificación' | 'Rechazado';
+const MAIN_CLUB_ID = 'OpitaClub';
 
 export default function AthleteProfilePage() {
   const { toast } = useToast();
@@ -76,6 +76,13 @@ export default function AthleteProfilePage() {
   }, [firestore, user?.uid, profile?.clubId]);
   const { data: athleteData, isLoading: isAthleteLoading, error: athleteError } = useDoc(athleteDocRef);
   
+  // Club Config data hook
+  const clubConfigRef = useMemoFirebase(() => {
+      if (!firestore || !profile?.clubId) return null;
+      return doc(firestore, `clubs`, profile.clubId);
+  }, [firestore, profile?.clubId]);
+  const { data: clubConfig, isLoading: isClubConfigLoading } = useDoc(clubConfigRef);
+
   // Payment data hooks
   const paymentsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid || !profile?.clubId) return null;
@@ -176,7 +183,7 @@ export default function AthleteProfilePage() {
     }
   }
 
-  const isLoading = isUserLoading || isAthleteLoading || arePaymentsLoading || isCoachLoading;
+  const isLoading = isUserLoading || isAthleteLoading || arePaymentsLoading || isCoachLoading || isClubConfigLoading;
 
   if (isLoading) {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
@@ -189,7 +196,7 @@ export default function AthleteProfilePage() {
   }
   
   const hasPendingPayment = athletePayments?.some(p => p.status === 'Pendiente');
-  const monthlyFee = (clubConfig.monthlyFees as Record<string, number>)[athleteData?.team] || 0;
+  const monthlyFee = (clubConfig?.monthlyFees as Record<string, number>)?.[athleteData?.team] || 0;
 
   const getAge = (birthDateString: string) => {
     if (!birthDateString || !isValid(parseISO(birthDateString))) return null;
@@ -296,10 +303,10 @@ export default function AthleteProfilePage() {
                                                 </DialogHeader>
                                                 <div className="space-y-4 rounded-lg border bg-secondary/50 p-4">
                                                     <h4 className="font-semibold text-center text-primary">Datos para la Transferencia</h4>
-                                                    <div className="flex items-center gap-4"><Landmark className="h-5 w-5 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Banco</p><p className="font-medium">{clubConfig.bankAccount.bankName}</p></div></div>
-                                                    <div className="flex items-center gap-4"><Banknote className="h-5 w-5 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Tipo de Cuenta</p><p className="font-medium">{clubConfig.bankAccount.accountType}</p></div></div>
-                                                    <div className="flex items-center gap-4"><Hash className="h-5 w-5 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Número de Cuenta</p><p className="font-medium">{clubConfig.bankAccount.accountNumber}</p></div></div>
-                                                    <div className="flex items-center gap-4"><User className="h-5 w-5 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Titular</p><p className="font-medium">{clubConfig.bankAccount.accountHolder}</p></div></div>
+                                                    <div className="flex items-center gap-4"><Landmark className="h-5 w-5 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Banco</p><p className="font-medium">{clubConfig?.bankAccount.bankName}</p></div></div>
+                                                    <div className="flex items-center gap-4"><Banknote className="h-5 w-5 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Tipo de Cuenta</p><p className="font-medium">{clubConfig?.bankAccount.accountType}</p></div></div>
+                                                    <div className="flex items-center gap-4"><Hash className="h-5 w-5 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Número de Cuenta</p><p className="font-medium">{clubConfig?.bankAccount.accountNumber}</p></div></div>
+                                                    <div className="flex items-center gap-4"><User className="h-5 w-5 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Titular</p><p className="font-medium">{clubConfig?.bankAccount.accountHolder}</p></div></div>
                                                     <div className="flex items-center gap-4"><Info className="h-5 w-5 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Valor a pagar</p><p className="font-medium">{formatCurrency(payment.amount)}</p></div></div>
                                                 </div>
                                                 <Separator />
