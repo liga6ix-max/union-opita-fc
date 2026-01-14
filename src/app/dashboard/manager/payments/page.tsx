@@ -56,15 +56,15 @@ export default function ManagerPaymentsPage() {
   const { firestore } = useFirebase();
 
   const athletesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore || !profile?.clubId) return null;
     return collection(firestore, `clubs/${profile.clubId}/athletes`);
-  }, [firestore, profile]);
+  }, [firestore, profile?.clubId]);
   const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
 
   const paymentsQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore || !profile?.clubId) return null;
     return collection(firestore, `clubs/${profile.clubId}/payments`);
-  }, [firestore, profile]);
+  }, [firestore, profile?.clubId]);
   const { data: paymentList, isLoading: paymentsLoading } = useCollection(paymentsQuery);
 
   const teams = Array.from(new Set(athletes?.map(a => a.team) || []));

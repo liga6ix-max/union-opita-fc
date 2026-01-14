@@ -24,33 +24,33 @@ export default function ManagerDashboard() {
   const { firestore } = useFirebase();
 
   const athletesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore || !profile?.clubId) return null;
     return collection(firestore, `clubs/${profile.clubId}/athletes`);
-  }, [firestore, profile]);
+  }, [firestore, profile?.clubId]);
   const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
 
   const coachesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore || !profile?.clubId) return null;
     return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId), where("role", "==", "coach"));
-  }, [firestore, profile]);
+  }, [firestore, profile?.clubId]);
   const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
   const paymentsQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore || !profile?.clubId) return null;
     return collection(firestore, `clubs/${profile.clubId}/payments`);
-  }, [firestore, profile]);
+  }, [firestore, profile?.clubId]);
   const { data: payments, isLoading: paymentsLoading } = useCollection(paymentsQuery);
 
   const tasksQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore || !profile?.clubId) return null;
     return query(collection(firestore, `clubs/${profile.clubId}/tasks`), orderBy("dueDate", "desc"), limit(4));
-  }, [firestore, profile]);
+  }, [firestore, profile?.clubId]);
   const { data: tasks, isLoading: tasksLoading } = useCollection(tasksQuery);
   
   const allCoachesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore || !profile?.clubId) return null;
     return query(collection(firestore, `users`), where("clubId", "==", profile.clubId));
-  }, [firestore, profile]);
+  }, [firestore, profile?.clubId]);
   const { data: allUsers, isLoading: allUsersLoading } = useCollection(allCoachesQuery);
 
 

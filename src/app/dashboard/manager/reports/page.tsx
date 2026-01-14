@@ -19,21 +19,21 @@ export default function ManagerReportsPage() {
     const { firestore } = useFirebase();
 
     const athletesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile) return null;
+        if (!firestore || !profile?.clubId) return null;
         return collection(firestore, `clubs/${profile.clubId}/athletes`);
-    }, [firestore, profile]);
+    }, [firestore, profile?.clubId]);
     const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
 
     const coachesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile) return null;
+        if (!firestore || !profile?.clubId) return null;
         return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId), where("role", "in", ["coach", "manager"]));
-    }, [firestore, profile]);
+    }, [firestore, profile?.clubId]);
     const { data: staff, isLoading: staffLoading } = useCollection(coachesQuery);
 
     const paymentsQuery = useMemoFirebase(() => {
-        if (!firestore || !profile) return null;
+        if (!firestore || !profile?.clubId) return null;
         return collection(firestore, `clubs/${profile.clubId}/payments`);
-    }, [firestore, profile]);
+    }, [firestore, profile?.clubId]);
     const { data: payments, isLoading: paymentsLoading } = useCollection(paymentsQuery);
 
     if (isUserLoading || athletesLoading || staffLoading || paymentsLoading) {

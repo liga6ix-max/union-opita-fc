@@ -71,23 +71,23 @@ export default function AthleteProfilePage() {
 
   // Profile data hooks
   const athleteDocRef = useMemoFirebase(() => {
-    if (!firestore || !user?.uid || !profile || !profile.clubId) return null;
+    if (!firestore || !user?.uid || !profile?.clubId) return null;
     return doc(firestore, `clubs/${profile.clubId}/athletes`, user.uid);
-  }, [firestore, user, profile]);
+  }, [firestore, user?.uid, profile?.clubId]);
   const { data: athleteData, isLoading: isAthleteLoading, error: athleteError } = useDoc(athleteDocRef);
   
   // Payment data hooks
   const paymentsQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid || !profile || !profile.clubId) return null;
+    if (!firestore || !user?.uid || !profile?.clubId) return null;
     const paymentsCollection = collection(firestore, `clubs/${profile.clubId}/payments`);
     return query(paymentsCollection, where("athleteId", "==", user.uid));
-  }, [firestore, user, profile]);
+  }, [firestore, user?.uid, profile?.clubId]);
   const { data: athletePayments, isLoading: arePaymentsLoading } = useCollection(paymentsQuery);
 
   const coachQuery = useMemoFirebase(() => {
-    if (!firestore || !athleteData?.coachId) return null;
+    if (!firestore || !athleteData?.coachId || !profile?.clubId) return null;
     return doc(firestore, 'users', athleteData.coachId);
-  }, [firestore, athleteData]);
+  }, [firestore, athleteData?.coachId, profile?.clubId]);
   const { data: coach, isLoading: isCoachLoading } = useDoc(coachQuery);
 
   // Profile Form

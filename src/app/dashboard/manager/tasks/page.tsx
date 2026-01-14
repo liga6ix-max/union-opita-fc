@@ -61,15 +61,15 @@ export default function ManagerTasksPage() {
   const { firestore } = useFirebase();
   
   const tasksQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore || !profile?.clubId) return null;
     return collection(firestore, `clubs/${profile.clubId}/tasks`);
-  }, [firestore, profile]);
+  }, [firestore, profile?.clubId]);
   const { data: taskList, isLoading: tasksLoading } = useCollection(tasksQuery);
 
   const coachesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore || !profile?.clubId) return null;
     return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId), where("role", "==", "coach"));
-  }, [firestore, profile]);
+  }, [firestore, profile?.clubId]);
   const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
   const form = useForm<TaskFormValues>({

@@ -37,11 +37,10 @@ export default function ApprovalsPage() {
     const { profile, firestore, isUserLoading } = useUser();
 
     // With simplified rules, a manager can list all users.
-    // IMPORTANT: Check for profile ensures this query doesn't run during logout.
     const usersQuery = useMemoFirebase(() => {
-        if (!firestore || !profile) return null;
+        if (!firestore || !profile?.clubId) return null;
         return collection(firestore, 'users');
-    }, [firestore, profile]);
+    }, [firestore, profile?.clubId]);
 
     const { data: userList, isLoading: usersLoading, error } = useCollection(usersQuery);
     
@@ -74,7 +73,7 @@ export default function ApprovalsPage() {
     };
 
     const handleChangeRole = async (userId: string, newRole: UserRole) => {
-        if (!firestore) return;
+        if (!firestore || !profile?.clubId) return;
         
         const userDocRef = doc(firestore, 'users', userId);
         try {
@@ -85,12 +84,12 @@ export default function ApprovalsPage() {
 
              // If the new role is 'athlete', ensure the subcollection document exists.
             if (newRole === 'athlete') {
-                const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, userId);
+                const athleteDocRef = doc(firestore, `clubs/${profile.clubId}/athletes`, userId);
                 const userToUpdate = userList?.find(u => u.id === userId);
                 if (userToUpdate) {
                     await setDoc(athleteDocRef, {
                         userId: userId,
-                        clubId: MAIN_CLUB_ID,
+                        clubId: profile.clubId,
                         email: userToUpdate.email,
                         firstName: userToUpdate.firstName,
                         lastName: userToUpdate.lastName,
@@ -105,12 +104,12 @@ export default function ApprovalsPage() {
     };
     
     const handleDeleteUser = async (userId: string) => {
-         if (!firestore) return;
+         if (!firestore || !profile?.clubId) return;
          const userDocRef = doc(firestore, 'users', userId);
          try {
             await deleteDoc(userDocRef);
             // Optionally, delete from athlete subcollection if they were one
-            const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, userId);
+            const athleteDocRef = doc(firestore, `clubs/${profile.clubId}/athletes`, userId);
             await deleteDoc(athleteDocRef).catch(() => {}); // Ignore error if it doesn't exist
             
             toast({ title: 'Usuario Eliminado', description: 'El usuario ha sido eliminado permanentemente.' });
