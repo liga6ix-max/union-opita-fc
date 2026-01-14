@@ -54,6 +54,8 @@ const paymentSchema = z.object({
         required_error: "La fecha de pago es requerida.",
     }),
     referenceNumber: z.string().min(4, { message: "El número de referencia debe tener al menos 4 caracteres."}),
+    amount: z.number(),
+    month: z.string(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -101,8 +103,18 @@ export default function AthleteProfilePage() {
   // Payment Form
   const paymentForm = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
-    defaultValues: { referenceNumber: "" },
+    defaultValues: { referenceNumber: "", amount: 0, month: "" },
   });
+  
+  const handleOpenDialog = (payment: any) => {
+    paymentForm.reset({
+        referenceNumber: "",
+        amount: payment.amount,
+        month: payment.month,
+    });
+    setOpenDialogId(payment.id);
+  };
+
 
   useEffect(() => {
     if (profile || athleteData) {
@@ -155,7 +167,7 @@ export default function AthleteProfilePage() {
             referenceNumber: data.referenceNumber,
             updatedAt: serverTimestamp()
         });
-        toast({ title: "¡Registro de Pago Enviado!", description: `Tu pago ha sido enviado para verificación.` });
+        toast({ title: "¡Registro de Pago Enviado!", description: `Tu pago para ${data.month} ha sido enviado para verificación.` });
         setOpenDialogId(null);
         paymentForm.reset();
     } catch (error) {
@@ -191,7 +203,7 @@ export default function AthleteProfilePage() {
   const formatCurrency = (value: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
 
   const statusBadgeVariant: Record<PaymentStatus, "default" | "secondary" | "destructive" | "outline"> = {
-    'Pagado': 'default', 'Pendiente': 'destructive', 'En Verificación': 'secondary', 'Rechazado': 'destructive',
+    'Pagado': 'default', 'Pendiente': 'destructive', 'En Verificación': 'secondary', 'Rechazado': 'outline',
   };
 
   return (
@@ -276,7 +288,7 @@ export default function AthleteProfilePage() {
                                 <TableCell className="text-right">
                                     {(payment.status === 'Pendiente' || payment.status === 'Rechazado') && (
                                         <Dialog open={openDialogId === payment.id} onOpenChange={(isOpen) => setOpenDialogId(isOpen ? payment.id : null)}>
-                                            <DialogTrigger asChild><Button size="sm">Registrar Pago</Button></DialogTrigger>
+                                            <DialogTrigger asChild><Button size="sm" onClick={() => handleOpenDialog(payment)}>Registrar Pago</Button></DialogTrigger>
                                             <DialogContent className="sm:max-w-md">
                                                 <DialogHeader>
                                                     <DialogTitle>Registrar Pago para {payment.month}</DialogTitle>
@@ -293,11 +305,27 @@ export default function AthleteProfilePage() {
                                                 <Separator />
                                                 <Form {...paymentForm}>
                                                     <form onSubmit={paymentForm.handleSubmit((data) => onPaymentSubmit(data, payment.id))} className="space-y-4">
+                                                         <div className="grid grid-cols-2 gap-4">
+                                                            <FormField control={paymentForm.control} name="month" render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Mes a Pagar</FormLabel>
+                                                                    <FormControl><Input {...field} readOnly disabled /></FormControl>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}/>
+                                                             <FormField control={paymentForm.control} name="amount" render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Valor (COP)</FormLabel>
+                                                                    <FormControl><Input type="text" value={formatCurrency(field.value)} readOnly disabled /></FormControl>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}/>
+                                                        </div>
                                                         <FormField control={paymentForm.control} name="paymentDate" render={({ field }) => (
                                                             <FormItem className="flex flex-col"><FormLabel>Fecha de la Transferencia</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP", { locale: es })) : (<span>Elige una fecha</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus locale={es} /></PopoverContent></Popover><FormMessage /></FormItem>
                                                         )}/>
                                                         <FormField control={paymentForm.control} name="referenceNumber" render={({ field }) => (<FormItem><FormLabel>Número de Referencia</FormLabel><FormControl><Input placeholder="Ej: 123456789" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                                                        <DialogFooter className="pt-4"><Button type="submit">Confirmar Pago</Button></DialogFooter>
+                                                        <DialogFooter className="pt-4"><Button type="submit" disabled={paymentForm.formState.isSubmitting}>{paymentForm.formState.isSubmitting ? <Loader2 className="animate-spin" /> : 'Confirmar Pago'}</Button></DialogFooter>
                                                     </form>
                                                 </Form>
                                             </DialogContent>
