@@ -39,9 +39,10 @@ export default function ApprovalsPage() {
 
     // With simplified rules, a manager can list all users.
     const usersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        // IMPORTANT: Check for profile ensures this query doesn't run during logout.
+        if (!firestore || !profile) return null;
         return collection(firestore, 'users');
-    }, [firestore]);
+    }, [firestore, profile]);
 
     const { data: userList, isLoading: usersLoading, error } = useCollection(usersQuery);
     
