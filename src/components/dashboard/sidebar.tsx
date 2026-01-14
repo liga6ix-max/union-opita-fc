@@ -55,7 +55,6 @@ const coachNav = [
 ];
 
 const athleteNav = [
-    { href: "/dashboard/athlete", label: "Mis Pagos", icon: Wallet },
     { href: "/dashboard/athlete/profile", label: "Mi Perfil", icon: User },
 ];
 
@@ -133,6 +132,9 @@ export function DashboardSidebar() {
   const isLinkActive = (href: string) => {
     if (href.endsWith('/manager') || href.endsWith('/coach') || href.endsWith('/athlete')) {
         return pathname === href;
+    }
+     if (href.endsWith('/athlete/profile')) {
+        return pathname.startsWith('/dashboard/athlete');
     }
     return pathname.startsWith(href);
   };
