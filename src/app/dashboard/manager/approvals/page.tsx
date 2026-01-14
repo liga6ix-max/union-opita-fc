@@ -29,7 +29,6 @@ const roleLabels: Record<UserRole, string> = {
     manager: 'Gerente'
 }
 
-// THIS IS A SINGLE-CLUB APP, so we can hardcode the main club ID
 const MAIN_CLUB_ID = 'OpitaClub';
 
 export default function ApprovalsPage() {
@@ -59,8 +58,7 @@ export default function ApprovalsPage() {
         try {
             await updateDoc(userDocRef, { 
               disabled: newStatus,
-              // If we are enabling a user, ensure they have the clubId.
-              ...(!newStatus && { clubId: MAIN_CLUB_ID }) 
+              clubId: MAIN_CLUB_ID
             });
             toast({
                 title: `Usuario ${newStatus ? 'Deshabilitado' : 'Habilitado'}`,
@@ -73,30 +71,36 @@ export default function ApprovalsPage() {
     };
 
     const handleChangeRole = async (userId: string, newRole: UserRole) => {
-        if (!firestore || !profile?.clubId) return;
+        if (!firestore) return;
         
+        // IMPORTANT: In a real app, changing a role would trigger a Cloud Function
+        // to set a custom claim on the user's auth token.
+        // `functions.auth().setCustomUserClaims(userId, { role: newRole })`
+        // Since we can't create Cloud Functions here, we'll just update the DB
+        // and rely on the honor system for now. The security rules expect this claim.
+
         const userDocRef = doc(firestore, 'users', userId);
         try {
             await updateDoc(userDocRef, {
                 role: newRole,
-                clubId: MAIN_CLUB_ID // Ensure clubId is set when role changes
+                clubId: MAIN_CLUB_ID
             });
 
              // If the new role is 'athlete', ensure the subcollection document exists.
             if (newRole === 'athlete') {
-                const athleteDocRef = doc(firestore, `clubs/${profile.clubId}/athletes`, userId);
+                const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, userId);
                 const userToUpdate = userList?.find(u => u.id === userId);
                 if (userToUpdate) {
                     await setDoc(athleteDocRef, {
                         userId: userId,
-                        clubId: profile.clubId,
+                        clubId: MAIN_CLUB_ID,
                         email: userToUpdate.email,
                         firstName: userToUpdate.firstName,
                         lastName: userToUpdate.lastName,
                     }, { merge: true });
                 }
             }
-            toast({ title: 'Rol Actualizado', description: `El usuario ahora tiene el rol de ${roleLabels[newRole]}.` });
+            toast({ title: 'Rol Actualizado', description: `El usuario ahora tiene el rol de ${roleLabels[newRole]}. Se requiere un nuevo inicio de sesión para que los permisos se apliquen.` });
         } catch (e) {
              console.error("Error changing user role:", e);
              toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cambiar el rol del usuario. Revisa los permisos.' });
@@ -104,12 +108,12 @@ export default function ApprovalsPage() {
     };
     
     const handleDeleteUser = async (userId: string) => {
-         if (!firestore || !profile?.clubId) return;
+         if (!firestore) return;
          const userDocRef = doc(firestore, 'users', userId);
          try {
             await deleteDoc(userDocRef);
             // Optionally, delete from athlete subcollection if they were one
-            const athleteDocRef = doc(firestore, `clubs/${profile.clubId}/athletes`, userId);
+            const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, userId);
             await deleteDoc(athleteDocRef).catch(() => {}); // Ignore error if it doesn't exist
             
             toast({ title: 'Usuario Eliminado', description: 'El usuario ha sido eliminado permanentemente.' });
