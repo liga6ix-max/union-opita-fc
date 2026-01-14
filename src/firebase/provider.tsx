@@ -102,9 +102,10 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           // Return the profile listener's unsubscribe function to be called on cleanup
           return () => profileUnsubscribe();
         } else {
-          // User is signed out, clear state and redirect
-          setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: null });
-          router.push('/login');
+          // User is signed out, clear state
+          if (userAuthState.user) { // Prevent clearing state on initial load
+            setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: null });
+          }
         }
       },
       (error) => {
@@ -114,7 +115,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     );
     
     return () => authUnsubscribe();
-  }, [auth, firestore, router]);
+  }, [auth, firestore, userAuthState.user]);
 
   // Effect to handle redirection on auth state change
   useEffect(() => {

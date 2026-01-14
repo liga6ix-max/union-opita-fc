@@ -3,7 +3,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Sidebar,
   SidebarHeader,
@@ -68,11 +68,13 @@ const navItems = {
 export function DashboardSidebar() {
   const { profile, isUserLoading } = useUser();
   const pathname = usePathname();
+  const router = useRouter();
   const { auth } = useFirebase();
 
   const handleLogout = () => {
     if (auth) {
       auth.signOut();
+      router.push('/login'); // Immediate redirection
     }
   };
 

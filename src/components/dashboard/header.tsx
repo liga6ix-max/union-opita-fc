@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useUser } from "@/firebase";
 import { useFirebase } from "@/firebase";
 
@@ -41,6 +41,7 @@ const pageTitles: { [key: string]: string } = {
 
 export function DashboardHeader() {
   const pathname = usePathname();
+  const router = useRouter();
   const { profile, isUserLoading } = useUser();
   const { auth } = useFirebase();
   const title = pageTitles[pathname] || "Dashboard";
@@ -54,6 +55,7 @@ export function DashboardHeader() {
   const handleLogout = () => {
     if (auth) {
       auth.signOut();
+      router.push('/login'); // Immediate redirection
     }
   };
 
