@@ -120,7 +120,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const isPublicPage = ['/login', '/register', '/'].includes(pathname);
     // If loading is finished and there is no user, redirect to login page if not on a public page
     if (!userAuthState.isUserLoading && !userAuthState.user && !isPublicPage) {
-        router.push('/login');
+        router.replace('/login');
     }
   }, [userAuthState.isUserLoading, userAuthState.user, pathname, router]);
 
@@ -202,3 +202,4 @@ export const useUser = (): UserHookResult => {
   const { user, profile, isUserLoading, userError, firestore } = context;
   return { user, profile, isUserLoading, userError, firestore };
 };
+
