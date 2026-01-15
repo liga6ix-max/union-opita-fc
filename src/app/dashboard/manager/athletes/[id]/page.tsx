@@ -131,18 +131,20 @@ export default function ManagerAthleteProfilePage({ params: { id: athleteId } }:
         }
     }
     
-    setDocumentNonBlocking(athleteDocRef, {
-        birthDate: data.birthDate,
-        gender: data.gender,
-        bloodType: data.bloodType,
-        documentType: data.documentType,
-        documentNumber: data.documentNumber,
-        emergencyContactName: data.emergencyContactName,
-        emergencyContactPhone: data.emergencyContactPhone,
-        medicalInformation: data.medicalInformation,
-        team: data.team,
-        coachId: finalCoachId,
-    }, { merge: true });
+    const athletePayload = {
+      birthDate: data.birthDate || null,
+      gender: data.gender || null,
+      bloodType: data.bloodType || null,
+      documentType: data.documentType || null,
+      documentNumber: data.documentNumber || null,
+      emergencyContactName: data.emergencyContactName || null,
+      emergencyContactPhone: data.emergencyContactPhone || null,
+      medicalInformation: data.medicalInformation || null,
+      team: data.team,
+      coachId: finalCoachId || null,
+    };
+
+    setDocumentNonBlocking(athleteDocRef, athletePayload, { merge: true });
 
     updateDocumentNonBlocking(userDocRef, {
       firstName: data.firstName,
