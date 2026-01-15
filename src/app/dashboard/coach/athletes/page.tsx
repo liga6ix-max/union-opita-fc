@@ -1,6 +1,6 @@
 
 'use client';
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,12 @@ export default function CoachAthletesPage() {
     }, [firestore, profile?.id, profile?.clubId]);
 
     const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
+    
+    const usersQuery = useMemoFirebase(() => {
+        if (!firestore || !profile?.clubId) return null;
+        return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId));
+    }, [firestore, profile?.clubId]);
+    const { data: users, isLoading: usersLoading } = useCollection(usersQuery);
 
     const openDetailsModal = (athlete: any) => {
         setSelectedAthlete(athlete);
@@ -39,8 +45,21 @@ export default function CoachAthletesPage() {
         }
         return age;
     };
+    
+    const enrichedAthletes = useMemo(() => {
+        if (!athletes || !users) return [];
+        return athletes.map(athlete => {
+            const userInfo = users.find(u => u.id === athlete.id);
+            return {
+                ...athlete,
+                firstName: userInfo?.firstName || athlete.firstName,
+                lastName: userInfo?.lastName || athlete.lastName,
+            };
+        });
+    }, [athletes, users]);
 
-    if (isUserLoading || athletesLoading) {
+
+    if (isUserLoading || athletesLoading || usersLoading) {
         return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
     }
 
@@ -63,7 +82,7 @@ export default function CoachAthletesPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {athletes && athletes.map(athlete => (
+                            {enrichedAthletes && enrichedAthletes.map(athlete => (
                                 <TableRow key={athlete.id}>
                                     <TableCell className="font-medium">{athlete.firstName} {athlete.lastName}</TableCell>
                                     <TableCell>{athlete.team || 'N/A'}</TableCell>
@@ -89,7 +108,7 @@ export default function CoachAthletesPage() {
                             ))}
                         </TableBody>
                     </Table>
-                     {(!athletes || athletes.length === 0) && (
+                     {(!enrichedAthletes || enrichedAthletes.length === 0) && (
                         <p className="text-center py-8 text-muted-foreground">No tienes deportistas asignados.</p>
                     )}
                 </CardContent>
