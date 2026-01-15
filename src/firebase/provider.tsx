@@ -102,8 +102,10 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           // Return the profile listener's unsubscribe function to be called on cleanup
           return () => profileUnsubscribe();
         } else {
-          // User is signed out, clear state
-          if (userAuthState.user) { // Prevent clearing state on initial load
+          // User is signed out, clear state only if we are not in a public page.
+          // This prevents firing queries with a null user during logout from a private page.
+          const isPublicPage = ['/login', '/register', '/'].includes(pathname);
+          if (isPublicPage) {
             setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: null });
           }
         }
@@ -115,7 +117,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     );
     
     return () => authUnsubscribe();
-  }, [auth, firestore, userAuthState.user]);
+  }, [auth, firestore, pathname]); // Add pathname dependency
 
   // Effect to handle redirection on auth state change
   useEffect(() => {
