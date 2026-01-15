@@ -36,6 +36,7 @@ import { useFirebase } from "@/firebase";
 const managerNav = [
   { href: "/dashboard/manager", label: "Resumen", icon: LayoutDashboard },
   { href: "/dashboard/manager/reports", label: "Reportes", icon: BarChart3 },
+  { href: "/dashboard/manager/athletes", label: "Deportistas", icon: Users },
   { href: "/dashboard/manager/teams", label: "Equipos", icon: Shield },
   { href: "/dashboard/manager/approvals", label: "Aprobaciones", icon: UserPlus },
   { href: "/dashboard/manager/tasks", label: "Tareas", icon: ClipboardList },
