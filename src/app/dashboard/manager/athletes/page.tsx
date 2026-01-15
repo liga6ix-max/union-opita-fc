@@ -20,7 +20,7 @@ export default function ManagerAthletesPage() {
     const { profile, isUserLoading } = useUser();
     const { firestore } = useFirebase();
 
-    const athletesQuery = useMemoFirebase(() => {
+    const athletesSubCollectionQuery = useMemoFirebase(() => {
       if (!firestore) return null;
       let q = query(collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`));
       if (teamFilter) {
@@ -28,15 +28,46 @@ export default function ManagerAthletesPage() {
       }
       return q;
     }, [firestore, teamFilter]);
-    const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
 
+    const allUsersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "athlete"));
+    }, [firestore]);
+    
     const coachesQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return query(collection(firestore, `users`), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "coach"));
     }, [firestore]);
+    
+    const { data: athletesSubCollection, isLoading: athletesLoading } = useCollection(athletesSubCollectionQuery);
+    const { data: allAthletesUsers, isLoading: usersLoading } = useCollection(allUsersQuery);
     const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
+    
+    const enabledAndEnrichedAthletes = useMemo(() => {
+        if (!allAthletesUsers || !athletesSubCollection) return [];
 
-    if (isUserLoading || athletesLoading || coachesLoading) {
+        // 1. Filter out disabled users first
+        const enabledUsers = allAthletesUsers.filter(user => !user.disabled);
+
+        // 2. Create a map of the sub-collection data for quick lookups
+        const subCollectionMap = new Map(athletesSubCollection.map(subDoc => [subDoc.id, subDoc]));
+
+        // 3. Map over enabled users and enrich them with data from the sub-collection
+        return enabledUsers.map(user => {
+            const subData = subCollectionMap.get(user.id);
+            return {
+                ...user, // has firstName, lastName, email, id from 'users' collection
+                ...subData, // has team, coachId etc. from 'athletes' sub-collection
+            };
+        }).filter(athlete => {
+            // Apply team filter if it exists
+            return teamFilter ? athlete.team === teamFilter : true;
+        });
+
+    }, [allAthletesUsers, athletesSubCollection, teamFilter]);
+
+
+    if (isUserLoading || athletesLoading || coachesLoading || usersLoading) {
       return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
     }
 
@@ -54,8 +85,8 @@ export default function ManagerAthletesPage() {
                         <CardTitle className="font-headline">Gestión de Deportistas</CardTitle>
                         <CardDescription>
                             {teamFilter 
-                                ? `Mostrando deportistas del equipo: ${teamFilter}`
-                                : "Mostrando todos los deportistas del club."
+                                ? `Mostrando deportistas habilitados del equipo: ${teamFilter}`
+                                : "Mostrando todos los deportistas habilitados del club."
                             }
                         </CardDescription>
                     </div>
@@ -86,7 +117,7 @@ export default function ManagerAthletesPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {athletes && athletes.map(athlete => (
+                            {enabledAndEnrichedAthletes && enabledAndEnrichedAthletes.map(athlete => (
                                 <TableRow key={athlete.id}>
                                     <TableCell className="font-medium">{athlete.firstName} {athlete.lastName}</TableCell>
                                     <TableCell>{athlete.team || 'Sin equipo'}</TableCell>
@@ -112,9 +143,9 @@ export default function ManagerAthletesPage() {
                             ))}
                         </TableBody>
                     </Table>
-                     {(!athletes || athletes.length === 0) && (
+                     {(!enabledAndEnrichedAthletes || enabledAndEnrichedAthletes.length === 0) && (
                         <p className="text-center py-8 text-muted-foreground">
-                            {teamFilter ? `No hay deportistas en el equipo ${teamFilter}.` : "No hay deportistas registrados."}
+                            {teamFilter ? `No hay deportistas habilitados en el equipo ${teamFilter}.` : "No hay deportistas habilitados registrados."}
                         </p>
                     )}
                 </CardContent>
