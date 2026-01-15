@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -21,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2, DollarSign, Banknote, Landmark, Hash, Info, Trophy, CalendarIcon, ShieldAlert } from 'lucide-react';
+import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2, DollarSign, Banknote, Landmark, Hash, Info, Trophy, CalendarIcon, ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
@@ -33,6 +33,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 
 const profileSchema = z.object({
@@ -61,6 +62,13 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 type PaymentFormValues = z.infer<typeof paymentSchema>;
 type PaymentStatus = 'Pagado' | 'Pendiente' | 'En Verificación' | 'Rechazado';
 const MAIN_CLUB_ID = 'OpitaClub';
+type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica';
+
+const methodologyLabels: Record<MicrocycleMethodology, string> = {
+    tecnificacion: 'Tecnificación (4-7 años)',
+    futbol_medida: 'Fútbol a la Medida (8-11 años)',
+    periodizacion_tactica: 'Periodización Táctica (12-20 años)'
+};
 
 export default function AthleteProfilePage() {
   const { toast } = useToast();
@@ -96,6 +104,32 @@ export default function AthleteProfilePage() {
     return doc(firestore, 'users', athleteData.coachId);
   }, [firestore, athleteData?.coachId, profile?.clubId]);
   const { data: coach, isLoading: isCoachLoading } = useDoc(coachQuery);
+
+  const microcyclesQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId || !athleteData?.team) return null;
+    return query(collection(firestore, `clubs/${profile.clubId}/microcycles`), where("team", "==", athleteData.team));
+  }, [firestore, profile?.clubId, athleteData?.team]);
+  const { data: teamCycles, isLoading: cyclesLoading } = useCollection(microcyclesQuery);
+  
+  const attendanceQuery = useMemoFirebase(() => {
+      if (!firestore || !user?.uid || !profile?.clubId) return null;
+      // This is a broad query, but necessary without complex backend logic.
+      // It gets all attendance records for the club and we filter client-side.
+      return collection(firestore, `clubs/${profile.clubId}/attendance`);
+  }, [firestore, user?.uid, profile?.clubId]);
+  const { data: allAttendance, isLoading: attendanceLoading } = useCollection(attendanceQuery);
+  
+  const athleteAttendance = useMemo(() => {
+      if (!allAttendance || !user?.uid) return {};
+      const records: Record<string, boolean> = {}; // eventId: wasPresent
+      allAttendance.forEach(record => {
+          if (record.attendance && user.uid in record.attendance) {
+              records[record.eventId] = record.attendance[user.uid];
+          }
+      });
+      return records;
+  }, [allAttendance, user?.uid]);
+
 
   // Profile Form
   const profileForm = useForm<ProfileFormValues>({
@@ -183,7 +217,7 @@ export default function AthleteProfilePage() {
     }
   }
 
-  const isLoading = isUserLoading || isAthleteLoading || arePaymentsLoading || isCoachLoading || isClubConfigLoading;
+  const isLoading = isUserLoading || isAthleteLoading || arePaymentsLoading || isCoachLoading || isClubConfigLoading || cyclesLoading || attendanceLoading;
 
   if (isLoading) {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
@@ -268,11 +302,69 @@ export default function AthleteProfilePage() {
                 )}
             </CardContent>
         </Card>
+        
+        <Card>
+            <CardHeader>
+                <CardTitle className="font-headline flex items-center gap-2"><CalendarHeart/> Plan de Entrenamiento y Asistencia</CardTitle>
+                <CardDescription>
+                     Tu plan de entrenamiento asignado. Entrenador a cargo: <span className="font-bold">{coach?.firstName || 'No asignado'} {coach?.lastName || ''}</span>
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                {!teamCycles || teamCycles.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">Aún no tienes un plan de entrenamiento asignado.</p>
+                ) : (
+                    <Accordion type="single" collapsible className="w-full space-y-4">
+                    {teamCycles.map((cycle) => (
+                        <Card key={cycle.id}>
+                        <AccordionItem value={`cycle-${cycle.id}`} className="border-b-0">
+                            <AccordionTrigger className="p-6 hover:no-underline">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full pr-4 text-left">
+                                <div>
+                                    <h4 className="font-bold text-lg">{cycle.week} - {cycle.team}</h4>
+                                    <Badge variant="secondary" className="mt-2">{methodologyLabels[cycle.methodology as MicrocycleMethodology]}</Badge>
+                                </div>
+                            </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="p-6 pt-0">
+                            <div className="space-y-4">
+                                <div>
+                                    <h5 className="font-semibold">Objetivo Principal</h5>
+                                    <p className="text-muted-foreground">{cycle.mainObjective}</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <h5 className="font-semibold">Sesiones y Asistencia</h5>
+                                    {cycle.sessions.map((session: any, index: number) => {
+                                        const eventIdForSession = `${cycle.id}_${session.day}`;
+                                        const attendanceStatus = athleteAttendance[eventIdForSession];
+                                        
+                                        return (
+                                            <div key={index} className="border-l-2 border-primary pl-4 py-2">
+                                                <div className="flex justify-between items-center">
+                                                     <p className="font-bold">{session.day} - {session.focus} ({session.duration} min)</p>
+                                                     {attendanceStatus === true && <Badge variant="default"><CheckCircle className="h-4 w-4 mr-1"/> Asistió</Badge>}
+                                                     {attendanceStatus === false && <Badge variant="destructive"><XCircle className="h-4 w-4 mr-1"/>No Asistió</Badge>}
+                                                     {attendanceStatus === undefined && <Badge variant="outline">Pendiente</Badge>}
+                                                </div>
+                                                <p className="text-muted-foreground whitespace-pre-wrap mt-1">{session.activities}</p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                        </Card>
+                    ))}
+                    </Accordion>
+                )}
+            </CardContent>
+        </Card>
 
         <Card>
             <CardHeader>
                 <CardTitle className="font-headline">Historial de Pagos</CardTitle>
-                <CardDescription>Tu cuota mensual actual es de <span className="font-bold text-primary">{formatCurrency(monthlyFee)}</span>. Entrenador: <span className="font-bold">{coach?.firstName || 'No asignado'}</span>.</CardDescription>
+                <CardDescription>Tu cuota mensual actual es de <span className="font-bold text-primary">{formatCurrency(monthlyFee)}</span>.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -346,20 +438,6 @@ export default function AthleteProfilePage() {
                  {(!athletePayments || athletePayments.length === 0) && (
                     <p className="text-center text-muted-foreground py-8">No tienes pagos registrados.</p>
                 )}
-            </CardContent>
-        </Card>
-        
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-headline"><CalendarHeart /> Plan de Entrenamiento Anual (Ejemplo)</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                    <div><h4 className="font-semibold text-primary">Primer Trimestre (Ene-Mar)</h4><p className="text-muted-foreground">Acondicionamiento Físico General y técnica.</p></div>
-                    <div><h4 className="font-semibold text-primary">Segundo Trimestre (Abr-Jun)</h4><p className="text-muted-foreground">Desarrollo de fuerza, velocidad y táctica.</p></div>
-                    <div><h4 className="font-semibold text-primary">Tercer Trimestre (Jul-Sep)</h4><p className="text-muted-foreground">Periodo competitivo y estrategia.</p></div>
-                    <div><h4 className="font-semibold text-primary">Cuarto Trimestre (Oct-Dic)</h4><p className="text-muted-foreground">Transición y recuperación activa.</p></div>
-                 </div>
             </CardContent>
         </Card>
 

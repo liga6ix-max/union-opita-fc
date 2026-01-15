@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import { useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, setDoc, serverTimestamp, addDoc } from 'firebase/firestore';
+import { collection, query, where, doc, setDoc, serverTimestamp, addDoc, getDocs } from 'firebase/firestore';
 import {
   Card,
   CardContent,
@@ -39,26 +39,37 @@ export default function CoachAttendancePage() {
   const { toast } = useToast();
   const { profile, isUserLoading, firestore } = useUser();
 
-  const [selectedEventId, setSelectedEventId] = useState<string | undefined>();
+  const [selectedCycleId, setSelectedCycleId] = useState<string | undefined>();
+  const [selectedDay, setSelectedDay] = useState<string | undefined>();
   const [attendance, setAttendance] = useState<AttendanceRecord>({});
 
-  const trainingEventsQuery = useMemoFirebase(() => {
+  const microcyclesQuery = useMemoFirebase(() => {
     if (!firestore || !profile?.id || !profile?.clubId) return null;
-    return query(collection(firestore, `clubs/${profile.clubId}/trainingEvents`), where("coachId", "==", profile.id));
+    return query(collection(firestore, `clubs/${profile.clubId}/microcycles`), where("coachId", "==", profile.id));
   }, [firestore, profile?.id, profile?.clubId]);
 
-  const { data: trainingEvents, isLoading: eventsLoading } = useCollection(trainingEventsQuery);
+  const { data: trainingCycles, isLoading: cyclesLoading } = useCollection(microcyclesQuery);
 
-  const selectedEvent = useMemo(() => {
-    return trainingEvents?.find(e => e.id === selectedEventId);
-  }, [trainingEvents, selectedEventId]);
+  const selectedCycle = useMemo(() => {
+    return trainingCycles?.find(c => c.id === selectedCycleId);
+  }, [trainingCycles, selectedCycleId]);
+  
+  const selectedSession = useMemo(() => {
+    return selectedCycle?.sessions.find((s:any) => s.day === selectedDay);
+  }, [selectedCycle, selectedDay]);
 
   const athletesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId || !selectedEvent?.team) return null;
-    return query(collection(firestore, `clubs/${profile.clubId}/athletes`), where("team", "==", selectedEvent.team));
-  }, [firestore, profile?.clubId, selectedEvent?.team]);
+    if (!firestore || !profile?.clubId || !selectedCycle?.team) return null;
+    return query(collection(firestore, `clubs/${profile.clubId}/athletes`), where("team", "==", selectedCycle.team));
+  }, [firestore, profile?.clubId, selectedCycle?.team]);
   
   const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
+  
+  // Reset states when cycle selection changes
+  useEffect(() => {
+    setSelectedDay(undefined);
+    setAttendance({});
+  }, [selectedCycleId]);
 
   const handleAttendanceChange = (athleteId: string, isPresent: boolean) => {
     setAttendance(prev => ({
@@ -68,32 +79,45 @@ export default function CoachAttendancePage() {
   };
 
   const handleSaveAttendance = async () => {
-    if(!selectedEventId || !firestore || !profile?.clubId || !profile.id) {
+    if(!selectedCycleId || !selectedDay || !firestore || !profile?.clubId || !profile.id || !selectedCycle) {
         toast({
             variant: "destructive",
             title: "Error",
-            description: "Por favor, selecciona una sesión."
+            description: "Por favor, selecciona una sesión válida."
         });
         return;
     }
     
-    const attendanceRef = collection(firestore, `clubs/${profile.clubId}/attendance`);
+    // An event ID is needed to link attendance to a specific session in time
+    const eventId = `${selectedCycleId}_${selectedDay}`;
+    const attendanceCollection = collection(firestore, `clubs/${profile.clubId}/attendance`);
     
-    const attendanceData = {
-        eventId: selectedEventId,
-        date: selectedEvent?.date,
-        coachId: profile.id,
-        team: selectedEvent?.team,
-        attendance: attendance,
-        createdAt: serverTimestamp()
-    };
+    // Check if attendance for this event already exists
+    const q = query(attendanceCollection, where("eventId", "==", eventId));
+    const querySnapshot = await getDocs(q);
 
+    const attendanceData = {
+        eventId: eventId,
+        date: format(new Date(), 'yyyy-MM-dd'), // The actual date of attendance
+        coachId: profile.id,
+        team: selectedCycle.team,
+        attendance: attendance,
+        cycleId: selectedCycleId,
+        sessionDay: selectedDay,
+        updatedAt: serverTimestamp()
+    };
+    
     try {
-        await addDoc(attendanceRef, attendanceData);
-        toast({
-            title: "¡Asistencia Guardada!",
-            description: `Se ha registrado la asistencia para la sesión seleccionada.`
-        });
+        if (querySnapshot.empty) {
+            // No existing record, create a new one
+            await addDoc(attendanceCollection, { ...attendanceData, createdAt: serverTimestamp() });
+             toast({ title: "¡Asistencia Guardada!", description: `Se ha registrado la asistencia para la sesión.` });
+        } else {
+            // Existing record found, update it
+            const docRef = querySnapshot.docs[0].ref;
+            await setDoc(docRef, attendanceData, { merge: true });
+             toast({ title: "¡Asistencia Actualizada!", description: `Se ha actualizado el registro de asistencia.` });
+        }
     } catch (error) {
         console.error("Error saving attendance: ", error);
         toast({
@@ -104,7 +128,7 @@ export default function CoachAttendancePage() {
     }
   }
 
-  if (isUserLoading || eventsLoading) {
+  if (isUserLoading || cyclesLoading) {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
@@ -116,34 +140,50 @@ export default function CoachAttendancePage() {
             <UserCheck /> Registro de Asistencia
           </CardTitle>
           <CardDescription>
-            Selecciona una sesión de entrenamiento programada y marca la asistencia.
+            Selecciona una semana y una sesión de entrenamiento para marcar la asistencia.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {trainingEvents && trainingEvents.length > 0 ? (
+          {trainingCycles && trainingCycles.length > 0 ? (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <Select onValueChange={setSelectedEventId} value={selectedEventId}>
-                  <SelectTrigger className="w-full sm:w-[380px]">
-                    <SelectValue placeholder="Selecciona una sesión de entrenamiento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {trainingEvents.map((event) => (
-                      <SelectItem key={event.id} value={event.id}>
-                        {format(new Date(event.date), "PPP", { locale: es })} a las {event.time} - {event.team}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button onClick={handleSaveAttendance} className="w-full sm:w-auto" disabled={!selectedEventId || athletesLoading}>
+                <div className='flex flex-col sm:flex-row gap-4 w-full'>
+                    <Select onValueChange={setSelectedCycleId} value={selectedCycleId}>
+                        <SelectTrigger className="w-full sm:w-[380px]">
+                            <SelectValue placeholder="Selecciona una semana (Microciclo)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {trainingCycles.map((cycle) => (
+                            <SelectItem key={cycle.id} value={cycle.id}>
+                                {cycle.week} - {cycle.team}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    
+                    <Select onValueChange={setSelectedDay} value={selectedDay} disabled={!selectedCycle}>
+                        <SelectTrigger className="w-full sm:w-[280px]">
+                            <SelectValue placeholder="Selecciona una sesión" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {selectedCycle?.sessions.map((session: any) => (
+                            <SelectItem key={session.day} value={session.day}>
+                                {session.day} - {session.focus}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                
+                <Button onClick={handleSaveAttendance} className="w-full sm:w-auto" disabled={!selectedDay || athletesLoading}>
                     {athletesLoading ? <Loader2 className="animate-spin" /> : "Guardar Asistencia"}
                 </Button>
               </div>
 
-              {selectedEvent && (
+              {selectedDay && (
                 <div>
                   <h3 className="text-lg font-semibold mb-4">
-                    Deportistas del Equipo: {selectedEvent.team}
+                    Deportistas del Equipo: {selectedCycle?.team}
                   </h3>
                    <div className="border rounded-lg">
                      <Table>
@@ -164,7 +204,7 @@ export default function CoachAttendancePage() {
                                                 id={`athlete-${athlete.id}`}
                                                 checked={attendance[athlete.id] || false}
                                                 onCheckedChange={(checked) => handleAttendanceChange(athlete.id, !!checked)}
-                                                aria-label={`Marcar asistencia para ${athlete.firstName}`}
+                                                aria-label={`Marcar asistencia para ${athlete.firstName} ${athlete.lastName}`}
                                             />
                                         </TableCell>
                                         <TableCell className="font-medium">
@@ -189,7 +229,7 @@ export default function CoachAttendancePage() {
             </div>
           ) : (
             <p className="text-muted-foreground text-center py-8">
-              No tienes sesiones de entrenamiento programadas.
+              No tienes planes de entrenamiento (microciclos) asignados.
             </p>
           )}
         </CardContent>
