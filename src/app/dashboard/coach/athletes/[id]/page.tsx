@@ -51,7 +51,7 @@ export default function CoachAthleteProfilePage({ params }: { params: { id: stri
   const [isEditing, setIsEditing] = useState(false);
   const { profile: coachProfile, isUserLoading } = useUser();
   const { firestore } = useFirebase();
-  const athleteId = params.id;
+  const { id: athleteId } = params;
 
   const athleteDocRef = useMemoFirebase(() => {
     if (!firestore || !coachProfile?.clubId || !athleteId) return null;
@@ -305,3 +305,5 @@ export default function CoachAthleteProfilePage({ params }: { params: { id: stri
     </div>
   );
 }
+
+    

@@ -51,7 +51,7 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
   const [isEditing, setIsEditing] = useState(false);
   const { profile: managerProfile, isUserLoading } = useUser();
   const { firestore } = useFirebase();
-  const athleteId = params.id;
+  const { id: athleteId } = params;
 
   const athleteDocRef = useMemoFirebase(() => {
     if (!firestore || !athleteId) return null;
@@ -338,3 +338,5 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
     </div>
   );
 }
+
+    
