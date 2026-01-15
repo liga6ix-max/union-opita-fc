@@ -46,12 +46,11 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 const MAIN_CLUB_ID = 'OpitaClub';
 
-export default function ManagerAthleteProfilePage({ params }: { params: { id: string } }) {
+export default function ManagerAthleteProfilePage({ params: { id: athleteId } }: { params: { id: string } }) {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const { profile: managerProfile, isUserLoading } = useUser();
   const { firestore } = useFirebase();
-  const { id: athleteId } = params;
 
   const athleteDocRef = useMemoFirebase(() => {
     if (!firestore || !athleteId) return null;
@@ -338,5 +337,3 @@ export default function ManagerAthleteProfilePage({ params }: { params: { id: st
     </div>
   );
 }
-
-    

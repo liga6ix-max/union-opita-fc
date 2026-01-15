@@ -46,12 +46,11 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-export default function CoachAthleteProfilePage({ params }: { params: { id: string } }) {
+export default function CoachAthleteProfilePage({ params: { id: athleteId } }: { params: { id: string } }) {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const { profile: coachProfile, isUserLoading } = useUser();
   const { firestore } = useFirebase();
-  const { id: athleteId } = params;
 
   const athleteDocRef = useMemoFirebase(() => {
     if (!firestore || !coachProfile?.clubId || !athleteId) return null;
@@ -305,5 +304,3 @@ export default function CoachAthleteProfilePage({ params }: { params: { id: stri
     </div>
   );
 }
-
-    
