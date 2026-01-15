@@ -32,8 +32,9 @@ service cloud.firestore {
     }
 
     function isMemberOfTheClub(clubId) {
-      // Check if the user document has the corresponding clubId.
-      return isSignedIn() && getUserData(request.auth.uid).clubId == clubId;
+      // Check if the user document exists and has the corresponding clubId.
+      let userData = getUserData(request.auth.uid);
+      return isSignedIn() && ('clubId' in userData) && userData.clubId == clubId;
     }
 
     // --------------------------------------------------------------------------------
@@ -43,9 +44,8 @@ service cloud.firestore {
     // CLUBS
     match /clubs/{clubId} {
       // Any authenticated member of the club can read club details.
-      allow get: if isSignedIn() && isMemberOfTheClub(clubId);
       // Managers can read any club document, essential for settings.
-      allow read: if isManager();
+      allow read: if isManager() || (isSignedIn() && isMemberOfTheClub(clubId));
       // Only managers can create, update, or delete club documents.
       allow write: if isManager();
     }
@@ -67,9 +67,9 @@ service cloud.firestore {
       allow delete: if isManager();
     }
     
-    // Subcollections need to verify the user is part of the parent club.
+    // Subcollections need to verify the user is part of the parent club OR is a manager.
     match /clubs/{clubId}/{document=**} {
-        allow read, write: if isSignedIn() && isMemberOfTheClub(clubId);
+        allow read, write: if isManager() || (isSignedIn() && isMemberOfTheClub(clubId));
     }
   }
 }
