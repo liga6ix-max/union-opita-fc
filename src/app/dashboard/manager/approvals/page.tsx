@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -37,9 +38,9 @@ export default function ApprovalsPage() {
 
     // With simplified rules, a manager can list all users.
     const usersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !profile) return null;
         return collection(firestore, 'users');
-    }, [firestore]);
+    }, [firestore, profile]);
 
     const { data: userList, isLoading: usersLoading, error } = useCollection(usersQuery);
     
