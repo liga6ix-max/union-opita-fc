@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format, parse, isValid, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useParams } from 'next/navigation';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,11 +47,13 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-export default function CoachAthleteProfilePage({ params: { id: athleteId } }: { params: { id: string } }) {
+export default function CoachAthleteProfilePage() {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const { profile: coachProfile, isUserLoading } = useUser();
   const { firestore } = useFirebase();
+  const params = useParams();
+  const athleteId = params.id as string;
 
   const athleteDocRef = useMemoFirebase(() => {
     if (!firestore || !coachProfile?.clubId || !athleteId) return null;

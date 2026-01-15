@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format, parse, isValid, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useParams } from 'next/navigation';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,11 +48,13 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 const MAIN_CLUB_ID = 'OpitaClub';
 
-export default function ManagerAthleteProfilePage({ params: { id: athleteId } }: { params: { id: string } }) {
+export default function ManagerAthleteProfilePage() {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const { profile: managerProfile, isUserLoading } = useUser();
   const { firestore } = useFirebase();
+  const params = useParams();
+  const athleteId = params.id as string;
 
   const athleteDocRef = useMemoFirebase(() => {
     if (!firestore || !athleteId) return null;
