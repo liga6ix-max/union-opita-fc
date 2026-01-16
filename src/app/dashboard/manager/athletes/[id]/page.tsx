@@ -99,12 +99,12 @@ export default function ManagerAthleteProfilePage() {
       medicalInformation: '',
       team: '',
       coachId: '',
-      weight: undefined,
-      height: undefined,
-      vo2max: undefined,
-      jumpHeight: undefined,
-      speedTest30mTime: undefined,
-      ankleFlexibility: undefined,
+      weight: '',
+      height: '',
+      vo2max: '',
+      jumpHeight: '',
+      speedTest30mTime: '',
+      ankleFlexibility: '',
       enduranceTest8kmTime: '',
     },
   });
@@ -127,12 +127,12 @@ export default function ManagerAthleteProfilePage() {
         medicalInformation: combinedData.medicalInformation || '',
         team: combinedData.team || '',
         coachId: combinedData.coachId || '',
-        weight: combinedData.weight || undefined,
-        height: combinedData.height || undefined,
-        vo2max: combinedData.vo2max || undefined,
-        jumpHeight: combinedData.jumpHeight || undefined,
-        speedTest30mTime: combinedData.speedTest30mTime || undefined,
-        ankleFlexibility: combinedData.ankleFlexibility || undefined,
+        weight: combinedData.weight || '',
+        height: combinedData.height || '',
+        vo2max: combinedData.vo2max || '',
+        jumpHeight: combinedData.jumpHeight || '',
+        speedTest30mTime: combinedData.speedTest30mTime || '',
+        ankleFlexibility: combinedData.ankleFlexibility || '',
         enduranceTest8kmTime: combinedData.enduranceTest8kmTime || '',
       });
     }
@@ -400,3 +400,5 @@ export default function ManagerAthleteProfilePage() {
     </div>
   );
 }
+
+    
