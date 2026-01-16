@@ -102,6 +102,14 @@
           "type": "string",
           "description": "Important medical information about the athlete."
         },
+        "weight": {
+          "type": "number",
+          "description": "Peso del atleta en kilogramos."
+        },
+        "height": {
+          "type": "number",
+          "description": "Estatura del atleta en centímetros."
+        },
         "vo2max": {
           "type": "number",
           "description": "Consumo máximo de oxígeno, medido en niveles de 1 a 30."

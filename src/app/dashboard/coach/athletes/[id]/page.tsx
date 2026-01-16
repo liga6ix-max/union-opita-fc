@@ -23,7 +23,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2, Wind, ArrowUpFromLine, Zap, Footprints, Timer } from 'lucide-react';
+import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2, Wind, ArrowUpFromLine, Zap, Footprints, Timer, Scale, Ruler } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
@@ -44,6 +44,8 @@ const profileSchema = z.object({
   emergencyContactPhone: z.string().min(7, { message: 'El teléfono del contacto es requerido.' }),
   medicalInformation: z.string().optional(),
   team: z.string().min(1, "El equipo es requerido."),
+  weight: z.coerce.number().positive().optional().or(z.literal('')),
+  height: z.coerce.number().positive().optional().or(z.literal('')),
   vo2max: z.coerce.number().min(1).max(30).optional().or(z.literal('')),
   jumpHeight: z.coerce.number().optional().or(z.literal('')),
   speedTest30mTime: z.coerce.number().positive().optional().or(z.literal('')),
@@ -89,6 +91,8 @@ export default function CoachAthleteProfilePage() {
       emergencyContactPhone: '',
       medicalInformation: '',
       team: '',
+      weight: undefined,
+      height: undefined,
       vo2max: undefined,
       jumpHeight: undefined,
       speedTest30mTime: undefined,
@@ -114,6 +118,8 @@ export default function CoachAthleteProfilePage() {
         emergencyContactPhone: combinedData.emergencyContactPhone || '',
         medicalInformation: combinedData.medicalInformation || '',
         team: combinedData.team || '',
+        weight: combinedData.weight || undefined,
+        height: combinedData.height || undefined,
         vo2max: combinedData.vo2max || undefined,
         jumpHeight: combinedData.jumpHeight || undefined,
         speedTest30mTime: combinedData.speedTest30mTime || undefined,
@@ -143,6 +149,8 @@ export default function CoachAthleteProfilePage() {
       emergencyContactPhone: data.emergencyContactPhone || null,
       medicalInformation: data.medicalInformation || null,
       team: data.team,
+      weight: data.weight || null,
+      height: data.height || null,
       vo2max: data.vo2max || null,
       jumpHeight: data.jumpHeight || null,
       speedTest30mTime: data.speedTest30mTime || null,
@@ -311,6 +319,8 @@ export default function CoachAthleteProfilePage() {
                         <fieldset className="space-y-4 rounded-lg border p-4">
                             <legend className="-ml-1 px-1 text-lg font-medium font-headline">Evaluaciones Físicas</legend>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <FormField control={form.control} name="weight" render={({ field }) => (<FormItem><FormLabel>Peso (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="kg" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name="height" render={({ field }) => (<FormItem><FormLabel>Estatura (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 <FormField control={form.control} name="vo2max" render={({ field }) => (<FormItem><FormLabel>VO2 Max (Nivel 1-30)</FormLabel><FormControl><Input type="number" placeholder="Nivel" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 <FormField control={form.control} name="speedTest30mTime" render={({ field }) => (<FormItem><FormLabel>Test 30m (segundos)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Segundos" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 <FormField control={form.control} name="enduranceTest8kmTime" render={({ field }) => (<FormItem><FormLabel>Test 8km (HH:mm:ss)</FormLabel><FormControl><Input placeholder="HH:mm:ss" {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -340,6 +350,8 @@ export default function CoachAthleteProfilePage() {
                     <div>
                         <h3 className="text-lg font-semibold mb-4 font-headline">Evaluaciones Físicas</h3>
                          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
+                            <div className="flex items-center gap-4"><Scale className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Peso</p><p className="font-medium">{displayData.weight ? `${displayData.weight} kg` : 'No registrado'}</p></div></div>
+                            <div className="flex items-center gap-4"><Ruler className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Estatura</p><p className="font-medium">{displayData.height ? `${displayData.height} cm` : 'No registrada'}</p></div></div>
                             <div className="flex items-center gap-4"><Wind className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Consumo Máx. Oxígeno</p><p className="font-medium">{displayData.vo2max ? `Nivel ${displayData.vo2max}` : 'No registrado'}</p></div></div>
                             <div className="flex items-center gap-4"><Zap className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Velocidad (30m)</p><p className="font-medium">{speed ? `${speed} m/s` : 'No registrado'}</p></div></div>
                             <div className="flex items-center gap-4"><Timer className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Resistencia (8km)</p><p className="font-medium">{displayData.enduranceTest8kmTime || 'No registrado'}</p></div></div>
