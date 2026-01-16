@@ -101,6 +101,26 @@
         "medicalInformation": {
           "type": "string",
           "description": "Important medical information about the athlete."
+        },
+        "vo2max": {
+          "type": "number",
+          "description": "Consumo máximo de oxígeno, medido en niveles de 1 a 30."
+        },
+        "jumpHeight": {
+          "type": "number",
+          "description": "Altura del salto vertical, medido en centímetros."
+        },
+        "speedTest30mTime": {
+          "type": "number",
+          "description": "Tiempo en segundos en el test de velocidad de 30 metros."
+        },
+        "ankleFlexibility": {
+          "type": "number",
+          "description": "Flexibilidad del tobillo, medida en centímetros."
+        },
+        "enduranceTest8kmTime": {
+          "type": "string",
+          "description": "Tiempo en la prueba de resistencia de 8km (formato HH:mm:ss)."
         }
       },
       "required": [

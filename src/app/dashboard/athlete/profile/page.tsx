@@ -21,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2, DollarSign, Banknote, Landmark, Hash, Info, Trophy, CalendarIcon, ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
+import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2, DollarSign, Banknote, Landmark, Hash, Info, Trophy, CalendarIcon, ShieldAlert, CheckCircle, XCircle, Wind, ArrowUpFromLine, Zap, Footprints, Timer } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
@@ -247,6 +247,10 @@ export default function AthleteProfilePage() {
     'Pagado': 'default', 'Pendiente': 'destructive', 'En Verificación': 'secondary', 'Rechazado': 'outline',
   };
 
+  const hasPhysicalData = athleteData?.vo2max || athleteData?.jumpHeight || athleteData?.speedTest30mTime || athleteData?.ankleFlexibility || athleteData?.enduranceTest8kmTime;
+  const speed = athleteData?.speedTest30mTime ? (30 / athleteData.speedTest30mTime).toFixed(2) : null;
+
+
   return (
     <div className="space-y-8">
         {hasPendingPayment && (
@@ -446,7 +450,17 @@ export default function AthleteProfilePage() {
                 <CardTitle className="flex items-center gap-2 font-headline"><ClipboardCheck /> Evaluaciones Físicas</CardTitle>
             </CardHeader>
             <CardContent>
-                <p className="text-muted-foreground text-center py-8">Aún no tienes evaluaciones físicas registradas.</p>
+                {hasPhysicalData ? (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
+                        <div className="flex items-center gap-4"><Wind className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Consumo Máx. Oxígeno</p><p className="font-medium">{athleteData.vo2max ? `Nivel ${athleteData.vo2max}` : 'No registrado'}</p></div></div>
+                        <div className="flex items-center gap-4"><Zap className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Velocidad (30m)</p><p className="font-medium">{speed ? `${speed} m/s` : 'No registrado'}</p></div></div>
+                        <div className="flex items-center gap-4"><Timer className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Resistencia (8km)</p><p className="font-medium">{athleteData.enduranceTest8kmTime || 'No registrado'}</p></div></div>
+                        <div className="flex items-center gap-4"><ArrowUpFromLine className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Salto Vertical</p><p className="font-medium">{athleteData.jumpHeight ? `${athleteData.jumpHeight} cm` : 'No registrado'}</p></div></div>
+                        <div className="flex items-center gap-4"><Footprints className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Flexibilidad de Tobillo</p><p className="font-medium">{athleteData.ankleFlexibility ? `${athleteData.ankleFlexibility} cm` : 'No registrado'}</p></div></div>
+                    </div>
+                ) : (
+                    <p className="text-muted-foreground text-center py-8">Aún no tienes evaluaciones físicas registradas.</p>
+                )}
             </CardContent>
         </Card>
     </div>

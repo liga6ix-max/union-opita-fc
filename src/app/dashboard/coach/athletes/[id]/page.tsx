@@ -23,13 +23,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2 } from 'lucide-react';
+import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2, Wind, ArrowUpFromLine, Zap, Footprints, Timer } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
 import clubConfig from '@/lib/club-config.json';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Separator } from '@/components/ui/separator';
 
 const profileSchema = z.object({
   firstName: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
@@ -43,6 +44,11 @@ const profileSchema = z.object({
   emergencyContactPhone: z.string().min(7, { message: 'El teléfono del contacto es requerido.' }),
   medicalInformation: z.string().optional(),
   team: z.string().min(1, "El equipo es requerido."),
+  vo2max: z.coerce.number().min(1).max(30).optional().or(z.literal('')),
+  jumpHeight: z.coerce.number().optional().or(z.literal('')),
+  speedTest30mTime: z.coerce.number().positive().optional().or(z.literal('')),
+  ankleFlexibility: z.coerce.number().optional().or(z.literal('')),
+  enduranceTest8kmTime: z.string().regex(/^(\d{2}):(\d{2}):(\d{2})$/, "El formato debe ser HH:mm:ss").optional().or(z.literal('')),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -83,6 +89,11 @@ export default function CoachAthleteProfilePage() {
       emergencyContactPhone: '',
       medicalInformation: '',
       team: '',
+      vo2max: undefined,
+      jumpHeight: undefined,
+      speedTest30mTime: undefined,
+      ankleFlexibility: undefined,
+      enduranceTest8kmTime: '',
     },
   });
 
@@ -103,6 +114,11 @@ export default function CoachAthleteProfilePage() {
         emergencyContactPhone: combinedData.emergencyContactPhone || '',
         medicalInformation: combinedData.medicalInformation || '',
         team: combinedData.team || '',
+        vo2max: combinedData.vo2max || undefined,
+        jumpHeight: combinedData.jumpHeight || undefined,
+        speedTest30mTime: combinedData.speedTest30mTime || undefined,
+        ankleFlexibility: combinedData.ankleFlexibility || undefined,
+        enduranceTest8kmTime: combinedData.enduranceTest8kmTime || '',
       });
     }
   }, [userData, athleteData, reset]);
@@ -127,6 +143,11 @@ export default function CoachAthleteProfilePage() {
       emergencyContactPhone: data.emergencyContactPhone || null,
       medicalInformation: data.medicalInformation || null,
       team: data.team,
+      vo2max: data.vo2max || null,
+      jumpHeight: data.jumpHeight || null,
+      speedTest30mTime: data.speedTest30mTime || null,
+      ankleFlexibility: data.ankleFlexibility || null,
+      enduranceTest8kmTime: data.enduranceTest8kmTime || null,
     };
     
     // Non-blocking updates
@@ -166,6 +187,7 @@ export default function CoachAthleteProfilePage() {
   };
   
   const age = displayData.birthDate ? getAge(displayData.birthDate) : null;
+  const speed = displayData.speedTest30mTime ? (30 / displayData.speedTest30mTime).toFixed(2) : null;
 
   return (
     <div className="space-y-8">
@@ -285,6 +307,18 @@ export default function CoachAthleteProfilePage() {
                                 <FormMessage />
                             </FormItem>
                         )}/>
+
+                        <fieldset className="space-y-4 rounded-lg border p-4">
+                            <legend className="-ml-1 px-1 text-lg font-medium font-headline">Evaluaciones Físicas</legend>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <FormField control={form.control} name="vo2max" render={({ field }) => (<FormItem><FormLabel>VO2 Max (Nivel 1-30)</FormLabel><FormControl><Input type="number" placeholder="Nivel" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name="speedTest30mTime" render={({ field }) => (<FormItem><FormLabel>Test 30m (segundos)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Segundos" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name="enduranceTest8kmTime" render={({ field }) => (<FormItem><FormLabel>Test 8km (HH:mm:ss)</FormLabel><FormControl><Input placeholder="HH:mm:ss" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name="jumpHeight" render={({ field }) => (<FormItem><FormLabel>Salto Vertical (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name="ankleFlexibility" render={({ field }) => (<FormItem><FormLabel>Flex. Tobillo (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            </div>
+                        </fieldset>
+
                         <Button type="submit" disabled={formState.isSubmitting}>
                             {formState.isSubmitting ? <Loader2 className="animate-spin" /> : "Guardar Cambios"}
                         </Button>
@@ -301,6 +335,17 @@ export default function CoachAthleteProfilePage() {
                         <div className="flex items-center gap-4"><Droplets className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Tipo de Sangre</p><p className="font-medium">{displayData.bloodType || 'No especificado'}</p></div></div>
                         <div className="flex items-center gap-4 col-span-1 md:col-span-2 lg:col-span-3"><Phone className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Contacto de Emergencia</p><p className="font-medium">{displayData.emergencyContactName && displayData.emergencyContactPhone ? `${displayData.emergencyContactName} - ${displayData.emergencyContactPhone}` : 'No especificado'}</p></div></div>
                         <div className="flex items-start gap-4 col-span-1 md:col-span-2 lg:col-span-3"><Hospital className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Información Médica</p><p className="font-medium">{displayData.medicalInformation || 'No especificada'}</p></div></div>
+                    </div>
+                    <Separator />
+                    <div>
+                        <h3 className="text-lg font-semibold mb-4 font-headline">Evaluaciones Físicas</h3>
+                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
+                            <div className="flex items-center gap-4"><Wind className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Consumo Máx. Oxígeno</p><p className="font-medium">{displayData.vo2max ? `Nivel ${displayData.vo2max}` : 'No registrado'}</p></div></div>
+                            <div className="flex items-center gap-4"><Zap className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Velocidad (30m)</p><p className="font-medium">{speed ? `${speed} m/s` : 'No registrado'}</p></div></div>
+                            <div className="flex items-center gap-4"><Timer className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Resistencia (8km)</p><p className="font-medium">{displayData.enduranceTest8kmTime || 'No registrado'}</p></div></div>
+                            <div className="flex items-center gap-4"><ArrowUpFromLine className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Salto Vertical</p><p className="font-medium">{displayData.jumpHeight ? `${displayData.jumpHeight} cm` : 'No registrado'}</p></div></div>
+                            <div className="flex items-center gap-4"><Footprints className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Flexibilidad de Tobillo</p><p className="font-medium">{displayData.ankleFlexibility ? `${displayData.ankleFlexibility} cm` : 'No registrado'}</p></div></div>
+                        </div>
                     </div>
                 </div>
                 )}
