@@ -45,12 +45,13 @@ const taskSchema = z.object({
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
-type TaskStatus = 'Pendiente' | 'En Progreso' | 'Completada';
+type TaskStatus = 'Pendiente' | 'En Progreso' | 'Completada' | 'Leído';
 
-const statusBadgeVariant: Record<TaskStatus, 'default' | 'secondary' | 'destructive'> = {
+const statusBadgeVariant: Record<TaskStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   'Completada': 'default',
   'En Progreso': 'secondary',
   'Pendiente': 'destructive',
+  'Leído': 'outline'
 };
 
 const MAIN_CLUB_ID = 'OpitaClub';

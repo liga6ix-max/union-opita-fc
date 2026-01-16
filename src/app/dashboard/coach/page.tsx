@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useFirebase, useUser, useMemoFirebase, useCollection } from '@/firebase';
@@ -7,10 +6,21 @@ import { Users, ListTodo, Wallet, Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+
+type TaskStatus = 'Pendiente' | 'En Progreso' | 'Completada' | 'Leído';
+
+const statusBadgeVariant: Record<TaskStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  'Completada': 'default',
+  'En Progreso': 'secondary',
+  'Pendiente': 'destructive',
+  'Leído': 'outline',
+};
 
 export default function CoachDashboard() {
   const { profile, isUserLoading, firestore } = useUser();
+  const { toast } = useToast();
 
   const athletesQuery = useMemoFirebase(() => {
     if (!firestore || !profile?.id || !profile?.clubId) return null;
@@ -25,6 +35,32 @@ export default function CoachDashboard() {
   }, [firestore, profile?.id, profile?.clubId]);
 
   const { data: tasks, isLoading: tasksLoading } = useCollection(tasksQuery);
+
+  const handleMarkAsRead = async (taskId: string) => {
+    if (!firestore || !profile?.clubId) {
+      toast({
+        variant: "destructive",
+        title: "Error de conexión",
+        description: "No se pudo conectar a la base de datos.",
+      });
+      return;
+    }
+    const taskRef = doc(firestore, `clubs/${profile.clubId}/tasks`, taskId);
+    try {
+      await updateDoc(taskRef, { status: "Leído" });
+      toast({
+        title: "Tarea actualizada",
+        description: "La tarea ha sido marcada como leída.",
+      });
+    } catch (e: any) {
+      console.error("Error updating task:", e);
+      toast({
+        variant: "destructive",
+        title: "Error al actualizar",
+        description: e.message || "No se pudo actualizar la tarea.",
+      });
+    }
+  };
 
   if (isUserLoading || athletesLoading || tasksLoading) {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -96,13 +132,18 @@ export default function CoachDashboard() {
                             <TableCell className="font-medium">{task.description}</TableCell>
                             <TableCell>{task.dueDate}</TableCell>
                             <TableCell>
-                                <Badge variant={task.status === 'Completada' ? 'default' : task.status === 'En Progreso' ? 'secondary' : 'destructive'}>
+                                <Badge variant={statusBadgeVariant[task.status as TaskStatus]}>
                                     {task.status}
                                 </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                                <Button variant="outline" size="sm">
-                                    Actualizar
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleMarkAsRead(task.id)}
+                                  disabled={task.status !== 'Pendiente'}
+                                >
+                                  {task.status === 'Pendiente' ? 'Marcar como Leído' : 'Actualizar'}
                                 </Button>
                             </TableCell>
                         </TableRow>

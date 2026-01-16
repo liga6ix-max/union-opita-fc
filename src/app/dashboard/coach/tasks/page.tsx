@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -28,12 +27,13 @@ import {
 import { useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
 
-type TaskStatus = 'Pendiente' | 'En Progreso' | 'Completada';
+type TaskStatus = 'Pendiente' | 'Leído' | 'En Progreso' | 'Completada';
 
-const statusBadgeVariant: Record<TaskStatus, "default" | "secondary" | "destructive"> = {
+const statusBadgeVariant: Record<TaskStatus, "default" | "secondary" | "destructive" | "outline"> = {
     'Completada': 'default',
     'En Progreso': 'secondary',
-    'Pendiente': 'destructive'
+    'Pendiente': 'destructive',
+    'Leído': 'outline'
 };
 
 export default function CoachTasksPage() {
@@ -125,6 +125,7 @@ export default function CoachTasksPage() {
                                 onValueChange={(value) => handleStatusChange(task.id, value as TaskStatus)}
                             >
                                 <DropdownMenuRadioItem value="Pendiente">Pendiente</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="Leído">Leído</DropdownMenuRadioItem>
                                 <DropdownMenuRadioItem value="En Progreso">En Progreso</DropdownMenuRadioItem>
                                 <DropdownMenuRadioItem value="Completada">Completada</DropdownMenuRadioItem>
                             </DropdownMenuRadioGroup>
