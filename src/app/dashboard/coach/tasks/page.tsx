@@ -24,8 +24,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
+import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type TaskStatus = 'Pendiente' | 'Leído' | 'En Progreso' | 'Completada';
 
@@ -49,23 +50,14 @@ export default function CoachTasksPage() {
 
   const { data: taskList, isLoading: tasksLoading } = useCollection(tasksQuery);
 
-  const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
+  const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
     if (!firestore || !profile?.clubId) return;
     const taskRef = doc(firestore, `clubs/${profile.clubId}/tasks`, taskId);
-    try {
-        await updateDoc(taskRef, { status: newStatus });
-        toast({
-            title: '¡Estado de la Tarea Actualizado!',
-            description: `La tarea ha sido marcada como "${newStatus}".`,
-        });
-    } catch(e) {
-        console.error("Error updating task status:", e);
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "No se pudo actualizar el estado de la tarea."
-        })
-    }
+    updateDocumentNonBlocking(taskRef, { status: newStatus });
+    toast({
+        title: '¡Estado de la Tarea Actualizado!',
+        description: `La tarea ha sido marcada como "${newStatus}".`,
+    });
   };
 
   const openDetailsModal = (task: any) => {

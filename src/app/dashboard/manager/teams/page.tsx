@@ -4,8 +4,9 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, User, Target, ArrowRight, Loader2, MoreVertical } from "lucide-react";
-import { useUser, useCollection, useMemoFirebase, useFirebase, useDoc } from "@/firebase";
-import { collection, query, where, writeBatch, getDocs, doc, updateDoc } from "firebase/firestore";
+import { useUser, useCollection, useMemoFirebase, useFirebase, useDoc, errorEmitter, FirestorePermissionError } from "@/firebase";
+import { collection, query, where, getDocs, doc } from "firebase/firestore";
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -21,8 +22,6 @@ import clubConfig from "@/lib/club-config.json";
 const MAIN_CLUB_ID = 'OpitaClub';
 
 const createSafeKeyForTeam = (teamName: string) => {
-    // Firestore field paths cannot contain '/', so we replace it.
-    // We also remove spaces to be safe with dot notation.
     return teamName.replace(/\s/g, '').replace(/\//g, '-');
 }
 
@@ -32,30 +31,28 @@ export default function ManagerTeamsPage() {
     const { toast } = useToast();
 
     const athletesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        // The where clause is removed to ensure all athletes in the subcollection are fetched,
-        // as the collection path already scopes them to the club.
+        if (!firestore || !profile) return null;
         return collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`);
-    }, [firestore]);
+    }, [firestore, profile]);
     
     const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
     
     const coachesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !profile) return null;
         return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "in", ["coach", "manager"]));
-    }, [firestore]);
+    }, [firestore, profile]);
     const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
     const microcyclesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !profile) return null;
         return collection(firestore, `clubs/${MAIN_CLUB_ID}/microcycles`);
-    }, [firestore]);
+    }, [firestore, profile]);
     const { data: microcycles, isLoading: cyclesLoading } = useCollection(microcyclesQuery);
 
     const clubDocRef = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !profile) return null;
         return doc(firestore, `clubs/${MAIN_CLUB_ID}`);
-    }, [firestore]);
+    }, [firestore, profile]);
     const { data: clubData, isLoading: clubLoading } = useDoc(clubDocRef);
 
     if (isUserLoading || athletesLoading || coachesLoading || cyclesLoading || clubLoading) {
@@ -75,7 +72,7 @@ export default function ManagerTeamsPage() {
         return cycle?.mainObjective || 'No hay objetivo principal definido.';
     }
 
-    const handleAssignCoach = async (teamName: string, coach: any) => {
+    const handleAssignCoach = (teamName: string, coach: any) => {
         if (!firestore) {
             toast({ variant: "destructive", title: "Error", description: "No se pudo conectar a la base de datos." });
             return;
@@ -85,31 +82,28 @@ export default function ManagerTeamsPage() {
         const newCoachId = coach.id;
         const safeKey = createSafeKeyForTeam(teamName);
 
-        try {
-            // Use dot notation to update a field in a map.
-            // The key must not contain characters like '/'.
-            await updateDoc(clubRef, {
-                [`coachAssignments.${safeKey}`]: newCoachId
-            });
+        updateDocumentNonBlocking(clubRef, {
+            [`coachAssignments.${safeKey}`]: newCoachId
+        });
 
-            // For data consistency, also update all current athletes in that team
-            const batch = writeBatch(firestore);
-            const athletesToUpdateQuery = query(collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`), where("team", "==", teamName));
-            const athleteDocs = await getDocs(athletesToUpdateQuery);
+        // For data consistency, also update all current athletes in that team
+        const athletesToUpdateQuery = query(collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`), where("team", "==", teamName));
+        getDocs(athletesToUpdateQuery).then(athleteDocs => {
             athleteDocs.forEach(athleteDoc => {
                 const athleteRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, athleteDoc.id);
-                batch.update(athleteRef, { coachId: newCoachId });
+                updateDocumentNonBlocking(athleteRef, { coachId: newCoachId });
             });
-            await batch.commit();
-
-            toast({
-                title: "¡Entrenador Asignado!",
-                description: `El equipo ${teamName} ha sido asignado a ${coach.firstName}.`,
-            });
-        } catch (error) {
-            console.error("Error al asignar entrenador: ", error);
-            toast({ variant: "destructive", title: "Error", description: "No se pudo completar la asignación del entrenador." });
-        }
+        }).catch(error => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'list',
+                path: `clubs/${MAIN_CLUB_ID}/athletes`,
+            }));
+        });
+        
+        toast({
+            title: "¡Entrenador Asignado!",
+            description: `El equipo ${teamName} ha sido asignado a ${coach.firstName}.`,
+        });
     };
 
     const { categories } = clubConfig;

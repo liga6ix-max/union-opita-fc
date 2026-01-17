@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { UserCog, MoreVertical, Trash2, ShieldCheck, ShieldOff, Loader2 } from 'lucide-react';
 import { useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
+import { setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +49,7 @@ export default function ApprovalsPage() {
         console.error("Firestore Error fetching users:", error);
     }
     
-    const handleToggleDisable = async (userId: string, currentStatus: boolean) => {
+    const handleToggleDisable = (userId: string, currentStatus: boolean) => {
         if (!firestore) {
             toast({ variant: 'destructive', title: 'Error', description: 'No se ha podido conectar a la base de datos.' });
             return;
@@ -56,72 +57,54 @@ export default function ApprovalsPage() {
         
         const userDocRef = doc(firestore, 'users', userId);
         const newStatus = !currentStatus;
-        try {
-            await updateDoc(userDocRef, { 
-              disabled: newStatus,
-              clubId: MAIN_CLUB_ID
-            });
-            toast({
-                title: `Usuario ${newStatus ? 'Deshabilitado' : 'Habilitado'}`,
-                description: `El acceso del usuario ha sido actualizado.`
-            });
-        } catch (e) {
-            console.error("Error toggling user status:", e);
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cambiar el estado del usuario. Revisa los permisos.' });
-        }
+        
+        updateDocumentNonBlocking(userDocRef, {
+          disabled: newStatus,
+          clubId: MAIN_CLUB_ID
+        });
+
+        toast({
+            title: `Usuario ${newStatus ? 'Deshabilitado' : 'Habilitado'}`,
+            description: `El acceso del usuario ha sido actualizado.`
+        });
     };
 
-    const handleChangeRole = async (userId: string, newRole: UserRole) => {
+    const handleChangeRole = (userId: string, newRole: UserRole) => {
         if (!firestore) return;
-        
-        // IMPORTANT: In a real app, changing a role would trigger a Cloud Function
-        // to set a custom claim on the user's auth token.
-        // `functions.auth().setCustomUserClaims(userId, { role: newRole })`
-        // Since we can't create Cloud Functions here, we'll just update the DB
-        // and rely on the honor system for now. The security rules expect this claim.
 
         const userDocRef = doc(firestore, 'users', userId);
-        try {
-            await updateDoc(userDocRef, {
-                role: newRole,
-                clubId: MAIN_CLUB_ID
-            });
+        
+        updateDocumentNonBlocking(userDocRef, {
+            role: newRole,
+            clubId: MAIN_CLUB_ID
+        });
 
-             // If the new role is 'athlete', ensure the subcollection document exists.
-            if (newRole === 'athlete') {
-                const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, userId);
-                const userToUpdate = userList?.find(u => u.id === userId);
-                if (userToUpdate) {
-                    await setDoc(athleteDocRef, {
-                        userId: userId,
-                        clubId: MAIN_CLUB_ID,
-                        email: userToUpdate.email,
-                        firstName: userToUpdate.firstName,
-                        lastName: userToUpdate.lastName,
-                    }, { merge: true });
-                }
+        // If the new role is 'athlete', ensure the subcollection document exists.
+        if (newRole === 'athlete') {
+            const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, userId);
+            const userToUpdate = userList?.find(u => u.id === userId);
+            if (userToUpdate) {
+                setDocumentNonBlocking(athleteDocRef, {
+                    userId: userId,
+                    clubId: MAIN_CLUB_ID,
+                    email: userToUpdate.email,
+                    firstName: userToUpdate.firstName,
+                    lastName: userToUpdate.lastName,
+                }, { merge: true });
             }
-            toast({ title: 'Rol Actualizado', description: `El usuario ahora tiene el rol de ${roleLabels[newRole]}. Se requiere un nuevo inicio de sesión para que los permisos se apliquen.` });
-        } catch (e) {
-             console.error("Error changing user role:", e);
-             toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cambiar el rol del usuario. Revisa los permisos.' });
         }
+        toast({ title: 'Rol Actualizado', description: `El usuario ahora tiene el rol de ${roleLabels[newRole]}. Se requiere un nuevo inicio de sesión para que los permisos se apliquen.` });
     };
     
-    const handleDeleteUser = async (userId: string) => {
+    const handleDeleteUser = (userId: string) => {
          if (!firestore) return;
          const userDocRef = doc(firestore, 'users', userId);
-         try {
-            await deleteDoc(userDocRef);
-            // Optionally, delete from athlete subcollection if they were one
-            const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, userId);
-            await deleteDoc(athleteDocRef).catch(() => {}); // Ignore error if it doesn't exist
-            
-            toast({ title: 'Usuario Eliminado', description: 'El usuario ha sido eliminado permanentemente.' });
-         } catch (e) {
-            console.error("Error deleting user:", e);
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar al usuario. Revisa los permisos.' });
-         }
+         deleteDocumentNonBlocking(userDocRef);
+         
+         const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, userId);
+         deleteDocumentNonBlocking(athleteDocRef);
+         
+         toast({ title: 'Usuario Eliminado', description: 'El usuario ha sido eliminado permanentemente.' });
     };
     
     const isLoading = isUserLoading || usersLoading;

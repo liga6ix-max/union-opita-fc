@@ -24,7 +24,8 @@ import { useToast } from '@/hooks/use-toast';
 import { User, Cake, VenetianMask, FileText, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser, useFirebase } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const profileSchema = z.object({
   firstName: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
@@ -63,27 +64,18 @@ export default function CoachProfilePage() {
     }
   }, [profile, form]);
 
-  const onSubmit = async (data: ProfileFormValues) => {
+  const onSubmit = (data: ProfileFormValues) => {
     if (!profile?.id || !firestore) return;
 
     const userDocRef = doc(firestore, 'users', profile.id);
-    try {
-        await updateDoc(userDocRef, {
-            ...data
-        });
-        toast({
-            title: '¡Perfil Actualizado!',
-            description: 'Tu información ha sido guardada correctamente.',
-        });
-        setIsEditing(false);
-    } catch (e) {
-        console.error("Error updating profile:", e);
-        toast({
-            variant: "destructive",
-            title: "Error al actualizar",
-            description: "Hubo un problema al guardar tu perfil."
-        });
-    }
+    updateDocumentNonBlocking(userDocRef, {
+        ...data
+    });
+    toast({
+        title: '¡Perfil Actualizado!',
+        description: 'Tu información ha sido guardada correctamente.',
+    });
+    setIsEditing(false);
   };
   
   if (isUserLoading || !profile) {

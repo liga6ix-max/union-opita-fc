@@ -36,7 +36,8 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
-import { collection, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const taskSchema = z.object({
   description: z.string().min(10, 'La descripción debe tener al menos 10 caracteres.'),
@@ -79,24 +80,19 @@ export default function ManagerTasksPage() {
     defaultValues: { description: '', assigneeId: '', dueDate: '' },
   });
 
-  const onSubmit = async (data: TaskFormValues) => {
+  const onSubmit = (data: TaskFormValues) => {
     if (!firestore || !profile?.id) return;
 
-    try {
-      await addDoc(collection(firestore, `clubs/${MAIN_CLUB_ID}/tasks`), {
-        ...data,
-        status: 'Pendiente',
-        assignerId: profile.id,
-        clubId: MAIN_CLUB_ID,
-        createdAt: serverTimestamp(),
-      });
-      toast({ title: '¡Tarea Creada!', description: `La tarea ha sido asignada.` });
-      setIsDialogOpen(false);
-      form.reset();
-    } catch(e) {
-      console.error("Error creating task:", e);
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo crear la tarea.' });
-    }
+    addDocumentNonBlocking(collection(firestore, `clubs/${MAIN_CLUB_ID}/tasks`), {
+      ...data,
+      status: 'Pendiente',
+      assignerId: profile.id,
+      clubId: MAIN_CLUB_ID,
+      createdAt: serverTimestamp(),
+    });
+    toast({ title: '¡Tarea Creada!', description: `La tarea ha sido asignada.` });
+    setIsDialogOpen(false);
+    form.reset();
   };
   
   if (isUserLoading || tasksLoading || coachesLoading) {

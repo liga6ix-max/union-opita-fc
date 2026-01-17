@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useState, useMemo, useEffect } from 'react';
+import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, query, where, doc, setDoc, serverTimestamp, addDoc, getDocs } from 'firebase/firestore';
 import {
   Card,
@@ -32,12 +32,15 @@ import {
 import { UserCheck, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { FirestorePermissionError, errorEmitter } from '@/firebase';
 
 type AttendanceRecord = Record<string, boolean>; // { [athleteId]: isPresent }
 
 export default function CoachAttendancePage() {
   const { toast } = useToast();
-  const { profile, isUserLoading, firestore } = useUser();
+  const { profile, isUserLoading } = useUser();
+  const { firestore } = useFirebase();
 
   const [selectedCycleId, setSelectedCycleId] = useState<string | undefined>();
   const [selectedDay, setSelectedDay] = useState<string | undefined>();
@@ -78,7 +81,7 @@ export default function CoachAttendancePage() {
     }));
   };
 
-  const handleSaveAttendance = async () => {
+  const handleSaveAttendance = () => {
     if(!selectedCycleId || !selectedDay || !firestore || !profile?.clubId || !profile.id || !selectedCycle) {
         toast({
             variant: "destructive",
@@ -94,38 +97,35 @@ export default function CoachAttendancePage() {
     
     // Check if attendance for this event already exists
     const q = query(attendanceCollection, where("eventId", "==", eventId));
-    const querySnapshot = await getDocs(q);
-
-    const attendanceData = {
-        eventId: eventId,
-        date: format(new Date(), 'yyyy-MM-dd'), // The actual date of attendance
-        coachId: profile.id,
-        team: selectedCycle.team,
-        attendance: attendance,
-        cycleId: selectedCycleId,
-        sessionDay: selectedDay,
-        updatedAt: serverTimestamp()
-    };
     
-    try {
+    getDocs(q).then(querySnapshot => {
+        const attendanceData = {
+            eventId: eventId,
+            date: format(new Date(), 'yyyy-MM-dd'), // The actual date of attendance
+            coachId: profile.id,
+            team: selectedCycle.team,
+            attendance: attendance,
+            cycleId: selectedCycleId,
+            sessionDay: selectedDay,
+        };
+
         if (querySnapshot.empty) {
             // No existing record, create a new one
-            await addDoc(attendanceCollection, { ...attendanceData, createdAt: serverTimestamp() });
+            addDocumentNonBlocking(attendanceCollection, { ...attendanceData, createdAt: serverTimestamp() });
              toast({ title: "¡Asistencia Guardada!", description: `Se ha registrado la asistencia para la sesión.` });
         } else {
             // Existing record found, update it
             const docRef = querySnapshot.docs[0].ref;
-            await setDoc(docRef, attendanceData, { merge: true });
+            setDocumentNonBlocking(docRef, { ...attendanceData, updatedAt: serverTimestamp() }, { merge: true });
              toast({ title: "¡Asistencia Actualizada!", description: `Se ha actualizado el registro de asistencia.` });
         }
-    } catch (error) {
-        console.error("Error saving attendance: ", error);
-        toast({
-            variant: 'destructive',
-            title: "Error al guardar",
-            description: "No se pudo guardar la asistencia."
+    }).catch(error => {
+        const contextualError = new FirestorePermissionError({
+          operation: 'list',
+          path: `clubs/${profile.clubId}/attendance`,
         })
-    }
+        errorEmitter.emit('permission-error', contextualError);
+    })
   }
 
   if (isUserLoading || cyclesLoading) {

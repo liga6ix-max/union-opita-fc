@@ -7,8 +7,9 @@ import { Users, ListTodo, Wallet, Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type TaskStatus = 'Pendiente' | 'En Progreso' | 'Completada' | 'Leído';
 
@@ -37,7 +38,7 @@ export default function CoachDashboard() {
 
   const { data: tasks, isLoading: tasksLoading } = useCollection(tasksQuery);
 
-  const handleMarkAsRead = async (taskId: string) => {
+  const handleMarkAsRead = (taskId: string) => {
     if (!firestore || !profile?.clubId) {
       toast({
         variant: "destructive",
@@ -47,20 +48,11 @@ export default function CoachDashboard() {
       return;
     }
     const taskRef = doc(firestore, `clubs/${profile.clubId}/tasks`, taskId);
-    try {
-      await updateDoc(taskRef, { status: "Leído" });
-      toast({
-        title: "Tarea actualizada",
-        description: "La tarea ha sido marcada como leída.",
-      });
-    } catch (e: any) {
-      console.error("Error updating task:", e);
-      toast({
-        variant: "destructive",
-        title: "Error al actualizar",
-        description: e.message || "No se pudo actualizar la tarea.",
-      });
-    }
+    updateDocumentNonBlocking(taskRef, { status: "Leído" });
+    toast({
+      title: "Tarea actualizada",
+      description: "La tarea ha sido marcada como leída.",
+    });
   };
 
   if (isUserLoading || athletesLoading || tasksLoading) {

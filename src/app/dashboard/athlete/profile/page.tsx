@@ -25,7 +25,8 @@ import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Dro
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, updateDoc, collection, query, where, getDocs, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, query, where, serverTimestamp } from 'firebase/firestore';
+import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Separator } from '@/components/ui/separator';
@@ -212,52 +213,42 @@ export default function AthleteProfilePage() {
     }
   }, [profile, athleteData, profileForm.reset]);
 
-  const onProfileSubmit = async (data: ProfileFormValues) => {
+  const onProfileSubmit = (data: ProfileFormValues) => {
     if (!user || !profile || !firestore || !athleteDocRef) return;
     
-    try {
-      await setDoc(athleteDocRef, {
-          birthDate: data.birthDate,
-          gender: data.gender,
-          bloodType: data.bloodType,
-          documentType: data.documentType,
-          documentNumber: data.documentNumber,
-          emergencyContactName: data.emergencyContactName,
-          emergencyContactPhone: data.emergencyContactPhone,
-          medicalInformation: data.medicalInformation,
-          team: data.team,
-          coachId: calculatedCoachId,
-      }, { merge: true });
+    setDocumentNonBlocking(athleteDocRef, {
+        birthDate: data.birthDate,
+        gender: data.gender,
+        bloodType: data.bloodType,
+        documentType: data.documentType,
+        documentNumber: data.documentNumber,
+        emergencyContactName: data.emergencyContactName,
+        emergencyContactPhone: data.emergencyContactPhone,
+        medicalInformation: data.medicalInformation,
+        team: data.team,
+        coachId: calculatedCoachId,
+    }, { merge: true });
 
-      const userDocRef = doc(firestore, 'users', user.uid);
-      await updateDoc(userDocRef, { firstName: data.firstName, lastName: data.lastName });
-      
-      toast({ title: '¡Perfil Actualizado!', description: data.team ? `Tu información ha sido guardada y se te ha asignado a la categoría ${data.team}.` : 'Tu información ha sido guardada correctamente.' });
-      setIsEditing(false);
-    } catch(e: any) {
-        console.error("Error updating profile:", e);
-        toast({ variant: "destructive", title: "Error al actualizar", description: e.message || "No se pudo guardar tu perfil." });
-    }
+    const userDocRef = doc(firestore, 'users', user.uid);
+    updateDocumentNonBlocking(userDocRef, { firstName: data.firstName, lastName: data.lastName });
+    
+    toast({ title: '¡Perfil Actualizado!', description: data.team ? `Tu información ha sido guardada y se te ha asignado a la categoría ${data.team}.` : 'Tu información ha sido guardada correctamente.' });
+    setIsEditing(false);
   };
 
-  const onPaymentSubmit = async (data: PaymentFormValues, paymentId: string) => {
+  const onPaymentSubmit = (data: PaymentFormValues, paymentId: string) => {
     if (!firestore || !profile?.clubId) return;
 
     const paymentRef = doc(firestore, `clubs/${profile.clubId}/payments`, paymentId);
-    try {
-        await updateDoc(paymentRef, {
-            status: 'En Verificación',
-            paymentDate: data.paymentDate,
-            referenceNumber: data.referenceNumber,
-            updatedAt: serverTimestamp()
-        });
-        toast({ title: "¡Registro de Pago Enviado!", description: `Tu pago para ${data.month} ha sido enviado para verificación.` });
-        setOpenDialogId(null);
-        paymentForm.reset();
-    } catch (error) {
-        console.error("Error updating payment:", error);
-        toast({ variant: 'destructive', title: "Error al registrar el pago", description: "Hubo un problema al enviar tu registro." });
-    }
+    updateDocumentNonBlocking(paymentRef, {
+        status: 'En Verificación',
+        paymentDate: data.paymentDate,
+        referenceNumber: data.referenceNumber,
+        updatedAt: serverTimestamp()
+    });
+    toast({ title: "¡Registro de Pago Enviado!", description: `Tu pago para ${data.month} ha sido enviado para verificación.` });
+    setOpenDialogId(null);
+    paymentForm.reset();
   }
 
   const isLoading = isUserLoading || isAthleteLoading || arePaymentsLoading || isCoachLoading || isClubConfigLoading || cyclesLoading || attendanceLoading;

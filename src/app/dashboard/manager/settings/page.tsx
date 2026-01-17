@@ -26,7 +26,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useUser, useMemoFirebase, useFirebase, useCollection, useDoc } from "@/firebase";
-import { collection, query, where, doc, setDoc, writeBatch } from "firebase/firestore";
+import { collection, query, where, doc, setDoc } from "firebase/firestore";
+import { updateDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Loader2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -116,40 +117,29 @@ export default function ManagerSettingsPage() {
     }
   }, [clubData, clubLoading, coaches, bankAccountForm]);
 
-  const onBankAccountSubmit = async (data: BankAccountFormValues) => {
+  const onBankAccountSubmit = (data: BankAccountFormValues) => {
     if (!clubConfigRef) return;
     setIsSavingBank(true);
-    try {
-        await setDoc(clubConfigRef, { bankAccount: data }, { merge: true });
-        toast({ title: "¡Datos Bancarios Guardados!", description: "La información de la cuenta ha sido actualizada." });
-    } catch(e) {
-        toast({ variant: 'destructive', title: "Error", description: "No se pudieron guardar los datos bancarios." });
-    } finally {
-        setIsSavingBank(false);
-    }
+    setDocumentNonBlocking(clubConfigRef, { bankAccount: data }, { merge: true });
+    toast({ title: "¡Datos Bancarios Guardados!", description: "La información de la cuenta ha sido actualizada." });
+    setIsSavingBank(false);
   };
 
   const handleSalaryChange = (coachId: string, salary: string) => {
     setSalaries(prev => ({...prev, [coachId]: parseInt(salary, 10) || 0}));
   };
 
-  const handleSaveSalaries = async () => {
+  const handleSaveSalaries = () => {
     if (!firestore || !coaches) return;
     setIsSavingSalaries(true);
-    try {
-        const batch = writeBatch(firestore);
-        coaches.forEach(coach => {
-            const coachRef = doc(firestore, 'users', coach.id);
-            batch.update(coachRef, { salary: salaries[coach.id] || 0 });
-        });
-        await batch.commit();
-        toast({ title: "¡Salarios Guardados!", description: "Los salarios de los entrenadores han sido actualizados." });
-    } catch(e) {
-        console.error("Error saving salaries:", e);
-        toast({ variant: 'destructive', title: "Error", description: "No se pudieron guardar los salarios." });
-    } finally {
-        setIsSavingSalaries(false);
-    }
+    
+    coaches.forEach(coach => {
+        const coachRef = doc(firestore, 'users', coach.id);
+        updateDocumentNonBlocking(coachRef, { salary: salaries[coach.id] || 0 });
+    });
+
+    toast({ title: "¡Salarios Guardados!", description: "Los salarios de los entrenadores han sido actualizados." });
+    setIsSavingSalaries(false);
   };
   
   const handleCategoryYearChange = (index: number, field: 'minYear' | 'maxYear', value: string) => {
@@ -158,30 +148,20 @@ export default function ManagerSettingsPage() {
     setCategories(newCategories);
   };
 
-  const handleSaveCategories = async () => {
+  const handleSaveCategories = () => {
     if (!clubConfigRef) return;
     setIsSavingCategories(true);
-    try {
-        await setDoc(clubConfigRef, { categories: categories }, { merge: true });
-        toast({ title: "¡Configuración de Categorías Guardada!", description: "Los rangos de edad para las categorías han sido actualizados." });
-    } catch (e) {
-        toast({ variant: 'destructive', title: "Error", description: "No se pudo guardar la configuración de categorías." });
-    } finally {
-        setIsSavingCategories(false);
-    }
+    setDocumentNonBlocking(clubConfigRef, { categories: categories }, { merge: true });
+    toast({ title: "¡Configuración de Categorías Guardada!", description: "Los rangos de edad para las categorías han sido actualizados." });
+    setIsSavingCategories(false);
   };
   
-  const handleSaveName = async () => {
+  const handleSaveName = () => {
     if (!clubConfigRef) return;
     setIsSavingName(true);
-    try {
-        await setDoc(clubConfigRef, { name: clubName }, { merge: true });
-        toast({title: "Nombre del club actualizado"});
-    } catch (e) {
-        toast({variant: 'destructive', title: 'Error', description: 'No se pudo guardar el nombre del club.'});
-    } finally {
-        setIsSavingName(false);
-    }
+    setDocumentNonBlocking(clubConfigRef, { name: clubName }, { merge: true });
+    toast({title: "Nombre del club actualizado"});
+    setIsSavingName(false);
   }
   
   if (isUserLoading || clubLoading || coachesLoading) {

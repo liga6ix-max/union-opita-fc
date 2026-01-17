@@ -7,8 +7,9 @@ import * as z from 'zod';
 import { createTrainingPlan } from '@/ai/flows/create-training-plan-flow';
 import { TrainingPlanInputSchema, type TrainingPlanOutput } from '@/ai/schemas/training-plan-schema';
 import clubConfig from '@/lib/club-config.json';
-import { useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, addDoc, doc, deleteDoc } from 'firebase/firestore';
+import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 import {
@@ -76,7 +77,8 @@ export default function ManagerPlanningPage() {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [cycleToDelete, setCycleToDelete] = useState<string | null>(null);
-  const { profile, isUserLoading, firestore } = useUser();
+  const { profile, isUserLoading } = useUser();
+  const { firestore } = useFirebase();
 
   const cyclesQuery = useMemoFirebase(() => {
     if (!firestore || !profile) return null;
@@ -115,8 +117,8 @@ export default function ManagerPlanningPage() {
         const generatedPlan: TrainingPlanOutput = await createTrainingPlan(data);
         
         const microcyclesCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/microcycles`);
-        for (const micro of generatedPlan.microcycles) {
-            await addDoc(microcyclesCollection, {
+        generatedPlan.microcycles.forEach(micro => {
+            addDocumentNonBlocking(microcyclesCollection, {
                 week: micro.week,
                 coachId: data.coachId,
                 team: data.category,
@@ -125,7 +127,7 @@ export default function ManagerPlanningPage() {
                 sessions: micro.sessions,
                 clubId: MAIN_CLUB_ID,
             });
-        }
+        });
 
         toast({
             title: '¡Planificación Generada y Guardada!',
@@ -144,27 +146,17 @@ export default function ManagerPlanningPage() {
     }
   };
   
-  const confirmDeleteCycle = async () => {
+  const confirmDeleteCycle = () => {
     if (!cycleToDelete || !firestore) return;
 
     const cycleDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/microcycles`, cycleToDelete);
 
-    try {
-      await deleteDoc(cycleDocRef);
-      toast({
-        title: "Plan Semanal Eliminado",
-        description: "El microciclo ha sido eliminado correctamente."
-      });
-    } catch (error) {
-      console.error("Error deleting microcycle:", error);
-      toast({
-        variant: "destructive",
-        title: "Error al eliminar",
-        description: "No se pudo eliminar el plan de entrenamiento."
-      });
-    } finally {
-      setCycleToDelete(null); // Close the dialog
-    }
+    deleteDocumentNonBlocking(cycleDocRef);
+    toast({
+      title: "Plan Semanal Eliminado",
+      description: "El microciclo ha sido eliminado correctamente."
+    });
+    setCycleToDelete(null); // Close the dialog
   };
   
   if (isUserLoading || cyclesLoading || coachesLoading) {

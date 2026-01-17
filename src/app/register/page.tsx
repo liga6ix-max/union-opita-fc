@@ -28,7 +28,8 @@ import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase/provider';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const registerSchema = z.object({
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres.'),
@@ -74,7 +75,7 @@ export default function RegisterPage() {
         await updateProfile(user, { displayName: data.name });
 
         const userDocRef = doc(firestore, 'users', user.uid);
-        await setDoc(userDocRef, {
+        const userData = {
             id: user.uid,
             firstName: data.name.split(' ')[0] || '',
             lastName: data.name.split(' ').slice(1).join(' ') || '',
@@ -82,17 +83,18 @@ export default function RegisterPage() {
             clubId: MAIN_CLUB_ID, // Assign main club ID on registration
             role: 'athlete', // Default role is athlete
             disabled: true, // User is disabled by default until a manager enables them
-        });
+        };
+        setDocumentNonBlocking(userDocRef, userData, {});
         
-        // Also create the initial athlete document in the subcollection
         const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, user.uid);
-        await setDoc(athleteDocRef, {
+        const athleteData = {
             userId: user.uid,
             clubId: MAIN_CLUB_ID,
             email: user.email,
             firstName: data.name.split(' ')[0] || '',
             lastName: data.name.split(' ').slice(1).join(' ') || '',
-        }, { merge: true });
+        };
+        setDocumentNonBlocking(athleteDocRef, athleteData, { merge: true });
 
         setIsLoading(false);
 
@@ -101,9 +103,7 @@ export default function RegisterPage() {
             description: 'Tu cuenta ha sido creada y está pendiente de habilitación por un administrador.',
         });
         
-        // Sign the user out immediately after registration
         await auth.signOut();
-
         router.push('/login');
 
     } catch (error: any) {

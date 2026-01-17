@@ -6,7 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import clubConfig from '@/lib/club-config.json';
 import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
-import { collection, query, where, doc, updateDoc, writeBatch, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
+import { setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -84,7 +85,7 @@ export default function ManagerPaymentsPage() {
     defaultValues: { month: '', amount: 50000 }, // Default fee
   });
 
-  const onScheduleSubmit = async (data: PaymentScheduleFormValues) => {
+  const onScheduleSubmit = (data: PaymentScheduleFormValues) => {
     if (!firestore || !athletes || !paymentList) {
         toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron cargar los datos necesarios para programar los pagos.' });
         return;
@@ -95,7 +96,6 @@ export default function ManagerPaymentsPage() {
       return;
     }
 
-    const batch = writeBatch(firestore);
     const paymentsCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
     let newPaymentsCount = 0;
     
@@ -106,13 +106,14 @@ export default function ManagerPaymentsPage() {
 
       if (!alreadyExists) {
         const newPaymentRef = doc(paymentsCollection);
-        batch.set(newPaymentRef, {
+        const newPaymentData = {
           athleteId: athlete.id,
           month: data.month,
           amount: data.amount,
           status: 'Pendiente',
           clubId: MAIN_CLUB_ID
-        });
+        };
+        setDocumentNonBlocking(newPaymentRef, newPaymentData, {});
         newPaymentsCount++;
       }
     });
@@ -122,23 +123,14 @@ export default function ManagerPaymentsPage() {
             title: 'No se crearon pagos nuevos',
             description: `Todos los deportistas ya tienen una cuota de pago para ${data.month}.`,
         });
-        setIsDialogOpen(false);
-        form.reset();
-        return;
+    } else {
+        toast({
+            title: 'Pagos Programados Exitosamente',
+            description: `Se crearon ${newPaymentsCount} nuevas cuotas de pago para el mes de ${data.month}.`,
+        });
     }
-
-    try {
-      await batch.commit();
-      toast({
-        title: 'Pagos Programados Exitosamente',
-        description: `Se crearon ${newPaymentsCount} nuevas cuotas de pago para el mes de ${data.month}.`,
-      });
-      setIsDialogOpen(false);
-      form.reset();
-    } catch(e) {
-      console.error("Error scheduling payments:", e);
-      toast({ variant: 'destructive', title: 'Error al programar', description: 'No se pudieron guardar las nuevas cuotas de pago.' });
-    }
+    setIsDialogOpen(false);
+    form.reset();
   };
   
   const pendingVerifications = paymentList?.filter(p => p.status === 'En Verificación') || [];
@@ -148,32 +140,21 @@ export default function ManagerPaymentsPage() {
     return user ? `${user.firstName} ${user.lastName}` : 'Desconocido';
   };
 
-  const handlePaymentAction = async (paymentId: string, newStatus: 'Pagado' | 'Rechazado') => {
+  const handlePaymentAction = (paymentId: string, newStatus: 'Pagado' | 'Rechazado') => {
     if (!firestore) return;
     const paymentRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/payments`, paymentId);
-    try {
-      await updateDoc(paymentRef, { status: newStatus });
-      const actionText = newStatus === 'Pagado' ? 'aprobado' : 'rechazado';
-      toast({ title: `Pago ${actionText}`, description: `El pago ha sido marcado como ${actionText}.` });
-    } catch (e) {
-      console.error("Error updating payment:", e);
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo actualizar el pago.' });
-    }
+    updateDocumentNonBlocking(paymentRef, { status: newStatus });
+    const actionText = newStatus === 'Pagado' ? 'aprobado' : 'rechazado';
+    toast({ title: `Pago ${actionText}`, description: `El pago ha sido marcado como ${actionText}.` });
   };
   
-  const handleDeletePayment = async () => {
+  const handleDeletePayment = () => {
     if (!paymentToDelete || !firestore) return;
     const paymentRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/payments`, paymentToDelete);
-    try {
-        await deleteDoc(paymentRef);
-        toast({ title: 'Pago Eliminado', description: 'La cuota de pago ha sido eliminada correctamente.' });
-    } catch (e) {
-        console.error("Error deleting payment:", e);
-        toast({ variant: 'destructive', title: 'Error al eliminar', description: 'No se pudo eliminar la cuota de pago.' });
-    } finally {
-        setIsDeleteDialogOpen(false);
-        setPaymentToDelete(null);
-    }
+    deleteDocumentNonBlocking(paymentRef);
+    toast({ title: 'Pago Eliminado', description: 'La cuota de pago ha sido eliminada correctamente.' });
+    setIsDeleteDialogOpen(false);
+    setPaymentToDelete(null);
   };
 
   const openDeleteDialog = (paymentId: string) => {
