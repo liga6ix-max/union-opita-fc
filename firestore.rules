@@ -15,26 +15,29 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
     
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
+    function getUserDoc(userId) {
+      return get(/databases/$(database)/documents/users/$(userId));
     }
 
     function isManager() {
-      return isSignedIn() && getUserData(request.auth.uid).role == 'manager';
+      let userDoc = getUserDoc(request.auth.uid);
+      return isSignedIn() && userDoc != null && userDoc.data.role == 'manager';
     }
 
     function isCoach() {
-      return isSignedIn() && getUserData(request.auth.uid).role in ['manager', 'coach'];
+      let userDoc = getUserDoc(request.auth.uid);
+      return isSignedIn() && userDoc != null && userDoc.data.role in ['manager', 'coach'];
     }
 
     function isAthlete() {
-      return isSignedIn() && getUserData(request.auth.uid).role == 'athlete';
+      let userDoc = getUserDoc(request.auth.uid);
+      return isSignedIn() && userDoc != null && userDoc.data.role == 'athlete';
     }
 
     function isMemberOfTheClub(clubId) {
+      let userDoc = getUserDoc(request.auth.uid);
       // Check if the user document exists and has the corresponding clubId.
-      let userData = getUserData(request.auth.uid);
-      return isSignedIn() && ('clubId' in userData) && userData.clubId == clubId;
+      return isSignedIn() && userDoc != null && ('clubId' in userDoc.data) && userDoc.data.clubId == clubId;
     }
 
     // --------------------------------------------------------------------------------
