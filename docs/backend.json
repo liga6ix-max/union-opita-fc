@@ -4,7 +4,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Club",
       "type": "object",
-      "description": "Represents the club entity with its main details.",
+      "description": "Represents the club entity with its main details, settings, and configurations.",
       "properties": {
         "id": {
           "type": "string",
@@ -17,6 +17,33 @@
         "nit": {
           "type": "string",
           "description": "The NIT (Tax Identification Number) of the club."
+        },
+        "bankAccount": {
+          "type": "object",
+          "description": "Bank account details for receiving payments.",
+          "properties": {
+            "bankName": { "type": "string" },
+            "accountType": { "type": "string" },
+            "accountNumber": { "type": "string" },
+            "accountHolder": { "type": "string" }
+          }
+        },
+        "monthlyFees": {
+          "type": "object",
+          "description": "Fee structure per category.",
+          "additionalProperties": { "type": "number" }
+        },
+        "categories": {
+          "type": "array",
+          "description": "List of age categories in the club.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "minYear": { "type": "number" },
+              "maxYear": { "type": "number" }
+            }
+          }
         }
       },
       "required": [
