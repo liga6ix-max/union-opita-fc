@@ -28,6 +28,8 @@ import { toast } from "@/hooks/use-toast";
 import { useUser, useMemoFirebase, useFirebase, useCollection, useDoc } from "@/firebase";
 import { collection, query, where, doc, setDoc, writeBatch } from "firebase/firestore";
 import { Loader2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 const bankAccountSchema = z.object({
     bankName: z.string().min(1, "El nombre del banco es requerido."),
@@ -240,9 +242,23 @@ export default function ManagerSettingsPage() {
               </div>
             ))}
           </div>
-          <Button onClick={handleSaveCategories} className="mt-6" disabled={isSavingCategories}>
-            {isSavingCategories ? <Loader2 className="animate-spin" /> : "Guardar Categorías"}
-          </Button>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Button onClick={handleSaveCategories} disabled={isSavingCategories}>
+                {isSavingCategories ? <Loader2 className="animate-spin" /> : "Guardar Categorías"}
+            </Button>
+             <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                         <Button variant="outline" onClick={() => setCategories(clubConfig.categories)}>
+                            Restablecer
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Carga las categorías por defecto del sistema.</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+          </div>
         </CardContent>
       </Card>
       
