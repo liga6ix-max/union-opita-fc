@@ -4,8 +4,8 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, User, Target, ArrowRight, Loader2, MoreVertical } from "lucide-react";
-import { useUser, useCollection, useMemoFirebase, useFirebase } from "@/firebase";
-import { collection, query, where, writeBatch, getDocs, doc } from "firebase/firestore";
+import { useUser, useCollection, useMemoFirebase, useFirebase, useDoc } from "@/firebase";
+import { collection, query, where, writeBatch, getDocs, doc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -46,17 +46,21 @@ export default function ManagerTeamsPage() {
     }, [firestore]);
     const { data: microcycles, isLoading: cyclesLoading } = useCollection(microcyclesQuery);
 
-    if (isUserLoading || athletesLoading || coachesLoading || cyclesLoading) {
+    const clubDocRef = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return doc(firestore, `clubs/${MAIN_CLUB_ID}`);
+    }, [firestore]);
+    const { data: clubData, isLoading: clubLoading } = useDoc(clubDocRef);
+
+    if (isUserLoading || athletesLoading || coachesLoading || cyclesLoading || clubLoading) {
         return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
     }
     
     const getCoachForTeam = (teamName: string) => {
-        // Find an athlete in the team who has a coach assigned.
-        const athleteWithCoach = athletes?.find(a => a.team === teamName && a.coachId);
-        // If no such athlete is found, or the coaches list isn't loaded, return null.
-        if (!athleteWithCoach || !coaches) return null;
-        // Find the full coach object from the coaches list using the found coachId.
-        return coaches.find(c => c.id === athleteWithCoach.coachId);
+        if (!coaches || !clubData?.coachAssignments) return null;
+        const coachId = clubData.coachAssignments[teamName];
+        if (!coachId) return null;
+        return coaches.find(c => c.id === coachId);
     }
 
     const getObjectiveForTeam = (teamName: string) => {
@@ -70,17 +74,23 @@ export default function ManagerTeamsPage() {
             return;
         }
 
-        const athletesToUpdateQuery = query(collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`), where("team", "==", teamName));
+        const clubRef = doc(firestore, `clubs/${MAIN_CLUB_ID}`);
+        const newCoachId = coach.id;
 
         try {
-            const querySnapshot = await getDocs(athletesToUpdateQuery);
-            const batch = writeBatch(firestore);
-
-            querySnapshot.forEach(athleteDoc => {
-                const athleteRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, athleteDoc.id);
-                batch.update(athleteRef, { coachId: coach.id });
+            // Use dot notation to update a field in a map
+            await updateDoc(clubRef, {
+                [`coachAssignments.${teamName}`]: newCoachId
             });
 
+            // For data consistency, also update all current athletes in that team
+            const batch = writeBatch(firestore);
+            const athletesToUpdateQuery = query(collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`), where("team", "==", teamName));
+            const athleteDocs = await getDocs(athletesToUpdateQuery);
+            athleteDocs.forEach(athleteDoc => {
+                const athleteRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, athleteDoc.id);
+                batch.update(athleteRef, { coachId: newCoachId });
+            });
             await batch.commit();
 
             toast({

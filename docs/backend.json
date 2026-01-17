@@ -44,6 +44,13 @@
               "maxYear": { "type": "number" }
             }
           }
+        },
+        "coachAssignments": {
+          "type": "object",
+          "description": "Mapping of team names to assigned coach user IDs.",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       },
       "required": [
