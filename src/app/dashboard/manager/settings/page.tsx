@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import clubConfig from "@/lib/club-config.json";
 
 import {
   Card,
@@ -98,8 +99,11 @@ export default function ManagerSettingsPage() {
           accountHolder: clubData.bankAccount?.accountHolder || '',
         });
         setClubName(clubData.name || '');
-        setCategories(clubData.categories || []);
+        setCategories(clubData.categories && clubData.categories.length > 0 ? clubData.categories : clubConfig.categories);
+    } else if (!clubLoading) {
+        setCategories(clubConfig.categories);
     }
+    
     if (coaches) {
       const initialSalaries = coaches.reduce((acc, coach) => {
         // @ts-ignore
@@ -108,7 +112,7 @@ export default function ManagerSettingsPage() {
       }, {} as Record<string, number>);
       setSalaries(initialSalaries);
     }
-  }, [clubData, coaches, bankAccountForm]);
+  }, [clubData, clubLoading, coaches, bankAccountForm]);
 
   const onBankAccountSubmit = async (data: BankAccountFormValues) => {
     if (!clubConfigRef) return;
