@@ -20,6 +20,12 @@ import clubConfig from "@/lib/club-config.json";
 
 const MAIN_CLUB_ID = 'OpitaClub';
 
+const createSafeKeyForTeam = (teamName: string) => {
+    // Firestore field paths cannot contain '/', so we replace it.
+    // We also remove spaces to be safe with dot notation.
+    return teamName.replace(/\s/g, '').replace(/\//g, '-');
+}
+
 export default function ManagerTeamsPage() {
     const { profile, isUserLoading } = useUser();
     const { firestore } = useFirebase();
@@ -58,7 +64,8 @@ export default function ManagerTeamsPage() {
     
     const getCoachForTeam = (teamName: string) => {
         if (!coaches || !clubData?.coachAssignments) return null;
-        const coachId = clubData.coachAssignments[teamName];
+        const safeKey = createSafeKeyForTeam(teamName);
+        const coachId = clubData.coachAssignments[safeKey];
         if (!coachId) return null;
         return coaches.find(c => c.id === coachId);
     }
@@ -76,11 +83,13 @@ export default function ManagerTeamsPage() {
 
         const clubRef = doc(firestore, `clubs/${MAIN_CLUB_ID}`);
         const newCoachId = coach.id;
+        const safeKey = createSafeKeyForTeam(teamName);
 
         try {
-            // Use dot notation to update a field in a map
+            // Use dot notation to update a field in a map.
+            // The key must not contain characters like '/'.
             await updateDoc(clubRef, {
-                [`coachAssignments.${teamName}`]: newCoachId
+                [`coachAssignments.${safeKey}`]: newCoachId
             });
 
             // For data consistency, also update all current athletes in that team
