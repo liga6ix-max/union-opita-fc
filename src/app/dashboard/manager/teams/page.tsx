@@ -51,9 +51,12 @@ export default function ManagerTeamsPage() {
     }
     
     const getCoachForTeam = (teamName: string) => {
-        const athleteInTeam = athletes?.find(a => a.team === teamName);
-        if (!athleteInTeam || !coaches || !athleteInTeam.coachId) return null;
-        return coaches.find(c => c.id === athleteInTeam.coachId);
+        // Find an athlete in the team who has a coach assigned.
+        const athleteWithCoach = athletes?.find(a => a.team === teamName && a.coachId);
+        // If no such athlete is found, or the coaches list isn't loaded, return null.
+        if (!athleteWithCoach || !coaches) return null;
+        // Find the full coach object from the coaches list using the found coachId.
+        return coaches.find(c => c.id === athleteWithCoach.coachId);
     }
 
     const getObjectiveForTeam = (teamName: string) => {
