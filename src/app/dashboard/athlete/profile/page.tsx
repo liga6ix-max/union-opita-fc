@@ -175,7 +175,20 @@ export default function AthleteProfilePage() {
   }, [profile, athleteData, profileForm.reset]);
 
   const onProfileSubmit = async (data: ProfileFormValues) => {
-    if (!user || !profile || !firestore || !athleteDocRef) return;
+    if (!user || !profile || !firestore || !athleteDocRef || !clubConfig) return;
+
+    let team = athleteData?.team || '';
+    if (data.birthDate && clubConfig.categories) {
+        try {
+            const birthYear = parseISO(data.birthDate).getFullYear();
+            const foundCategory = clubConfig.categories.find(cat => birthYear >= cat.minYear && birthYear <= cat.maxYear);
+            if (foundCategory) {
+                team = foundCategory.name;
+            }
+        } catch (e) {
+            console.error("Error parsing date for category assignment", e);
+        }
+    }
     
     try {
       await setDoc(athleteDocRef, {
@@ -183,12 +196,13 @@ export default function AthleteProfilePage() {
           documentType: data.documentType, documentNumber: data.documentNumber,
           emergencyContactName: data.emergencyContactName, emergencyContactPhone: data.emergencyContactPhone,
           medicalInformation: data.medicalInformation,
+          team: team,
       }, { merge: true });
 
       const userDocRef = doc(firestore, 'users', user.uid);
       await updateDoc(userDocRef, { firstName: data.firstName, lastName: data.lastName });
       
-      toast({ title: '¡Perfil Actualizado!', description: 'Tu información ha sido guardada correctamente.' });
+      toast({ title: '¡Perfil Actualizado!', description: team ? `Tu información ha sido guardada y se te ha asignado a la categoría ${team}.` : 'Tu información ha sido guardada correctamente.' });
       setIsEditing(false);
     } catch(e: any) {
         console.error("Error updating profile:", e);

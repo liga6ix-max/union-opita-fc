@@ -27,7 +27,6 @@ import { User, Shield, Phone, Hospital, Cake, Droplets, VenetianMask, FileText, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, updateDoc, setDoc, query, collection, where } from 'firebase/firestore';
-import clubConfig from '@/lib/club-config.json';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Separator } from '@/components/ui/separator';
 
@@ -42,7 +41,7 @@ const profileSchema = z.object({
   emergencyContactName: z.string().optional(),
   emergencyContactPhone: z.string().optional(),
   medicalInformation: z.string().optional(),
-  team: z.string().min(1, "El equipo es requerido."),
+  team: z.string().min(1, "La categoría se asigna automáticamente con la fecha de nacimiento."),
   coachId: z.string().optional(),
   weight: z.coerce.number().positive().optional().or(z.literal('')),
   height: z.coerce.number().positive().optional().or(z.literal('')),
@@ -78,6 +77,12 @@ export default function ManagerAthleteProfilePage() {
     if (!firestore) return null;
     return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "coach"));
   }, [firestore]);
+  
+  const clubConfigRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, `clubs`, MAIN_CLUB_ID);
+  }, [firestore]);
+  const { data: clubConfig, isLoading: isClubConfigLoading } = useDoc(clubConfigRef);
 
   const { data: athleteData, isLoading: isAthleteLoading, error: athleteError } = useDoc(athleteDocRef);
   const { data: userData, isLoading: isUserDocLoading, error: userError } = useDoc(userDocRef);
@@ -109,7 +114,25 @@ export default function ManagerAthleteProfilePage() {
     },
   });
 
-  const { formState, handleSubmit, control, reset } = form;
+  const { formState, handleSubmit, control, reset, watch, setValue } = form;
+
+  const watchedBirthDate = watch("birthDate");
+
+  useEffect(() => {
+    if (watchedBirthDate && clubConfig?.categories) {
+        try {
+            const birthYear = parseISO(watchedBirthDate).getFullYear();
+            const foundCategory = clubConfig.categories.find(cat => birthYear >= cat.minYear && birthYear <= cat.maxYear);
+            if (foundCategory) {
+                setValue('team', foundCategory.name, { shouldValidate: true });
+            } else {
+                setValue('team', '', { shouldValidate: true });
+            }
+        } catch (e) {
+            setValue('team', '', { shouldValidate: true });
+        }
+    }
+  }, [watchedBirthDate, clubConfig, setValue]);
 
   useEffect(() => {
     if (userData || athleteData) {
@@ -186,12 +209,12 @@ export default function ManagerAthleteProfilePage() {
     
     toast({
       title: '¡Perfil Actualizado!',
-      description: 'La información del deportista ha sido guardada correctamente.',
+      description: `La información del deportista ha sido guardada. Categoría asignada: ${data.team}`,
     });
     setIsEditing(false);
   };
   
-  if (isUserLoading || isAthleteLoading || isUserDocLoading || coachesLoading) {
+  if (isUserLoading || isAthleteLoading || isUserDocLoading || coachesLoading || isClubConfigLoading) {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
   }
   
@@ -247,13 +270,20 @@ export default function ManagerAthleteProfilePage() {
                                     <FormMessage />
                                 </FormItem>
                             )}/>
+                            <FormField control={control} name="birthDate" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Fecha de Nacimiento</FormLabel>
+                                    <FormControl><Input type="date" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
                             <FormField control={control} name="team" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Equipo / Categoría</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger></FormControl>
+                                    <FormLabel>Equipo / Categoría (Automático)</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value} disabled>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Se calculará con la fecha de nacimiento" /></SelectTrigger></FormControl>
                                         <SelectContent>
-                                            {clubConfig.categories.map(cat => (
+                                            {clubConfig?.categories.map(cat => (
                                                 <SelectItem key={cat.name} value={cat.name}>{cat.name}</SelectItem>
                                             ))}
                                         </SelectContent>
@@ -272,13 +302,6 @@ export default function ManagerAthleteProfilePage() {
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}/>
-                            <FormField control={control} name="birthDate" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Fecha de Nacimiento</FormLabel>
-                                    <FormControl><Input type="date" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}/>
