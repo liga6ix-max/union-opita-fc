@@ -73,41 +73,59 @@ export default function ManagerPaymentsPage() {
   });
 
   const onScheduleSubmit = async (data: PaymentScheduleFormValues) => {
-    if (!firestore || !athletes) {
-        toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron cargar los deportistas.' });
+    if (!firestore || !athletes || !paymentList) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron cargar los datos necesarios para programar los pagos.' });
         return;
     }
     
     if (athletes.length === 0) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No hay deportistas registrados en el club.' });
+      toast({ variant: 'info', title: 'Sin Deportistas', description: 'No hay deportistas registrados en el club para programar pagos.' });
       return;
     }
 
     const batch = writeBatch(firestore);
     const paymentsCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
+    let newPaymentsCount = 0;
     
     athletes.forEach(athlete => {
-      const newPaymentRef = doc(paymentsCollection);
-      batch.set(newPaymentRef, {
-        athleteId: athlete.id,
-        month: data.month,
-        amount: data.amount,
-        status: 'Pendiente',
-        clubId: MAIN_CLUB_ID
-      });
+      const alreadyExists = paymentList.some(
+        p => p.athleteId === athlete.id && p.month === data.month
+      );
+
+      if (!alreadyExists) {
+        const newPaymentRef = doc(paymentsCollection);
+        batch.set(newPaymentRef, {
+          athleteId: athlete.id,
+          month: data.month,
+          amount: data.amount,
+          status: 'Pendiente',
+          clubId: MAIN_CLUB_ID
+        });
+        newPaymentsCount++;
+      }
     });
+
+    if (newPaymentsCount === 0) {
+        toast({
+            title: 'No se crearon pagos nuevos',
+            description: `Todos los deportistas ya tienen una cuota de pago para ${data.month}.`,
+        });
+        setIsDialogOpen(false);
+        form.reset();
+        return;
+    }
 
     try {
       await batch.commit();
       toast({
-        title: 'Pagos Programados',
-        description: `Se crearon ${athletes.length} cuotas de pago para todos los deportistas.`,
+        title: 'Pagos Programados Exitosamente',
+        description: `Se crearon ${newPaymentsCount} nuevas cuotas de pago para el mes de ${data.month}.`,
       });
       setIsDialogOpen(false);
       form.reset();
     } catch(e) {
       console.error("Error scheduling payments:", e);
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron programar los pagos.' });
+      toast({ variant: 'destructive', title: 'Error al programar', description: 'No se pudieron guardar las nuevas cuotas de pago.' });
     }
   };
   
