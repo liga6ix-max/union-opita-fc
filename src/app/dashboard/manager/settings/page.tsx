@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useUser, useMemoFirebase, useFirebase, useCollection, useDoc } from "@/firebase";
-import { collection, query, where, doc, updateDoc, writeBatch } from "firebase/firestore";
+import { collection, query, where, doc, setDoc, writeBatch } from "firebase/firestore";
 import { Loader2 } from "lucide-react";
 
 const bankAccountSchema = z.object({
@@ -114,7 +114,7 @@ export default function ManagerSettingsPage() {
     if (!clubConfigRef) return;
     setIsSavingBank(true);
     try {
-        await updateDoc(clubConfigRef, { bankAccount: data });
+        await setDoc(clubConfigRef, { bankAccount: data }, { merge: true });
         toast({ title: "¡Datos Bancarios Guardados!", description: "La información de la cuenta ha sido actualizada." });
     } catch(e) {
         toast({ variant: 'destructive', title: "Error", description: "No se pudieron guardar los datos bancarios." });
@@ -156,7 +156,7 @@ export default function ManagerSettingsPage() {
     if (!clubConfigRef) return;
     setIsSavingCategories(true);
     try {
-        await updateDoc(clubConfigRef, { categories: categories });
+        await setDoc(clubConfigRef, { categories: categories }, { merge: true });
         toast({ title: "¡Configuración de Categorías Guardada!", description: "Los rangos de edad para las categorías han sido actualizados." });
     } catch (e) {
         toast({ variant: 'destructive', title: "Error", description: "No se pudo guardar la configuración de categorías." });
@@ -169,7 +169,7 @@ export default function ManagerSettingsPage() {
     if (!clubConfigRef) return;
     setIsSavingName(true);
     try {
-        await updateDoc(clubConfigRef, { name: clubName });
+        await setDoc(clubConfigRef, { name: clubName }, { merge: true });
         toast({title: "Nombre del club actualizado"});
     } catch (e) {
         toast({variant: 'destructive', title: 'Error', description: 'No se pudo guardar el nombre del club.'});
