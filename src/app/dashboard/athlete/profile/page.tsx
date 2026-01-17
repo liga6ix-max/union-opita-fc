@@ -50,9 +50,7 @@ const profileSchema = z.object({
 });
 
 const paymentSchema = z.object({
-    paymentDate: z.date({
-        required_error: "La fecha de pago es requerida.",
-    }),
+    paymentDate: z.string().min(1, "La fecha de pago es requerida."),
     referenceNumber: z.string().min(4, { message: "El número de referencia debe tener al menos 4 caracteres."}),
     amount: z.number(),
     month: z.string(),
@@ -144,11 +142,12 @@ export default function AthleteProfilePage() {
   // Payment Form
   const paymentForm = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
-    defaultValues: { referenceNumber: "", amount: 0, month: "" },
+    defaultValues: { paymentDate: "", referenceNumber: "", amount: 0, month: "" },
   });
   
   const handleOpenDialog = (payment: any) => {
     paymentForm.reset({
+        paymentDate: "",
         referenceNumber: "",
         amount: payment.amount,
         month: payment.month,
@@ -204,7 +203,7 @@ export default function AthleteProfilePage() {
     try {
         await updateDoc(paymentRef, {
             status: 'En Verificación',
-            paymentDate: format(data.paymentDate, 'yyyy-MM-dd'),
+            paymentDate: data.paymentDate,
             referenceNumber: data.referenceNumber,
             updatedAt: serverTimestamp()
         });
@@ -425,7 +424,11 @@ export default function AthleteProfilePage() {
                                                             )}/>
                                                         </div>
                                                         <FormField control={paymentForm.control} name="paymentDate" render={({ field }) => (
-                                                            <FormItem className="flex flex-col"><FormLabel>Fecha de la Transferencia</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP", { locale: es })) : (<span>Elige una fecha</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus locale={es} /></PopoverContent></Popover><FormMessage /></FormItem>
+                                                            <FormItem>
+                                                                <FormLabel>Fecha de la Transferencia</FormLabel>
+                                                                <FormControl><Input type="date" {...field} /></FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
                                                         )}/>
                                                         <FormField control={paymentForm.control} name="referenceNumber" render={({ field }) => (<FormItem><FormLabel>Número de Referencia</FormLabel><FormControl><Input placeholder="Ej: 123456789" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                                                         <DialogFooter className="pt-4"><Button type="submit" disabled={paymentForm.formState.isSubmitting}>{paymentForm.formState.isSubmitting ? <Loader2 className="animate-spin" /> : 'Confirmar Pago'}</Button></DialogFooter>
