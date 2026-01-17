@@ -6,13 +6,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import clubConfig from '@/lib/club-config.json';
 import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
-import { collection, query, where, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, writeBatch, deleteDoc } from 'firebase/firestore';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, FileClock, PlusCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, FileClock, PlusCircle, Loader2, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -31,6 +31,16 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const paymentScheduleSchema = z.object({
   month: z.string().min(3, 'El mes es requerido.'),
@@ -45,6 +55,8 @@ const MAIN_CLUB_ID = 'OpitaClub';
 export default function ManagerPaymentsPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
   const { profile, isUserLoading } = useUser();
   const { firestore } = useFirebase();
 
@@ -79,7 +91,7 @@ export default function ManagerPaymentsPage() {
     }
     
     if (athletes.length === 0) {
-      toast({ variant: 'info', title: 'Sin Deportistas', description: 'No hay deportistas registrados en el club para programar pagos.' });
+      toast({ title: 'Sin Deportistas', description: 'No hay deportistas registrados en el club para programar pagos.' });
       return;
     }
 
@@ -149,6 +161,26 @@ export default function ManagerPaymentsPage() {
     }
   };
   
+  const handleDeletePayment = async () => {
+    if (!paymentToDelete || !firestore) return;
+    const paymentRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/payments`, paymentToDelete);
+    try {
+        await deleteDoc(paymentRef);
+        toast({ title: 'Pago Eliminado', description: 'La cuota de pago ha sido eliminada correctamente.' });
+    } catch (e) {
+        console.error("Error deleting payment:", e);
+        toast({ variant: 'destructive', title: 'Error al eliminar', description: 'No se pudo eliminar la cuota de pago.' });
+    } finally {
+        setIsDeleteDialogOpen(false);
+        setPaymentToDelete(null);
+    }
+  };
+
+  const openDeleteDialog = (paymentId: string) => {
+    setPaymentToDelete(paymentId);
+    setIsDeleteDialogOpen(true);
+  };
+  
   const isLoading = isUserLoading || athletesLoading || paymentsLoading || usersLoading;
   
   if (isLoading) {
@@ -156,113 +188,142 @@ export default function ManagerPaymentsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="font-headline flex items-center gap-2"><FileClock /> Pagos por Verificar</CardTitle>
-            <CardDescription>Revisa y aprueba los pagos registrados por los deportistas.</CardDescription>
-          </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild><Button><PlusCircle className="mr-2" />Programar Pagos</Button></DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Programar Nuevas Cuotas de Pago</DialogTitle></DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onScheduleSubmit)} className="space-y-4 py-4">
-                  <FormField control={form.control} name="month" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Mes a Cobrar</FormLabel>
-                        <FormControl><Input placeholder="Ej: Septiembre 2024" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                   <FormField control={form.control} name="amount" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Monto de la Cuota (COP)</FormLabel>
-                        <FormControl><Input type="number" placeholder="50000" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <DialogFooter>
-                    <Button type="submit" disabled={form.formState.isSubmitting}>
-                      {form.formState.isSubmitting ? <Loader2 className="animate-spin" /> : "Programar Cuotas"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent>
-            {pendingVerifications.length > 0 ? (
-                <Table>
-                    <TableHeader>
-                    <TableRow>
-                        <TableHead>Deportista</TableHead>
-                        <TableHead>Mes</TableHead>
-                        <TableHead>Fecha Reporte</TableHead>
-                        <TableHead>Referencia</TableHead>
-                        <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {pendingVerifications.map((payment) => (
-                        <TableRow key={payment.id}>
-                            <TableCell className="font-medium">{getAthleteName(payment.athleteId)}</TableCell>
-                            <TableCell>{payment.month}</TableCell>
-                            <TableCell>{payment.paymentDate}</TableCell>
-                            <TableCell>{payment.referenceNumber}</TableCell>
-                            <TableCell className="text-right space-x-2">
-                                <Button size="sm" variant="outline" onClick={() => handlePaymentAction(payment.id, 'Rechazado')}><XCircle className="mr-2 h-4 w-4 text-destructive" />Rechazar</Button>
-                                <Button size="sm" onClick={() => handlePaymentAction(payment.id, 'Pagado')}><CheckCircle className="mr-2 h-4 w-4" />Aprobar</Button>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                    </TableBody>
-                </Table>
-            ): (
-                <p className="text-center text-muted-foreground py-8">No hay pagos pendientes de verificación.</p>
-            )}
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline">Historial General de Pagos</CardTitle>
-          <CardDescription>Consulta el estado de todos los pagos del club.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Deportista</TableHead>
-                        <TableHead>Mes</TableHead>
-                        <TableHead>Monto</TableHead>
-                        <TableHead>Estado</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {paymentList?.map(payment => (
-                         <TableRow key={payment.id}>
-                            <TableCell className="font-medium">{getAthleteName(payment.athleteId)}</TableCell>
-                            <TableCell>{payment.month}</TableCell>
-                            <TableCell>{payment.amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}</TableCell>
-                            <TableCell>
-                                <Badge variant={payment.status === 'Pagado' ? 'default' : payment.status === 'Pendiente' ? 'destructive' : 'secondary'}>
-                                    {payment.status}
-                                </Badge>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-            {(!paymentList || paymentList.length === 0) && (
-              <p className="text-center text-muted-foreground py-8">No hay pagos registrados.</p>
-            )}
-        </CardContent>
-      </Card>
-    </div>
+    <>
+      <div className="space-y-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="font-headline flex items-center gap-2"><FileClock /> Pagos por Verificar</CardTitle>
+              <CardDescription>Revisa y aprueba los pagos registrados por los deportistas.</CardDescription>
+            </div>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild><Button><PlusCircle className="mr-2" />Programar Pagos</Button></DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Programar Nuevas Cuotas de Pago</DialogTitle></DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onScheduleSubmit)} className="space-y-4 py-4">
+                    <FormField control={form.control} name="month" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Mes a Cobrar</FormLabel>
+                          <FormControl><Input placeholder="Ej: Septiembre 2024" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField control={form.control} name="amount" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Monto de la Cuota (COP)</FormLabel>
+                          <FormControl><Input type="number" placeholder="50000" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <DialogFooter>
+                      <Button type="submit" disabled={form.formState.isSubmitting}>
+                        {form.formState.isSubmitting ? <Loader2 className="animate-spin" /> : "Programar Cuotas"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </CardHeader>
+          <CardContent>
+              {pendingVerifications.length > 0 ? (
+                  <Table>
+                      <TableHeader>
+                      <TableRow>
+                          <TableHead>Deportista</TableHead>
+                          <TableHead>Mes</TableHead>
+                          <TableHead>Fecha Reporte</TableHead>
+                          <TableHead>Referencia</TableHead>
+                          <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                      {pendingVerifications.map((payment) => (
+                          <TableRow key={payment.id}>
+                              <TableCell className="font-medium">{getAthleteName(payment.athleteId)}</TableCell>
+                              <TableCell>{payment.month}</TableCell>
+                              <TableCell>{payment.paymentDate}</TableCell>
+                              <TableCell>{payment.referenceNumber}</TableCell>
+                              <TableCell className="text-right space-x-2">
+                                  <Button size="sm" variant="outline" onClick={() => handlePaymentAction(payment.id, 'Rechazado')}><XCircle className="mr-2 h-4 w-4 text-destructive" />Rechazar</Button>
+                                  <Button size="sm" onClick={() => handlePaymentAction(payment.id, 'Pagado')}><CheckCircle className="mr-2 h-4 w-4" />Aprobar</Button>
+                              </TableCell>
+                          </TableRow>
+                      ))}
+                      </TableBody>
+                  </Table>
+              ): (
+                  <p className="text-center text-muted-foreground py-8">No hay pagos pendientes de verificación.</p>
+              )}
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-headline">Historial General de Pagos</CardTitle>
+            <CardDescription>Consulta el estado de todos los pagos del club.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead>Deportista</TableHead>
+                          <TableHead>Mes</TableHead>
+                          <TableHead>Monto</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {paymentList?.map(payment => (
+                          <TableRow key={payment.id}>
+                              <TableCell className="font-medium">{getAthleteName(payment.athleteId)}</TableCell>
+                              <TableCell>{payment.month}</TableCell>
+                              <TableCell>{payment.amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}</TableCell>
+                              <TableCell>
+                                  <Badge variant={payment.status === 'Pagado' ? 'default' : payment.status === 'Pendiente' ? 'destructive' : 'secondary'}>
+                                      {payment.status}
+                                  </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                  <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => openDeleteDialog(payment.id)}
+                                  >
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                              </TableCell>
+                          </TableRow>
+                      ))}
+                  </TableBody>
+              </Table>
+              {(!paymentList || paymentList.length === 0) && (
+                <p className="text-center text-muted-foreground py-8">No hay pagos registrados.</p>
+              )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta acción no se puede deshacer. Esto eliminará permanentemente la cuota de pago del historial.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setPaymentToDelete(null)}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeletePayment} className="bg-destructive hover:bg-destructive/90">
+                    Sí, eliminar
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
