@@ -8,47 +8,47 @@
     "accountHolder": "Unión Opita FC NIT 901.943.142-2"
   },
   "monthlyFees": {
-    "U-6 / Kids": 50000,
-    "U-8 / Prebenjamín": 50000,
-    "U-10 / Benjamín": 50000,
-    "U-12 / Alevín": 50000,
-    "U-14 / Infantil": 45000,
-    "U-16 / Cadete": 50000,
-    "U-18 / Juvenil": 50000
+    "U6": 50000,
+    "U8": 50000,
+    "U10": 50000,
+    "U12": 50000,
+    "U14": 45000,
+    "U16": 50000,
+    "U18": 50000
   },
   "categories": [
     {
-      "name": "U-6 / Kids",
+      "name": "U6",
       "minYear": 2020,
       "maxYear": 2021
     },
     {
-      "name": "U-8 / Prebenjamín",
+      "name": "U8",
       "minYear": 2018,
       "maxYear": 2019
     },
     {
-      "name": "U-10 / Benjamín",
+      "name": "U10",
       "minYear": 2016,
       "maxYear": 2017
     },
     {
-      "name": "U-12 / Alevín",
+      "name": "U12",
       "minYear": 2014,
       "maxYear": 2015
     },
     {
-      "name": "U-14 / Infantil",
+      "name": "U14",
       "minYear": 2012,
       "maxYear": 2013
     },
     {
-      "name": "U-16 / Cadete",
+      "name": "U16",
       "minYear": 2010,
       "maxYear": 2011
     },
     {
-      "name": "U-18 / Juvenil",
+      "name": "U18",
       "minYear": 2008,
       "maxYear": 2009
     }
