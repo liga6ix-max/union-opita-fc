@@ -27,7 +27,9 @@ export default function ManagerTeamsPage() {
 
     const athletesQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        return query(collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`), where("clubId", "==", MAIN_CLUB_ID));
+        // The where clause is removed to ensure all athletes in the subcollection are fetched,
+        // as the collection path already scopes them to the club.
+        return collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`);
     }, [firestore]);
     
     const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
