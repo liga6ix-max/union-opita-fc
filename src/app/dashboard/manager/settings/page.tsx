@@ -57,7 +57,7 @@ type BankAccountFormValues = z.infer<typeof bankAccountSchema>;
 const MAIN_CLUB_ID = 'OpitaClub';
 
 export default function ManagerSettingsPage() {
-  const { isUserLoading } = useUser();
+  const { profile, isUserLoading } = useUser();
   const { firestore } = useFirebase();
   
   const [isSavingBank, setIsSavingBank] = useState(false);
@@ -69,15 +69,15 @@ export default function ManagerSettingsPage() {
   const [categories, setCategories] = useState<z.infer<typeof categorySchema>[]>([]);
 
   const clubConfigRef = useMemoFirebase(() => {
-      if (!firestore) return null;
+      if (!firestore || !profile) return null;
       return doc(firestore, 'clubs', MAIN_CLUB_ID);
-  },[firestore]);
+  },[firestore, profile]);
   const {data: clubData, isLoading: clubLoading} = useDoc<ClubSettings>(clubConfigRef);
 
   const coachesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "coach"));
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
   const [salaries, setSalaries] = useState<Record<string, number>>({});

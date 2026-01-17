@@ -79,16 +79,16 @@ export default function ManagerPlanningPage() {
   const { profile, isUserLoading, firestore } = useUser();
 
   const cyclesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     return collection(firestore, `clubs/${MAIN_CLUB_ID}/microcycles`);
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: cycleList, isLoading: cyclesLoading } = useCollection(cyclesQuery);
   
   const coachesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     // Query for all users that are staff (coaches or managers).
     return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "in", ["coach", "manager"]));
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
   const form = useForm<PlanningFormValues>({

@@ -61,22 +61,22 @@ export default function ManagerPaymentsPage() {
   const { firestore } = useFirebase();
 
   const athletesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     return collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`);
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
 
   const paymentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     return collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: paymentList, isLoading: paymentsLoading } = useCollection(paymentsQuery);
   
   // Query all users to map IDs to names
   const usersQuery = useMemoFirebase(() => {
-      if (!firestore) return null;
+      if (!firestore || !profile) return null;
       return collection(firestore, 'users');
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: allUsers, isLoading: usersLoading } = useCollection(usersQuery);
 
   const form = useForm<PaymentScheduleFormValues>({

@@ -1,7 +1,7 @@
 'use client';
 
 import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
@@ -20,24 +20,37 @@ export default function ManagerReportsPage() {
     const { firestore } = useFirebase();
 
     const athletesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !profile) return null;
         return collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`);
-    }, [firestore]);
+    }, [firestore, profile]);
     const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
 
     const coachesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !profile) return null;
         return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "in", ["coach", "manager"]));
-    }, [firestore]);
+    }, [firestore, profile]);
     const { data: staff, isLoading: staffLoading } = useCollection(coachesQuery);
 
     const paymentsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !profile) return null;
         return collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
-    }, [firestore]);
+    }, [firestore, profile]);
     const { data: payments, isLoading: paymentsLoading } = useCollection(paymentsQuery);
 
-    if (isUserLoading || athletesLoading || staffLoading || paymentsLoading) {
+    const tasksQuery = useMemoFirebase(() => {
+        if (!firestore || !profile) return null;
+        return query(collection(firestore, `clubs/${MAIN_CLUB_ID}/tasks`), orderBy("dueDate", "desc"), limit(4));
+    }, [firestore, profile]);
+    const { data: tasks, isLoading: tasksLoading } = useCollection(tasksQuery);
+  
+    const allCoachesQuery = useMemoFirebase(() => {
+        if (!firestore || !profile) return null;
+        return query(collection(firestore, `users`), where("clubId", "==", MAIN_CLUB_ID));
+    }, [firestore, profile]);
+    const { data: allUsers, isLoading: allUsersLoading } = useCollection(allCoachesQuery);
+
+
+    if (isUserLoading || athletesLoading || staffLoading || paymentsLoading || tasksLoading || allUsersLoading) {
         return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
     }
 

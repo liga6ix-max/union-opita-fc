@@ -21,23 +21,23 @@ export default function ManagerAthletesPage() {
     const { firestore } = useFirebase();
 
     const athletesSubCollectionQuery = useMemoFirebase(() => {
-      if (!firestore) return null;
+      if (!firestore || !profile) return null;
       let q = query(collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`));
       if (teamFilter) {
           q = query(q, where("team", "==", teamFilter));
       }
       return q;
-    }, [firestore, teamFilter]);
+    }, [firestore, teamFilter, profile]);
 
     const allUsersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !profile) return null;
         return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "athlete"));
-    }, [firestore]);
+    }, [firestore, profile]);
     
     const coachesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !profile) return null;
         return query(collection(firestore, `users`), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "coach"));
-    }, [firestore]);
+    }, [firestore, profile]);
     
     const { data: athletesSubCollection, isLoading: athletesLoading } = useCollection(athletesSubCollectionQuery);
     const { data: allAthletesUsers, isLoading: usersLoading } = useCollection(allUsersQuery);
