@@ -17,6 +17,7 @@ export interface UserProfile {
   clubId: string;
   role: 'manager' | 'coach' | 'athlete';
   disabled?: boolean;
+  salary?: number;
 }
 
 interface UserAuthState {
@@ -203,3 +204,5 @@ export const useUser = (): UserHookResult => {
   return { user, profile, isUserLoading, userError, firestore };
 };
 
+
+    

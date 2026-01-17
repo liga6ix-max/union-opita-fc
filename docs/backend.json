@@ -87,6 +87,10 @@
         "disabled": {
             "type": "boolean",
             "description": "Indicates if the user's account is disabled."
+        },
+        "salary": {
+            "type": "number",
+            "description": "The monthly salary of the user, applicable to coaches and managers."
         }
       },
       "required": [
@@ -408,3 +412,5 @@
     "reasoning": "The Firestore structure is designed to manage a sports club (Opita Club Manager) with role-based access control. It prioritizes authorization independence by denormalizing clubId into every collection that requires club-specific data, eliminating the need for `get()` calls in security rules and enabling atomic operations.\n\n- `/clubs`: Stores club details. This top-level collection allows easy querying for clubs.\n- `/users`: Stores user details, including their role and clubId. This enables role-based access control at the user level.\n- `/clubs/{clubId}/athletes`: Stores athlete information related to a specific club. The clubId is denormalized to enable secure querying of athletes within a club without requiring a `get()` call to the clubs collection. This supports QAPs by ensuring that listing athletes is secure and efficient.\n- `/clubs/{clubId}/payments`: Stores payment information for athletes within a specific club. The clubId is denormalized here as well, ensuring secure and efficient payment listing.\n- `/clubs/{clubId}/tasks`: Stores tasks assigned to coaches or staff within a club. The clubId is denormalized.\n- `/clubs/{clubId}/landingPageContent`: Stores landing page content specific to each club. The clubId is denormalized.\n\nThis structure facilitates secure and efficient data retrieval and management, aligning with the application's role-based access control requirements and the need for an informative landing page."
   }
 }
+
+    

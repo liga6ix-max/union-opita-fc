@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useFirebase, useUser, useMemoFirebase, useCollection } from '@/firebase';
@@ -69,9 +70,8 @@ export default function CoachDashboard() {
   const assignedAthletesCount = athletes?.length || 0;
   const pendingTasksCount = tasks?.filter(t => t.status !== 'Completada').length || 0;
   
-  // Salary is not available on the user profile in this structure
-  // This would need to be fetched from a separate 'staff' or similar collection if needed.
-  // const coachSalary = profile?.salary || 0; 
+  // Salary is now available on the user profile
+  const coachSalary = profile?.salary || 0; 
 
   const formatCurrency = (value: number) => {
       return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
@@ -106,8 +106,8 @@ export default function CoachDashboard() {
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">N/A</div>
-            <p className="text-xs text-muted-foreground">Información no disponible</p>
+            <div className="text-2xl font-bold">{formatCurrency(coachSalary)}</div>
+            <p className="text-xs text-muted-foreground">Remuneración asignada</p>
           </CardContent>
         </Card>
       </div>
@@ -158,3 +158,5 @@ export default function CoachDashboard() {
     </div>
   );
 }
+
+    
