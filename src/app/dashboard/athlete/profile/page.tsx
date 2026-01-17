@@ -47,6 +47,7 @@ const profileSchema = z.object({
   emergencyContactName: z.string().min(3, { message: 'El nombre del contacto es requerido.' }),
   emergencyContactPhone: z.string().min(7, { message: 'El teléfono del contacto es requerido.' }),
   medicalInformation: z.string().optional(),
+  team: z.string().optional(),
 });
 
 const paymentSchema = z.object({
@@ -135,9 +136,30 @@ export default function AthleteProfilePage() {
     defaultValues: {
       firstName: '', lastName: '', birthDate: '', gender: undefined, bloodType: '',
       documentType: undefined, documentNumber: '', emergencyContactName: '',
-      emergencyContactPhone: '', medicalInformation: '',
+      emergencyContactPhone: '', medicalInformation: '', team: ''
     },
   });
+
+  const { watch, setValue } = profileForm;
+  const watchedBirthDate = watch("birthDate");
+
+  useEffect(() => {
+    if (watchedBirthDate && clubConfig?.categories) {
+        try {
+            const birthYear = parseISO(watchedBirthDate).getFullYear();
+            const foundCategory = clubConfig.categories.find((cat: any) => birthYear >= cat.minYear && birthYear <= cat.maxYear);
+            if (foundCategory) {
+                setValue('team', foundCategory.name, { shouldValidate: true });
+            } else {
+                setValue('team', '', { shouldValidate: true });
+            }
+        } catch(e) {
+            // Invalid date string, clear team
+            setValue('team', '', { shouldValidate: true });
+        }
+    }
+  }, [watchedBirthDate, clubConfig, setValue]);
+
 
   // Payment Form
   const paymentForm = useForm<PaymentFormValues>({
@@ -170,39 +192,31 @@ export default function AthleteProfilePage() {
         emergencyContactName: combinedData.emergencyContactName || '',
         emergencyContactPhone: combinedData.emergencyContactPhone || '',
         medicalInformation: combinedData.medicalInformation || '',
+        team: combinedData.team || '',
       });
     }
   }, [profile, athleteData, profileForm.reset]);
 
   const onProfileSubmit = async (data: ProfileFormValues) => {
-    if (!user || !profile || !firestore || !athleteDocRef || !clubConfig) return;
-
-    let team = athleteData?.team || '';
-    if (data.birthDate && clubConfig.categories) {
-        try {
-            const birthYear = parseISO(data.birthDate).getFullYear();
-            const foundCategory = clubConfig.categories.find(cat => birthYear >= cat.minYear && birthYear <= cat.maxYear);
-            if (foundCategory) {
-                team = foundCategory.name;
-            }
-        } catch (e) {
-            console.error("Error parsing date for category assignment", e);
-        }
-    }
+    if (!user || !profile || !firestore || !athleteDocRef) return;
     
     try {
       await setDoc(athleteDocRef, {
-          birthDate: data.birthDate, gender: data.gender, bloodType: data.bloodType,
-          documentType: data.documentType, documentNumber: data.documentNumber,
-          emergencyContactName: data.emergencyContactName, emergencyContactPhone: data.emergencyContactPhone,
+          birthDate: data.birthDate,
+          gender: data.gender,
+          bloodType: data.bloodType,
+          documentType: data.documentType,
+          documentNumber: data.documentNumber,
+          emergencyContactName: data.emergencyContactName,
+          emergencyContactPhone: data.emergencyContactPhone,
           medicalInformation: data.medicalInformation,
-          team: team,
+          team: data.team,
       }, { merge: true });
 
       const userDocRef = doc(firestore, 'users', user.uid);
       await updateDoc(userDocRef, { firstName: data.firstName, lastName: data.lastName });
       
-      toast({ title: '¡Perfil Actualizado!', description: team ? `Tu información ha sido guardada y se te ha asignado a la categoría ${team}.` : 'Tu información ha sido guardada correctamente.' });
+      toast({ title: '¡Perfil Actualizado!', description: data.team ? `Tu información ha sido guardada y se te ha asignado a la categoría ${data.team}.` : 'Tu información ha sido guardada correctamente.' });
       setIsEditing(false);
     } catch(e: any) {
         console.error("Error updating profile:", e);
@@ -292,6 +306,20 @@ export default function AthleteProfilePage() {
                             <FormField control={profileForm.control} name="firstName" render={({ field }) => (<FormItem><FormLabel>Nombre</FormLabel><FormControl><Input placeholder="Tu nombre" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                              <FormField control={profileForm.control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Apellido</FormLabel><FormControl><Input placeholder="Tu apellido" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                             <FormField control={profileForm.control} name="birthDate" render={({ field }) => (<FormItem><FormLabel>Fecha de Nacimiento</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                             <FormField control={profileForm.control} name="team" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Equipo / Categoría (Automático)</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value} disabled>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Se asignará con la fecha de nacimiento" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            {clubConfig?.categories?.map((cat: any) => (
+                                                <SelectItem key={cat.name} value={cat.name}>{cat.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
                              <FormField control={profileForm.control} name="documentType" render={({ field }) => (<FormItem><FormLabel>Tipo de Documento</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger></FormControl><SelectContent><SelectItem value="TI">Tarjeta de Identidad</SelectItem><SelectItem value="CC">Cédula de Ciudadanía</SelectItem><SelectItem value="RC">Registro Civil</SelectItem></SelectContent></Select><FormMessage /></FormItem>)}/>
                             <FormField control={profileForm.control} name="documentNumber" render={({ field }) => (<FormItem><FormLabel>Número de Documento</FormLabel><FormControl><Input placeholder="123456789" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                              <FormField control={profileForm.control} name="gender" render={({ field }) => (<FormItem><FormLabel>Género</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Masculino">Masculino</SelectItem><SelectItem value="Femenino">Femenino</SelectItem></SelectContent></Select><FormMessage /></FormItem>)}/>
