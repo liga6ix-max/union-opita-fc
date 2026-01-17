@@ -43,6 +43,7 @@ const profileSchema = z.object({
   emergencyContactPhone: z.string().min(7, { message: 'El teléfono del contacto es requerido.' }),
   medicalInformation: z.string().optional(),
   team: z.string().min(1, "La categoría se asigna automáticamente con la fecha de nacimiento."),
+  coachId: z.string().optional(),
   weight: z.coerce.number().positive().optional().or(z.literal('')),
   height: z.coerce.number().positive().optional().or(z.literal('')),
   vo2max: z.coerce.number().min(1).max(30).optional().or(z.literal('')),
@@ -78,6 +79,12 @@ export default function CoachAthleteProfilePage() {
   }, [firestore, coachProfile?.clubId]);
   const { data: clubConfig, isLoading: isClubConfigLoading } = useDoc(clubConfigRef);
 
+  const microcyclesQuery = useMemoFirebase(() => {
+    if (!firestore || !coachProfile?.clubId) return null;
+    return collection(firestore, `clubs/${coachProfile.clubId}/microcycles`);
+  }, [firestore, coachProfile?.clubId]);
+  const { data: microcycles, isLoading: microcyclesLoading } = useCollection(microcyclesQuery);
+
   const { data: athleteData, isLoading: isAthleteLoading, error: athleteError } = useDoc(athleteDocRef);
   const { data: userData, isLoading: isUserDocLoading, error: userError } = useDoc(userDocRef);
 
@@ -96,6 +103,7 @@ export default function CoachAthleteProfilePage() {
       emergencyContactPhone: '',
       medicalInformation: '',
       team: '',
+      coachId: '',
       weight: '',
       height: '',
       vo2max: '',
@@ -111,21 +119,31 @@ export default function CoachAthleteProfilePage() {
   const watchedBirthDate = watch("birthDate");
 
   useEffect(() => {
-      if (watchedBirthDate && clubConfig?.categories) {
-          try {
-              const birthYear = parseISO(watchedBirthDate).getFullYear();
-              const foundCategory = clubConfig.categories.find(cat => birthYear >= cat.minYear && birthYear <= cat.maxYear);
-              if (foundCategory) {
-                  setValue('team', foundCategory.name, { shouldValidate: true });
-              } else {
-                  setValue('team', '', { shouldValidate: true });
-              }
-          } catch(e) {
-              // Invalid date string, clear team
-              setValue('team', '', { shouldValidate: true });
-          }
-      }
-  }, [watchedBirthDate, clubConfig, setValue]);
+    if (watchedBirthDate && clubConfig?.categories && microcycles) {
+        try {
+            const birthYear = parseISO(watchedBirthDate).getFullYear();
+            const foundCategory = clubConfig.categories.find(cat => birthYear >= cat.minYear && birthYear <= cat.maxYear);
+            if (foundCategory) {
+                const categoryName = foundCategory.name;
+                setValue('team', categoryName, { shouldValidate: true });
+
+                const cycleForTeam = microcycles.find(c => c.team === categoryName);
+                if (cycleForTeam && cycleForTeam.coachId) {
+                    setValue('coachId', cycleForTeam.coachId, { shouldValidate: true });
+                } else {
+                    setValue('coachId', '', { shouldValidate: true });
+                }
+
+            } else {
+                setValue('team', '', { shouldValidate: true });
+                setValue('coachId', '', { shouldValidate: true });
+            }
+        } catch(e) {
+            setValue('team', '', { shouldValidate: true });
+            setValue('coachId', '', { shouldValidate: true });
+        }
+    }
+  }, [watchedBirthDate, clubConfig, microcycles, setValue]);
 
   useEffect(() => {
     if (userData || athleteData) {
@@ -142,6 +160,7 @@ export default function CoachAthleteProfilePage() {
         emergencyContactPhone: combinedData.emergencyContactPhone || '',
         medicalInformation: combinedData.medicalInformation || '',
         team: combinedData.team || '',
+        coachId: combinedData.coachId || '',
         weight: combinedData.weight || '',
         height: combinedData.height || '',
         vo2max: combinedData.vo2max || '',
@@ -173,6 +192,7 @@ export default function CoachAthleteProfilePage() {
       emergencyContactPhone: data.emergencyContactPhone || null,
       medicalInformation: data.medicalInformation || null,
       team: data.team,
+      coachId: data.coachId || null,
       weight: data.weight || null,
       height: data.height || null,
       vo2max: data.vo2max || null,
@@ -197,7 +217,7 @@ export default function CoachAthleteProfilePage() {
     setIsEditing(false);
   };
   
-  if (isUserLoading || isAthleteLoading || isUserDocLoading || isClubConfigLoading) {
+  if (isUserLoading || isAthleteLoading || isUserDocLoading || isClubConfigLoading || microcyclesLoading) {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
   }
   

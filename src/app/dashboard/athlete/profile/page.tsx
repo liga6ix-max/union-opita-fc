@@ -73,6 +73,7 @@ export default function AthleteProfilePage() {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
+  const [calculatedCoachId, setCalculatedCoachId] = useState<string | null>(null);
   const { user, profile, isUserLoading } = useUser();
   const { firestore } = useFirebase();
 
@@ -104,11 +105,16 @@ export default function AthleteProfilePage() {
   }, [firestore, athleteData?.coachId, profile?.clubId]);
   const { data: coach, isLoading: isCoachLoading } = useDoc(coachQuery);
 
-  const microcyclesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId || !athleteData?.team) return null;
-    return query(collection(firestore, `clubs/${profile.clubId}/microcycles`), where("team", "==", athleteData.team));
-  }, [firestore, profile?.clubId, athleteData?.team]);
-  const { data: teamCycles, isLoading: cyclesLoading } = useCollection(microcyclesQuery);
+  const allMicrocyclesQuery = useMemoFirebase(() => {
+    if (!firestore || !profile?.clubId) return null;
+    return collection(firestore, `clubs/${profile.clubId}/microcycles`);
+  }, [firestore, profile?.clubId]);
+  const { data: allMicrocycles, isLoading: cyclesLoading } = useCollection(allMicrocyclesQuery);
+
+  const teamCycles = useMemo(() => {
+    if (!allMicrocycles || !athleteData?.team) return [];
+    return allMicrocycles.filter(c => c.team === athleteData.team);
+  }, [allMicrocycles, athleteData?.team]);
   
   const attendanceQuery = useMemoFirebase(() => {
       if (!firestore || !user?.uid || !profile?.clubId) return null;
@@ -144,21 +150,30 @@ export default function AthleteProfilePage() {
   const watchedBirthDate = watch("birthDate");
 
   useEffect(() => {
-    if (watchedBirthDate && clubConfig?.categories) {
+    if (watchedBirthDate && clubConfig?.categories && allMicrocycles) {
         try {
             const birthYear = parseISO(watchedBirthDate).getFullYear();
             const foundCategory = clubConfig.categories.find((cat: any) => birthYear >= cat.minYear && birthYear <= cat.maxYear);
             if (foundCategory) {
-                setValue('team', foundCategory.name, { shouldValidate: true });
+                const categoryName = foundCategory.name;
+                setValue('team', categoryName, { shouldValidate: true });
+
+                const cycleForTeam = allMicrocycles.find(c => c.team === categoryName);
+                if (cycleForTeam && cycleForTeam.coachId) {
+                    setCalculatedCoachId(cycleForTeam.coachId);
+                } else {
+                    setCalculatedCoachId(null);
+                }
             } else {
                 setValue('team', '', { shouldValidate: true });
+                setCalculatedCoachId(null);
             }
         } catch(e) {
-            // Invalid date string, clear team
             setValue('team', '', { shouldValidate: true });
+            setCalculatedCoachId(null);
         }
     }
-  }, [watchedBirthDate, clubConfig, setValue]);
+  }, [watchedBirthDate, clubConfig, allMicrocycles, setValue]);
 
 
   // Payment Form
@@ -211,6 +226,7 @@ export default function AthleteProfilePage() {
           emergencyContactPhone: data.emergencyContactPhone,
           medicalInformation: data.medicalInformation,
           team: data.team,
+          coachId: calculatedCoachId,
       }, { merge: true });
 
       const userDocRef = doc(firestore, 'users', user.uid);
