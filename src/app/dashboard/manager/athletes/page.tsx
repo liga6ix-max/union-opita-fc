@@ -85,19 +85,19 @@ export default function ManagerAthletesPage() {
                         <CardTitle className="font-headline">Gestión de Deportistas</CardTitle>
                         <CardDescription>
                             {teamFilter 
-                                ? `Mostrando deportistas habilitados del equipo: ${teamFilter}`
+                                ? `Mostrando deportistas habilitados de la categoría: ${teamFilter}`
                                 : "Mostrando todos los deportistas habilitados del club."
                             }
                         </CardDescription>
                     </div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline"><Filter className="mr-2 h-4 w-4" />Filtrar por Equipo</Button>
+                            <Button variant="outline"><Filter className="mr-2 h-4 w-4" />Filtrar por Categoría</Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
                             <DropdownMenuLabel>Categorías</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                             <DropdownMenuItem asChild><Link href="/dashboard/manager/athletes">Todos los Equipos</Link></DropdownMenuItem>
+                             <DropdownMenuItem asChild><Link href="/dashboard/manager/athletes">Todas las Categorías</Link></DropdownMenuItem>
                             {clubConfig.categories.map(cat => (
                                 <DropdownMenuItem key={cat.name} asChild>
                                     <Link href={`/dashboard/manager/athletes?team=${cat.name}`}>{cat.name}</Link>
@@ -111,7 +111,7 @@ export default function ManagerAthletesPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Nombre</TableHead>
-                                <TableHead>Equipo</TableHead>
+                                <TableHead>Categoría</TableHead>
                                 <TableHead>Entrenador Asignado</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
@@ -120,7 +120,7 @@ export default function ManagerAthletesPage() {
                             {enabledAndEnrichedAthletes && enabledAndEnrichedAthletes.map(athlete => (
                                 <TableRow key={athlete.id}>
                                     <TableCell className="font-medium">{athlete.firstName} {athlete.lastName}</TableCell>
-                                    <TableCell>{athlete.team || 'Sin equipo'}</TableCell>
+                                    <TableCell>{athlete.team || 'Sin categoría'}</TableCell>
                                     <TableCell>{getCoachName(athlete.coachId)}</TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
@@ -145,7 +145,7 @@ export default function ManagerAthletesPage() {
                     </Table>
                      {(!enabledAndEnrichedAthletes || enabledAndEnrichedAthletes.length === 0) && (
                         <p className="text-center py-8 text-muted-foreground">
-                            {teamFilter ? `No hay deportistas habilitados en el equipo ${teamFilter}.` : "No hay deportistas habilitados registrados."}
+                            {teamFilter ? `No hay deportistas habilitados en la categoría ${teamFilter}.` : "No hay deportistas habilitados registrados."}
                         </p>
                     )}
                 </CardContent>
