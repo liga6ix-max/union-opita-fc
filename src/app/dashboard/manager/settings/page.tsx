@@ -179,7 +179,7 @@ export default function ManagerSettingsPage() {
   }
   
   if (isUserLoading || clubLoading || coachesLoading) {
-    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
   }
 
   return (
