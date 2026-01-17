@@ -218,9 +218,9 @@ export default function ManagerSettingsPage() {
         <CardContent>
           <div className="space-y-4">
             {categories.map((category, index) => (
-              <div key={category.name} className="grid grid-cols-3 items-center gap-4">
-                <Label htmlFor={`category-${index}`} className="font-semibold">{category.name}</Label>
-                <div className="flex items-center gap-2">
+              <div key={category.name} className="grid grid-cols-1 md:grid-cols-5 items-center gap-4 border-t pt-4 first:border-t-0 first:pt-0">
+                <Label htmlFor={`category-min-${index}`} className="font-semibold md:col-span-2">{category.name}</Label>
+                <div className="md:col-span-3 flex items-center gap-2">
                     <Input
                         id={`category-min-${index}`}
                         type="number"
@@ -228,7 +228,7 @@ export default function ManagerSettingsPage() {
                         value={category.minYear}
                         onChange={(e) => handleCategoryYearChange(index, 'minYear', e.target.value)}
                     />
-                     <span className="text-muted-foreground">-</span>
+                     <span className="font-bold text-muted-foreground">-</span>
                      <Input
                         id={`category-max-${index}`}
                         type="number"
