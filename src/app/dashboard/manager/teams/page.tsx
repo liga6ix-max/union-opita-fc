@@ -16,6 +16,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger
 } from "@/components/ui/dropdown-menu";
+import clubConfig from "@/lib/club-config.json";
 
 const MAIN_CLUB_ID = 'OpitaClub';
 
@@ -42,17 +43,6 @@ export default function ManagerTeamsPage() {
         return collection(firestore, `clubs/${MAIN_CLUB_ID}/microcycles`);
     }, [firestore]);
     const { data: microcycles, isLoading: cyclesLoading } = useCollection(microcyclesQuery);
-
-    const teams = athletes?.reduce((acc, athlete) => {
-        const teamName = athlete.team;
-        if (teamName) {
-            if (!acc[teamName]) {
-                acc[teamName] = [];
-            }
-            acc[teamName].push(athlete);
-        }
-        return acc;
-    }, {} as Record<string, any[]>) || {};
 
     if (isUserLoading || athletesLoading || coachesLoading || cyclesLoading) {
         return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -98,6 +88,8 @@ export default function ManagerTeamsPage() {
         }
     };
 
+    const { categories } = clubConfig;
+
     return (
         <div className="space-y-8">
             <div>
@@ -105,8 +97,11 @@ export default function ManagerTeamsPage() {
                 <p className="text-muted-foreground">Gestiona y supervisa cada categoría del club de forma individual.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {Object.entries(teams).map(([teamName, teamAthletes]) => {
+                {categories.map((category) => {
+                    const teamName = category.name;
+                    const teamAthletes = athletes?.filter(a => a.team === teamName) || [];
                     const currentCoach = getCoachForTeam(teamName);
+                    
                     return (
                         <Card key={teamName} className="flex flex-col">
                             <CardHeader className="flex flex-row items-start justify-between">
@@ -156,11 +151,11 @@ export default function ManagerTeamsPage() {
                     )
                 })}
             </div>
-             {Object.keys(teams).length === 0 && (
+             {categories.length === 0 && (
                 <Card>
                     <CardContent className="p-8 text-center text-muted-foreground">
-                        <p>No hay equipos con deportistas asignados actualmente.</p>
-                        <p className="text-sm">Puedes asignar equipos a los deportistas desde la sección de <Link href="/dashboard/manager/approvals" className="text-primary underline">Aprobaciones</Link>.</p>
+                        <p>No hay equipos definidos en la configuración del club.</p>
+                        <p className="text-sm">Puedes definir equipos en la sección de <Link href="/dashboard/manager/settings" className="text-primary underline">Configuración</Link>.</p>
                     </CardContent>
                 </Card>
             )}
