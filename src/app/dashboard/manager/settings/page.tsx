@@ -181,30 +181,43 @@ export default function ManagerSettingsPage() {
 
  const handleScheduleChange = (categoryName: string, sessionIndex: number, field: 'day' | 'time' | 'location', value: string) => {
     const safeKey = createSafeKeyForCategory(categoryName);
-    const newSchedules = { ...trainingSchedules };
-    if (!newSchedules[safeKey]) {
-      newSchedules[safeKey] = [];
-    }
-    const updatedSession = { ...newSchedules[safeKey][sessionIndex], [field]: value };
-    newSchedules[safeKey][sessionIndex] = updatedSession;
-    setTrainingSchedules(newSchedules);
+    setTrainingSchedules(prev => {
+        const currentSessions = Array.isArray(prev[safeKey]) ? prev[safeKey] : [];
+        const newSessions = [...currentSessions];
+        newSessions[sessionIndex] = { ...newSessions[sessionIndex], [field]: value };
+        
+        return {
+            ...prev,
+            [safeKey]: newSessions,
+        };
+    });
   };
 
   const handleAddSession = (categoryName: string) => {
     const safeKey = createSafeKeyForCategory(categoryName);
-    const newSchedules = { ...trainingSchedules };
-    if (!newSchedules[safeKey]) {
-      newSchedules[safeKey] = [];
-    }
-    newSchedules[safeKey].push({ day: '', time: '', location: '' });
-    setTrainingSchedules(newSchedules);
+    setTrainingSchedules(prev => {
+        const currentSessions = Array.isArray(prev[safeKey]) ? prev[safeKey] : [];
+        const newSessions = [...currentSessions, { day: '', time: '', location: '' }];
+
+        return {
+            ...prev,
+            [safeKey]: newSessions,
+        };
+    });
   };
 
   const handleRemoveSession = (categoryName: string, sessionIndex: number) => {
     const safeKey = createSafeKeyForCategory(categoryName);
-    const newSchedules = { ...trainingSchedules };
-    newSchedules[safeKey].splice(sessionIndex, 1);
-    setTrainingSchedules(newSchedules);
+    setTrainingSchedules(prev => {
+        const currentSessions = Array.isArray(prev[safeKey]) ? prev[safeKey] : [];
+        const newSessions = [...currentSessions];
+        newSessions.splice(sessionIndex, 1);
+        
+        return {
+            ...prev,
+            [safeKey]: newSessions,
+        };
+    });
   };
 
   const handleSaveSchedules = () => {
