@@ -21,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2, DollarSign, Banknote, Landmark, Hash, Info, Trophy, CalendarIcon, ShieldAlert, CheckCircle, XCircle, Wind, ArrowUpFromLine, Zap, Footprints, Timer, Scale, Ruler } from 'lucide-react';
+import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2, DollarSign, Banknote, Landmark, Hash, Info, Trophy, CalendarIcon, ShieldAlert, CheckCircle, XCircle, Wind, ArrowUpFromLine, Zap, Footprints, Timer, Scale, Ruler, Clock, MapPin } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
@@ -69,6 +69,12 @@ const methodologyLabels: Record<MicrocycleMethodology, string> = {
     futbol_medida: 'Fútbol a la Medida (8-11 años)',
     periodizacion_tactica: 'Periodización Táctica (12-20 años)'
 };
+
+const createSafeKeyForCategory = (categoryName: string) => {
+    if (!categoryName) return '';
+    return categoryName.replace(/[\s/]/g, '-');
+};
+
 
 export default function AthleteProfilePage() {
   const { toast } = useToast();
@@ -284,6 +290,8 @@ export default function AthleteProfilePage() {
   const hasPhysicalData = athleteData?.weight || athleteData?.height || athleteData?.vo2max || athleteData?.jumpHeight || athleteData?.speedTest30mTime || athleteData?.ankleFlexibility || athleteData?.enduranceTest8kmTime;
   const speed = athleteData?.speedTest30mTime ? (30 / athleteData.speedTest30mTime).toFixed(2) : null;
 
+  const schedule = clubConfig?.trainingSchedules?.[createSafeKeyForCategory(athleteData?.team)];
+
 
   return (
     <div className="space-y-8">
@@ -360,6 +368,13 @@ export default function AthleteProfilePage() {
                 <CardTitle className="font-headline flex items-center gap-2"><CalendarHeart/> Plan de Entrenamiento y Asistencia</CardTitle>
                 <CardDescription>
                      Tu plan de entrenamiento asignado. Entrenador a cargo: <span className="font-bold">{coach?.firstName || 'No asignado'} {coach?.lastName || ''}</span>
+                     {schedule && (
+                         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1.5"><CalendarIcon className="h-4 w-4"/> {schedule.days}</span>
+                            <span className="flex items-center gap-1.5"><Clock className="h-4 w-4"/> {schedule.time}</span>
+                            <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4"/> {schedule.location}</span>
+                         </div>
+                     )}
                 </CardDescription>
             </CardHeader>
             <CardContent>

@@ -51,6 +51,27 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "trainingSchedules": {
+          "type": "object",
+          "description": "Training schedules for each category, mapping safe category keys to schedule details.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "days": {
+                "type": "string",
+                "description": "Training days (e.g., 'Lunes, Miércoles, Viernes')."
+              },
+              "time": {
+                "type": "string",
+                "description": "Training time (e.g., '4:00 PM - 6:00 PM')."
+              },
+              "location": {
+                "type": "string",
+                "description": "Training location (e.g., 'Cancha Principal')."
+              }
+            }
+          }
         }
       },
       "required": [

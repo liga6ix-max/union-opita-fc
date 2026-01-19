@@ -10,7 +10,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Printer, Loader2 } from 'lucide-react';
+import { Printer, Loader2, Clock, MapPin, CalendarIcon } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -26,16 +26,24 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useMemoFirebase, useDoc, doc } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
 type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica';
+const MAIN_CLUB_ID = 'OpitaClub';
+
 
 const methodologyLabels: Record<MicrocycleMethodology, string> = {
     tecnificacion: 'Tecnificación (4-7 años)',
     futbol_medida: 'Fútbol a la Medida (8-11 años)',
     periodizacion_tactica: 'Periodización Táctica (12-20 años)'
 };
+
+const createSafeKeyForCategory = (categoryName: string) => {
+    if (!categoryName) return '';
+    return categoryName.replace(/[\s/]/g, '-');
+};
+
 
 export default function CoachPlanningPage() {
   const { profile, isUserLoading, firestore } = useUser();
@@ -48,6 +56,11 @@ export default function CoachPlanningPage() {
   }, [firestore, profile?.id, profile?.clubId]);
 
   const { data: coachCycles, isLoading: cyclesLoading } = useCollection(microcyclesQuery);
+  
+  const { data: clubData, isLoading: clubLoading } = useDoc(useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'clubs', MAIN_CLUB_ID);
+  }, [firestore]));
 
   const handlePrint = () => {
     setTimeout(() => {
@@ -60,7 +73,7 @@ export default function CoachPlanningPage() {
     setIsPrintViewOpen(true);
   }
   
-  if (isUserLoading || cyclesLoading) {
+  if (isUserLoading || cyclesLoading || clubLoading) {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
@@ -91,6 +104,19 @@ export default function CoachPlanningPage() {
                         </AccordionTrigger>
                         <AccordionContent className="p-6 pt-0">
                         <div className="space-y-4">
+                            {(() => {
+                                const schedule = clubData?.trainingSchedules?.[createSafeKeyForCategory(cycle.team)];
+                                if (schedule) {
+                                    return (
+                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground border-b pb-4 mb-4">
+                                           <span className="flex items-center gap-1.5 font-medium"><CalendarIcon className="h-4 w-4"/> {schedule.days}</span>
+                                           <span className="flex items-center gap-1.5 font-medium"><Clock className="h-4 w-4"/> {schedule.time}</span>
+                                           <span className="flex items-center gap-1.5 font-medium"><MapPin className="h-4 w-4"/> {schedule.location}</span>
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
                             <div>
                                 <h5 className="font-semibold">Objetivo Principal</h5>
                                 <p className="text-muted-foreground">{cycle.mainObjective}</p>

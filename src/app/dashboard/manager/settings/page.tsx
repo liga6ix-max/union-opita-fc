@@ -50,12 +50,22 @@ const clubSettingsSchema = z.object({
   bankAccount: bankAccountSchema,
   categories: z.array(categorySchema),
   monthlyFees: z.record(z.number()),
+  trainingSchedules: z.record(z.object({
+    days: z.string(),
+    time: z.string(),
+    location: z.string(),
+  })).optional(),
 });
 
 type ClubSettings = z.infer<typeof clubSettingsSchema>;
 type BankAccountFormValues = z.infer<typeof bankAccountSchema>;
 
 const MAIN_CLUB_ID = 'OpitaClub';
+
+const createSafeKeyForCategory = (categoryName: string) => {
+    return categoryName.replace(/[\s/]/g, '-');
+};
+
 
 export default function ManagerSettingsPage() {
   const { profile, isUserLoading } = useUser();
@@ -65,9 +75,12 @@ export default function ManagerSettingsPage() {
   const [isSavingSalaries, setIsSavingSalaries] = useState(false);
   const [isSavingCategories, setIsSavingCategories] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
+  const [isSavingSchedules, setIsSavingSchedules] = useState(false);
   
   const [clubName, setClubName] = useState('');
   const [categories, setCategories] = useState<z.infer<typeof categorySchema>[]>([]);
+  const [trainingSchedules, setTrainingSchedules] = useState<Record<string, { days: string, time: string, location: string }>>({});
+
 
   const clubConfigRef = useMemoFirebase(() => {
       if (!firestore || !profile) return null;
@@ -103,6 +116,8 @@ export default function ManagerSettingsPage() {
         });
         setClubName(clubData.name || '');
         setCategories(clubData.categories && clubData.categories.length > 0 ? clubData.categories : clubConfig.categories);
+        setTrainingSchedules(clubData.trainingSchedules || {});
+
     } else if (!clubLoading) {
         setCategories(clubConfig.categories);
     }
@@ -163,6 +178,25 @@ export default function ManagerSettingsPage() {
     toast({title: "Nombre del club actualizado"});
     setIsSavingName(false);
   }
+
+  const handleScheduleChange = (categoryName: string, field: 'days' | 'time' | 'location', value: string) => {
+    const safeKey = createSafeKeyForCategory(categoryName);
+    setTrainingSchedules(prev => ({
+      ...prev,
+      [safeKey]: {
+        ...(prev[safeKey] || { days: '', time: '', location: '' }),
+        [field]: value
+      }
+    }));
+  };
+
+  const handleSaveSchedules = () => {
+    if (!clubConfigRef) return;
+    setIsSavingSchedules(true);
+    setDocumentNonBlocking(clubConfigRef, { trainingSchedules }, { merge: true });
+    toast({ title: "¡Horarios Guardados!", description: "Los horarios de entrenamiento han sido actualizados." });
+    setIsSavingSchedules(false);
+  };
   
   if (isUserLoading || clubLoading || coachesLoading) {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
@@ -239,6 +273,60 @@ export default function ManagerSettingsPage() {
                 </Tooltip>
             </TooltipProvider>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Gestión de Horarios de Entrenamiento</CardTitle>
+          <CardDescription>
+            Define los días, horas y lugares de entrenamiento para cada categoría.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {categories.map((category) => {
+              const safeKey = createSafeKeyForCategory(category.name);
+              const schedule = trainingSchedules[safeKey] || { days: '', time: '', location: '' };
+              return (
+                <div key={category.name} className="space-y-3 rounded-md border p-4">
+                   <Label className="font-semibold text-base">{category.name}</Label>
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                       <div className="space-y-2">
+                           <Label htmlFor={`days-${safeKey}`}>Días</Label>
+                           <Input
+                               id={`days-${safeKey}`}
+                               value={schedule.days}
+                               onChange={(e) => handleScheduleChange(category.name, 'days', e.target.value)}
+                               placeholder="Ej: Lunes, Miércoles"
+                           />
+                       </div>
+                       <div className="space-y-2">
+                           <Label htmlFor={`time-${safeKey}`}>Horario</Label>
+                           <Input
+                               id={`time-${safeKey}`}
+                               value={schedule.time}
+                               onChange={(e) => handleScheduleChange(category.name, 'time', e.target.value)}
+                               placeholder="Ej: 4:00 PM - 6:00 PM"
+                           />
+                       </div>
+                       <div className="space-y-2">
+                           <Label htmlFor={`location-${safeKey}`}>Lugar</Label>
+                           <Input
+                               id={`location-${safeKey}`}
+                               value={schedule.location}
+                               onChange={(e) => handleScheduleChange(category.name, 'location', e.target.value)}
+                               placeholder="Ej: Cancha Principal"
+                           />
+                       </div>
+                   </div>
+                </div>
+              );
+            })}
+          </div>
+          <Button onClick={handleSaveSchedules} className="mt-6" disabled={isSavingSchedules}>
+            {isSavingSchedules ? <Loader2 className="animate-spin" /> : "Guardar Horarios"}
+          </Button>
         </CardContent>
       </Card>
       
