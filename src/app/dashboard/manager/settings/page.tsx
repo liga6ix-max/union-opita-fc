@@ -28,7 +28,7 @@ import { toast } from "@/hooks/use-toast";
 import { useUser, useMemoFirebase, useFirebase, useCollection, useDoc } from "@/firebase";
 import { collection, query, where, doc, setDoc } from "firebase/firestore";
 import { updateDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
-import { Loader2 } from "lucide-react";
+import { Loader2, PlusCircle, Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
@@ -50,11 +50,11 @@ const clubSettingsSchema = z.object({
   bankAccount: bankAccountSchema,
   categories: z.array(categorySchema),
   monthlyFees: z.record(z.number()),
-  trainingSchedules: z.record(z.object({
-    days: z.string(),
+  trainingSchedules: z.record(z.array(z.object({
+    day: z.string(),
     time: z.string(),
     location: z.string(),
-  })).optional(),
+  }))).optional(),
 });
 
 type ClubSettings = z.infer<typeof clubSettingsSchema>;
@@ -79,7 +79,7 @@ export default function ManagerSettingsPage() {
   
   const [clubName, setClubName] = useState('');
   const [categories, setCategories] = useState<z.infer<typeof categorySchema>[]>([]);
-  const [trainingSchedules, setTrainingSchedules] = useState<Record<string, { days: string, time: string, location: string }>>({});
+  const [trainingSchedules, setTrainingSchedules] = useState<Record<string, { day: string; time: string; location: string }[]>>({});
 
 
   const clubConfigRef = useMemoFirebase(() => {
@@ -179,15 +179,32 @@ export default function ManagerSettingsPage() {
     setIsSavingName(false);
   }
 
-  const handleScheduleChange = (categoryName: string, field: 'days' | 'time' | 'location', value: string) => {
+ const handleScheduleChange = (categoryName: string, sessionIndex: number, field: 'day' | 'time' | 'location', value: string) => {
     const safeKey = createSafeKeyForCategory(categoryName);
-    setTrainingSchedules(prev => ({
-      ...prev,
-      [safeKey]: {
-        ...(prev[safeKey] || { days: '', time: '', location: '' }),
-        [field]: value
-      }
-    }));
+    const newSchedules = { ...trainingSchedules };
+    if (!newSchedules[safeKey]) {
+      newSchedules[safeKey] = [];
+    }
+    const updatedSession = { ...newSchedules[safeKey][sessionIndex], [field]: value };
+    newSchedules[safeKey][sessionIndex] = updatedSession;
+    setTrainingSchedules(newSchedules);
+  };
+
+  const handleAddSession = (categoryName: string) => {
+    const safeKey = createSafeKeyForCategory(categoryName);
+    const newSchedules = { ...trainingSchedules };
+    if (!newSchedules[safeKey]) {
+      newSchedules[safeKey] = [];
+    }
+    newSchedules[safeKey].push({ day: '', time: '', location: '' });
+    setTrainingSchedules(newSchedules);
+  };
+
+  const handleRemoveSession = (categoryName: string, sessionIndex: number) => {
+    const safeKey = createSafeKeyForCategory(categoryName);
+    const newSchedules = { ...trainingSchedules };
+    newSchedules[safeKey].splice(sessionIndex, 1);
+    setTrainingSchedules(newSchedules);
   };
 
   const handleSaveSchedules = () => {
@@ -287,39 +304,32 @@ export default function ManagerSettingsPage() {
           <div className="space-y-6">
             {categories.map((category) => {
               const safeKey = createSafeKeyForCategory(category.name);
-              const schedule = trainingSchedules[safeKey] || { days: '', time: '', location: '' };
+              const scheduleSessions = trainingSchedules[safeKey] || [];
               return (
-                <div key={category.name} className="space-y-3 rounded-md border p-4">
+                <div key={category.name} className="space-y-4 rounded-md border p-4">
                    <Label className="font-semibold text-base">{category.name}</Label>
-                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                       <div className="space-y-2">
-                           <Label htmlFor={`days-${safeKey}`}>Días</Label>
-                           <Input
-                               id={`days-${safeKey}`}
-                               value={schedule.days}
-                               onChange={(e) => handleScheduleChange(category.name, 'days', e.target.value)}
-                               placeholder="Ej: Lunes, Miércoles"
-                           />
-                       </div>
-                       <div className="space-y-2">
-                           <Label htmlFor={`time-${safeKey}`}>Horario</Label>
-                           <Input
-                               id={`time-${safeKey}`}
-                               value={schedule.time}
-                               onChange={(e) => handleScheduleChange(category.name, 'time', e.target.value)}
-                               placeholder="Ej: 4:00 PM - 6:00 PM"
-                           />
-                       </div>
-                       <div className="space-y-2">
-                           <Label htmlFor={`location-${safeKey}`}>Lugar</Label>
-                           <Input
-                               id={`location-${safeKey}`}
-                               value={schedule.location}
-                               onChange={(e) => handleScheduleChange(category.name, 'location', e.target.value)}
-                               placeholder="Ej: Cancha Principal"
-                           />
-                       </div>
-                   </div>
+                   {scheduleSessions.map((session, index) => (
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-10 gap-2 items-end border-t pt-4">
+                        <div className="space-y-2 md:col-span-3">
+                            <Label htmlFor={`day-${safeKey}-${index}`}>Día</Label>
+                            <Input id={`day-${safeKey}-${index}`} value={session.day} onChange={(e) => handleScheduleChange(category.name, index, 'day', e.target.value)} placeholder="Ej: Lunes" />
+                        </div>
+                        <div className="space-y-2 md:col-span-3">
+                            <Label htmlFor={`time-${safeKey}-${index}`}>Horario</Label>
+                            <Input id={`time-${safeKey}-${index}`} value={session.time} onChange={(e) => handleScheduleChange(category.name, index, 'time', e.target.value)} placeholder="4-6 PM" />
+                        </div>
+                        <div className="space-y-2 md:col-span-3">
+                            <Label htmlFor={`location-${safeKey}-${index}`}>Lugar</Label>
+                            <Input id={`location-${safeKey}-${index}`} value={session.location} onChange={(e) => handleScheduleChange(category.name, index, 'location', e.target.value)} placeholder="Cancha Principal" />
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => handleRemoveSession(category.name, index)} className="md:col-span-1 text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={() => handleAddSession(category.name)}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Añadir Horario
+                  </Button>
                 </div>
               );
             })}

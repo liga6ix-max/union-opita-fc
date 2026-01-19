@@ -58,9 +58,9 @@ export default function CoachPlanningPage() {
   const { data: coachCycles, isLoading: cyclesLoading } = useCollection(microcyclesQuery);
   
   const { data: clubData, isLoading: clubLoading } = useDoc(useMemoFirebase(() => {
-    if (!firestore) return null;
-    return doc(firestore, 'clubs', MAIN_CLUB_ID);
-  }, [firestore]));
+    if (!firestore || !profile) return null;
+    return doc(firestore, 'clubs', profile.clubId);
+  }, [firestore, profile]));
 
   const handlePrint = () => {
     setTimeout(() => {
@@ -106,12 +106,16 @@ export default function CoachPlanningPage() {
                         <div className="space-y-4">
                             {(() => {
                                 const schedule = clubData?.trainingSchedules?.[createSafeKeyForCategory(cycle.team)];
-                                if (schedule) {
+                                if (schedule && Array.isArray(schedule) && schedule.length > 0) {
                                     return (
-                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground border-b pb-4 mb-4">
-                                           <span className="flex items-center gap-1.5 font-medium"><CalendarIcon className="h-4 w-4"/> {schedule.days}</span>
-                                           <span className="flex items-center gap-1.5 font-medium"><Clock className="h-4 w-4"/> {schedule.time}</span>
-                                           <span className="flex items-center gap-1.5 font-medium"><MapPin className="h-4 w-4"/> {schedule.location}</span>
+                                        <div className="space-y-2 border-b pb-4 mb-4">
+                                            {schedule.map((session: any, index: number) => (
+                                                <div key={index} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                                                   <span className="flex items-center gap-1.5 font-medium"><CalendarIcon className="h-4 w-4"/> {session.day}</span>
+                                                   <span className="flex items-center gap-1.5 font-medium"><Clock className="h-4 w-4"/> {session.time}</span>
+                                                   <span className="flex items-center gap-1.5 font-medium"><MapPin className="h-4 w-4"/> {session.location}</span>
+                                                </div>
+                                            ))}
                                         </div>
                                     );
                                 }

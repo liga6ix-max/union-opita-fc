@@ -54,22 +54,30 @@
         },
         "trainingSchedules": {
           "type": "object",
-          "description": "Training schedules for each category, mapping safe category keys to schedule details.",
+          "description": "Training schedules for each category, mapping safe category keys to an array of schedule items.",
           "additionalProperties": {
-            "type": "object",
-            "properties": {
-              "days": {
-                "type": "string",
-                "description": "Training days (e.g., 'Lunes, Miércoles, Viernes')."
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "day": {
+                  "type": "string",
+                  "description": "Day of the week (e.g., 'Lunes')."
+                },
+                "time": {
+                  "type": "string",
+                  "description": "Training time (e.g., '4:00 PM - 6:00 PM')."
+                },
+                "location": {
+                  "type": "string",
+                  "description": "Training location (e.g., 'Cancha Principal')."
+                }
               },
-              "time": {
-                "type": "string",
-                "description": "Training time (e.g., '4:00 PM - 6:00 PM')."
-              },
-              "location": {
-                "type": "string",
-                "description": "Training location (e.g., 'Cancha Principal')."
-              }
+              "required": [
+                "day",
+                "time",
+                "location"
+              ]
             }
           }
         }

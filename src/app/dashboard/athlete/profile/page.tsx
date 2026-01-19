@@ -368,12 +368,16 @@ export default function AthleteProfilePage() {
                 <CardTitle className="font-headline flex items-center gap-2"><CalendarHeart/> Plan de Entrenamiento y Asistencia</CardTitle>
                 <CardDescription>
                      Tu plan de entrenamiento asignado. Entrenador a cargo: <span className="font-bold">{coach?.firstName || 'No asignado'} {coach?.lastName || ''}</span>
-                     {schedule && (
-                         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1.5"><CalendarIcon className="h-4 w-4"/> {schedule.days}</span>
-                            <span className="flex items-center gap-1.5"><Clock className="h-4 w-4"/> {schedule.time}</span>
-                            <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4"/> {schedule.location}</span>
-                         </div>
+                     {schedule && Array.isArray(schedule) && schedule.length > 0 && (
+                        <div className="mt-2 space-y-2">
+                            {schedule.map((session, index) => (
+                                <div key={index} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                                    <span className="flex items-center gap-1.5 font-semibold"><CalendarIcon className="h-4 w-4"/> {session.day}</span>
+                                    <span className="flex items-center gap-1.5"><Clock className="h-4 w-4"/> {session.time}</span>
+                                    <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4"/> {session.location}</span>
+                                </div>
+                            ))}
+                        </div>
                      )}
                 </CardDescription>
             </CardHeader>
