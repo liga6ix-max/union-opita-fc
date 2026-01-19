@@ -25,33 +25,33 @@ export default function ManagerDashboard() {
   const { firestore } = useFirebase();
 
   const athletesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     return collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`);
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
 
   const coachesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "coach"));
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
   const paymentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     return collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: payments, isLoading: paymentsLoading } = useCollection(paymentsQuery);
 
   const tasksQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     return query(collection(firestore, `clubs/${MAIN_CLUB_ID}/tasks`), orderBy("dueDate", "desc"), limit(4));
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: tasks, isLoading: tasksLoading } = useCollection(tasksQuery);
   
   const allCoachesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     return query(collection(firestore, `users`), where("clubId", "==", MAIN_CLUB_ID));
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: allUsers, isLoading: allUsersLoading } = useCollection(allCoachesQuery);
 
 
