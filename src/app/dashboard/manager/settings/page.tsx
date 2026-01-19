@@ -304,7 +304,9 @@ export default function ManagerSettingsPage() {
           <div className="space-y-6">
             {categories.map((category) => {
               const safeKey = createSafeKeyForCategory(category.name);
-              const scheduleSessions = trainingSchedules[safeKey] || [];
+              const scheduleSessions = Array.isArray(trainingSchedules?.[safeKey])
+                ? trainingSchedules[safeKey]
+                : [];
               return (
                 <div key={category.name} className="space-y-4 rounded-md border p-4">
                    <Label className="font-semibold text-base">{category.name}</Label>
