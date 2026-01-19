@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -26,8 +25,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useUser, useCollection, useMemoFirebase, useDoc, doc } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
 
 type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica';
 const MAIN_CLUB_ID = 'OpitaClub';
