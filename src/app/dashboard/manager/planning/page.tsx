@@ -104,7 +104,7 @@ export default function ManagerPlanningPage() {
     },
   });
 
-  const onSubmit = async (data: PlanningFormValues) => {
+  const onSubmit = (data: PlanningFormValues) => {
     setIsGenerating(true);
     toast({ title: 'Generando planificación...', description: 'La IA está creando el plan de entrenamiento. Esto puede tardar un momento.' });
     if (!firestore) {
@@ -113,9 +113,11 @@ export default function ManagerPlanningPage() {
         return;
     }
 
-    try {
-        const generatedPlan: TrainingPlanOutput = await createTrainingPlan(data);
-        
+    createTrainingPlan(data)
+      .then((generatedPlan) => {
+        if (!generatedPlan || !generatedPlan.microcycles) {
+            throw new Error("La respuesta de la IA no tiene el formato esperado.");
+        }
         const microcyclesCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/microcycles`);
         generatedPlan.microcycles.forEach(micro => {
             addDocumentNonBlocking(microcyclesCollection, {
@@ -133,17 +135,18 @@ export default function ManagerPlanningPage() {
             title: '¡Planificación Generada y Guardada!',
             description: `Se ha creado y guardado un mesociclo de ${data.weeks} semanas para la categoría ${data.category}.`,
         });
-
-    } catch (error) {
-        console.error("Error generating or saving training plan:", error);
+      })
+      .catch((error) => {
+        console.error("Error generating training plan:", error);
         toast({
             variant: 'destructive',
             title: 'Error al generar el plan',
-            description: 'Hubo un problema con la IA o al guardar en la base de datos. Por favor, inténtalo de nuevo.',
+            description: 'Hubo un problema con la IA. Por favor, revisa la configuración y vuelve a intentarlo.',
         });
-    } finally {
+      })
+      .finally(() => {
         setIsGenerating(false);
-    }
+      });
   };
   
   const confirmDeleteCycle = () => {
