@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { UserCog, MoreVertical, Trash2, ShieldCheck, ShieldOff, Loader2 } from 'lucide-react';
 import { useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, query, where } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import {
   DropdownMenu,
@@ -37,10 +37,10 @@ export default function ApprovalsPage() {
     const { toast } = useToast();
     const { profile, firestore, isUserLoading } = useUser();
 
-    // With simplified rules, a manager can list all users.
+    // We query all users for the specific club to show on the approvals page.
     const usersQuery = useMemoFirebase(() => {
         if (!firestore || !profile) return null;
-        return collection(firestore, 'users');
+        return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID));
     }, [firestore, profile]);
 
     const { data: userList, isLoading: usersLoading, error } = useCollection(usersQuery);
