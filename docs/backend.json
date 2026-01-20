@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Club": {
@@ -322,6 +323,50 @@
         "title",
         "content"
       ]
+    },
+    "Evaluation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Evaluation",
+      "type": "object",
+      "description": "Represents a psychological or performance evaluation template.",
+      "properties": {
+        "id": { "type": "string" },
+        "clubId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "categories": { "type": "array", "items": { "type": "string" } },
+        "expiryDate": { "type": "string", "format": "date-time" },
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" }
+            },
+            "required": ["text"]
+          }
+        }
+      },
+      "required": ["id", "clubId", "title", "categories", "expiryDate", "questions"]
+    },
+    "EvaluationResponse": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "EvaluationResponse",
+      "type": "object",
+      "description": "Represents an athlete's response to an evaluation.",
+      "properties": {
+        "id": { "type": "string" },
+        "clubId": { "type": "string" },
+        "evaluationId": { "type": "string" },
+        "athleteId": { "type": "string" },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "responses": {
+          "type": "object",
+          "description": "Key-value pairs of question index and response value.",
+          "additionalProperties": { "type": "string" }
+        }
+      },
+      "required": ["id", "clubId", "evaluationId", "athleteId", "submittedAt", "responses"]
     }
   },
   "auth": {
@@ -441,6 +486,34 @@
               "name": "contentId",
               "description": "The unique identifier for the landing page content."
             }
+          ]
+        }
+      },
+       {
+        "path": "/clubs/{clubId}/evaluations/{evaluationId}",
+        "definition": {
+          "entityName": "Evaluation",
+          "schema": {
+            "$ref": "#/backend/entities/Evaluation"
+          },
+          "description": "Stores evaluation templates created by managers.",
+          "params": [
+            { "name": "clubId" },
+            { "name": "evaluationId" }
+          ]
+        }
+      },
+      {
+        "path": "/clubs/{clubId}/evaluationResponses/{responseId}",
+        "definition": {
+          "entityName": "EvaluationResponse",
+          "schema": {
+            "$ref": "#/backend/entities/EvaluationResponse"
+          },
+          "description": "Stores athlete responses to evaluations.",
+          "params": [
+            { "name": "clubId" },
+            { "name": "responseId" }
           ]
         }
       }

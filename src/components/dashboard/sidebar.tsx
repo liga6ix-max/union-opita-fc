@@ -30,6 +30,7 @@ import {
   BarChart3,
   UserPlus,
   Loader2,
+  BrainCircuit,
 } from "lucide-react";
 import { useFirebase } from "@/firebase";
 
@@ -41,6 +42,7 @@ const managerNav = [
   { href: "/dashboard/manager/approvals", label: "Aprobaciones", icon: UserPlus },
   { href: "/dashboard/manager/tasks", label: "Tareas", icon: ClipboardList },
   { href: "/dashboard/manager/planning", label: "Planificación", icon: CalendarClock },
+  { href: "/dashboard/manager/evaluations", label: "Evaluaciones", icon: BrainCircuit },
   { href: "/dashboard/manager/payments", label: "Pagos", icon: Wallet },
   { href: "/dashboard/manager/landing", label: "Página Inicio", icon: ImageIcon },
   { href: "/dashboard/manager/settings", label: "Configuración", icon: Settings },
@@ -57,6 +59,7 @@ const coachNav = [
 
 const athleteNav = [
     { href: "/dashboard/athlete/profile", label: "Mi Perfil", icon: User },
+    { href: "/dashboard/athlete/evaluations", label: "Mis Evaluaciones", icon: BrainCircuit },
 ];
 
 const navItems = {
@@ -135,7 +138,7 @@ export function DashboardSidebar() {
         return pathname === href;
     }
      if (href.endsWith('/athlete/profile')) {
-        return pathname.startsWith('/dashboard/athlete');
+        return pathname.startsWith('/dashboard/athlete/profile');
     }
     return pathname.startsWith(href);
   };

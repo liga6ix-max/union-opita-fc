@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -25,6 +26,7 @@ const pageTitles: { [key: string]: string } = {
   "/dashboard/manager/athletes": "Deportistas por Equipo",
   "/dashboard/manager/tasks": "Gestión de Tareas",
   "/dashboard/manager/planning": "Planificación (IA)",
+  "/dashboard/manager/evaluations": "Evaluaciones Psicológicas",
   "/dashboard/manager/payments": "Gestión de Pagos",
   "/dashboard/manager/approvals": "Aprobación de Usuarios",
   "/dashboard/manager/landing": "Gestión Página de Inicio",
@@ -37,6 +39,7 @@ const pageTitles: { [key: string]: string } = {
   "/dashboard/coach/profile": "Mi Perfil",
   "/dashboard/athlete": "Mis Pagos",
   "/dashboard/athlete/profile": "Mi Perfil",
+  "/dashboard/athlete/evaluations": "Mis Evaluaciones",
 };
 
 const getDynamicTitle = (pathname: string): string => {
