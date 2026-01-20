@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -42,7 +41,7 @@ const profileSchema = z.object({
   emergencyContactName: z.string().min(3, { message: 'El nombre del contacto es requerido.' }),
   emergencyContactPhone: z.string().min(7, { message: 'El teléfono del contacto es requerido.' }),
   medicalInformation: z.string().optional(),
-  team: z.string().min(1, "La categoría se asigna automáticamente con la fecha de nacimiento."),
+  team: z.string().optional(),
   coachId: z.string().optional(),
   weight: z.coerce.number().positive().optional().or(z.literal('')),
   height: z.coerce.number().positive().optional().or(z.literal('')),
@@ -410,5 +409,3 @@ export default function CoachAthleteProfilePage() {
     </div>
   );
 }
-
-    

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -41,7 +40,7 @@ const profileSchema = z.object({
   emergencyContactName: z.string().optional(),
   emergencyContactPhone: z.string().optional(),
   medicalInformation: z.string().optional(),
-  team: z.string().min(1, "La categoría se asigna automáticamente con la fecha de nacimiento."),
+  team: z.string().optional(),
   coachId: z.string().optional(),
   weight: z.coerce.number().positive().optional().or(z.literal('')),
   height: z.coerce.number().positive().optional().or(z.literal('')),
@@ -430,5 +429,3 @@ export default function ManagerAthleteProfilePage() {
     </div>
   );
 }
-
-    
