@@ -159,7 +159,7 @@ export default function CoachPlanningPage() {
       
       {/* Print View Dialog */}
       <Dialog open={isPrintViewOpen} onOpenChange={setIsPrintViewOpen}>
-        <DialogContent className="sm:max-w-3xl print:max-w-full print:border-0 print:shadow-none">
+        <DialogContent className="sm:max-w-4xl print:max-w-full print:border-0 print:shadow-none">
             <style>
                 {`
                 @media print {
@@ -174,6 +174,8 @@ export default function CoachPlanningPage() {
                         left: 0;
                         top: 0;
                         width: 100%;
+                        height: 100%;
+                        padding: 2rem; 
                     }
                     .no-print {
                         display: none;
@@ -181,44 +183,60 @@ export default function CoachPlanningPage() {
                 }
                 `}
             </style>
-           <div className="printable-area">
+           <div className="printable-area p-2 sm:p-4 md:p-8">
                 {selectedCycle && (
                     <>
-                        <DialogHeader>
-                            <DialogTitle className="text-2xl font-bold font-headline">Microciclo: {selectedCycle.week}</DialogTitle>
-                            <DialogDescription>
-                                Equipo: {selectedCycle.team} | Metodología: {methodologyLabels[selectedCycle.methodology as MicrocycleMethodology]}
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="my-6 space-y-6">
-                            <div className="p-4 border rounded-lg">
-                                <h3 className="font-semibold text-lg">Objetivo Principal</h3>
-                                <p className="text-gray-700">{selectedCycle.mainObjective}</p>
+                        <DialogHeader className="border-b-2 border-primary pb-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <DialogTitle className="text-3xl font-bold font-headline text-primary">
+                                        Plan de Entrenamiento: {selectedCycle.week}
+                                    </DialogTitle>
+                                    <DialogDescription className="text-base text-muted-foreground">
+                                        Equipo: {selectedCycle.team} | Metodología: {methodologyLabels[selectedCycle.methodology as MicrocycleMethodology]}
+                                    </DialogDescription>
+                                </div>
+                                <div className="text-right">
+                                    <h3 className="font-bold font-headline text-lg">{clubData?.name || 'Unión Opita FC'}</h3>
+                                    <p className="text-sm text-muted-foreground">Entrenador: {profile?.firstName} {profile?.lastName}</p>
+                                </div>
                             </div>
+                        </DialogHeader>
+
+                        <div className="my-8 space-y-8">
+                            <div className="p-4 bg-secondary/50 rounded-lg border">
+                                <h3 className="font-semibold text-xl font-headline text-primary">Objetivo Principal del Microciclo</h3>
+                                <p className="mt-2 text-foreground">{selectedCycle.mainObjective}</p>
+                            </div>
+
                             <div>
-                                <h3 className="font-semibold text-lg mb-2">Plan de Sesiones</h3>
-                                <div className="space-y-4">
-                                {selectedCycle.sessions.map((session: any, index: number) => (
-                                    <div key={index} className="border-t pt-4">
-                                        <div className="flex justify-between items-baseline">
-                                            <h4 className="font-bold text-md">{session.day} - {session.focus}</h4>
-                                            <span className="text-sm text-gray-500">{session.duration} minutos</span>
+                                <h3 className="font-semibold text-2xl font-headline text-primary border-b pb-2 mb-6">Plan de Sesiones</h3>
+                                <div className="space-y-8">
+                                    {selectedCycle.sessions.map((session: any, index: number) => (
+                                        <div key={index} className="border-l-4 border-primary pl-6 py-4 bg-card rounded-r-lg shadow-sm">
+                                            <div className="flex justify-between items-center mb-3">
+                                                <h4 className="font-bold text-xl font-headline">{session.day} - {session.focus}</h4>
+                                                <span className="font-medium text-sm bg-primary text-primary-foreground px-3 py-1 rounded-full">{session.duration} minutos</span>
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground mb-4">
+                                                {session.fieldDimensions && (
+                                                    <span className="flex items-center gap-1.5"><Maximize className="h-4 w-4"/> {session.fieldDimensions}</span>
+                                                )}
+                                                {session.recoveryTime && (
+                                                    <span className="flex items-center gap-1.5"><GlassWater className="h-4 w-4"/> {session.recoveryTime}</span>
+                                                )}
+                                            </div>
+                                            <div className="space-y-3 mt-4">
+                                                <h5 className="font-semibold text-md">Actividades:</h5>
+                                                <p className="text-foreground whitespace-pre-wrap leading-relaxed">{session.activities}</p>
+                                            </div>
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 mt-1">
-                                            {session.fieldDimensions && (
-                                                <span className="flex items-center gap-1.5"><Maximize className="h-4 w-4"/> {session.fieldDimensions}</span>
-                                            )}
-                                            {session.recoveryTime && (
-                                                <span className="flex items-center gap-1.5"><GlassWater className="h-4 w-4"/> {session.recoveryTime}</span>
-                                            )}
-                                        </div>
-                                        <p className="mt-2 text-gray-600 whitespace-pre-wrap">{session.activities}</p>
-                                    </div>
-                                ))}
+                                    ))}
                                 </div>
                             </div>
                         </div>
-                         <DialogFooter className="no-print pt-6">
+
+                         <DialogFooter className="no-print pt-8 border-t mt-8">
                             <Button variant="outline" onClick={() => setIsPrintViewOpen(false)}>Cerrar</Button>
                             <Button onClick={handlePrint}><Printer className="mr-2"/> Imprimir</Button>
                         </DialogFooter>
