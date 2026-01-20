@@ -31,6 +31,7 @@ import {
   UserPlus,
   Loader2,
   BrainCircuit,
+  CalendarDays,
 } from "lucide-react";
 import { useFirebase } from "@/firebase";
 
@@ -52,8 +53,9 @@ const coachNav = [
     { href: "/dashboard/coach", label: "Resumen", icon: LayoutDashboard },
     { href: "/dashboard/coach/athletes", label: "Mis Deportistas", icon: Users },
     { href: "/dashboard/coach/planning", label: "Planificación", icon: CalendarClock },
-    { href: "/dashboard/coach/tasks", label: "Mis Tareas", icon: ListTodo },
+    { href: "/dashboard/coach/schedule", label: "Mis Horarios", icon: CalendarDays },
     { href: "/dashboard/coach/attendance", label: "Asistencia", icon: UserCheck },
+    { href: "/dashboard/coach/tasks", label: "Mis Tareas", icon: ListTodo },
     { href: "/dashboard/coach/profile", label: "Mi Perfil", icon: User },
 ];
 

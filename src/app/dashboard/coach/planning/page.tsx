@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -9,7 +10,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Printer, Loader2, Clock, MapPin, CalendarIcon, Maximize, GlassWater } from 'lucide-react';
+import { Printer, Loader2, Maximize, GlassWater } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -38,12 +39,6 @@ const methodologyLabels: Record<MicrocycleMethodology, string> = {
     futbol_medida: 'Fútbol a la Medida',
     periodizacion_tactica: 'Periodización Táctica'
 };
-
-const createSafeKeyForCategory = (categoryName: string) => {
-    if (!categoryName) return '';
-    return categoryName.replace(/[\s/]/g, '-');
-};
-
 
 export default function CoachPlanningPage() {
   const { profile, isUserLoading, firestore } = useUser();
@@ -104,23 +99,6 @@ export default function CoachPlanningPage() {
                         </AccordionTrigger>
                         <AccordionContent className="p-6 pt-0">
                         <div className="space-y-4">
-                            {(() => {
-                                const schedule = clubData?.trainingSchedules?.[createSafeKeyForCategory(cycle.team)];
-                                if (schedule && Array.isArray(schedule) && schedule.length > 0) {
-                                    return (
-                                        <div className="space-y-2 border-b pb-4 mb-4">
-                                            {schedule.map((session: any, index: number) => (
-                                                <div key={index} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                                                   <span className="flex items-center gap-1.5 font-medium"><CalendarIcon className="h-4 w-4"/> {session.day}</span>
-                                                   <span className="flex items-center gap-1.5 font-medium"><Clock className="h-4 w-4"/> {session.time}</span>
-                                                   <span className="flex items-center gap-1.5 font-medium"><MapPin className="h-4 w-4"/> {session.location}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    );
-                                }
-                                return null;
-                            })()}
                             <div>
                                 <h5 className="font-semibold">Objetivo Principal</h5>
                                 <p className="text-muted-foreground">{cycle.mainObjective}</p>
