@@ -6,6 +6,8 @@ const sessionSchema = z.object({
   focus: z.string().describe("Foco principal de la sesión (Ej: Técnica, Táctica, Físico, Estrategia)."),
   duration: z.number().describe("Duración de la sesión en minutos."),
   activities: z.string().describe("Descripción detallada de las actividades y ejercicios a realizar. Usa saltos de línea para separar las fases (Calentamiento, Parte Principal, Vuelta a la Calma)."),
+  fieldDimensions: z.string().describe("Dimensiones del terreno de juego a utilizar para los ejercicios principales (Ej: 'Medio campo', '20x30 metros', 'Espacio reducido'). Debe ser apropiado para la categoría y el objetivo.").optional(),
+  recoveryTime: z.string().describe("Indicaciones sobre los tiempos de recuperación o pausas para hidratación (Ej: 'Pausas de 2 min cada 15 min', 'Hidratación libre', 'Recuperación activa entre series'). Debe ser apropiado para la intensidad y la edad de los jugadores.").optional(),
 });
 
 const microcycleSchema = z.object({

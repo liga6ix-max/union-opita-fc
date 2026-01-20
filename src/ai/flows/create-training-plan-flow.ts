@@ -58,6 +58,8 @@ const prompt = ai.definePrompt({
         -   'focus': El foco de la sesión (Técnico, Táctico, Físico, etc.).
         -   'duration': La duración en minutos (ajusta la duración según la edad/metodología, ej: 45-60 min para tecnificación, 90 min para periodización táctica).
         -   'activities': Una descripción clara y concisa de los ejercicios. Estructura las actividades en "Calentamiento", "Parte Principal" y "Vuelta a la Calma".
+        -   'fieldDimensions': Las dimensiones del terreno a utilizar (Ej: 'Medio campo', '20x30m'). Debe ser adecuado para la categoría y el objetivo.
+        -   'recoveryTime': Indicaciones sobre las pausas de recuperación e hidratación (Ej: 'Pausas de 2 min cada 15 min', 'Hidratación libre'). Debe ser adecuado para la categoría y la intensidad del entrenamiento.
 
         **IMPORTANTE:** El contenido debe ser 100% en español. Asegúrate de que la progresión de los objetivos y la complejidad de las actividades sean coherentes con la metodología y la categoría de edad.
     `,

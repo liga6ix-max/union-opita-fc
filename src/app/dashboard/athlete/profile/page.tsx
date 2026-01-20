@@ -21,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2, DollarSign, Banknote, Landmark, Hash, Info, Trophy, CalendarIcon, ShieldAlert, CheckCircle, XCircle, Wind, ArrowUpFromLine, Zap, Footprints, Timer, Scale, Ruler, Clock, MapPin } from 'lucide-react';
+import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2, DollarSign, Banknote, Landmark, Hash, Info, Trophy, CalendarIcon, ShieldAlert, CheckCircle, XCircle, Wind, ArrowUpFromLine, Zap, Footprints, Timer, Scale, Ruler, Clock, MapPin, Maximize, GlassWater } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
@@ -417,7 +417,15 @@ export default function AthleteProfilePage() {
                                                      {attendanceStatus === false && <Badge variant="destructive"><XCircle className="h-4 w-4 mr-1"/>No Asistió</Badge>}
                                                      {attendanceStatus === undefined && <Badge variant="outline">Pendiente</Badge>}
                                                 </div>
-                                                <p className="text-muted-foreground whitespace-pre-wrap mt-1">{session.activities}</p>
+                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
+                                                    {session.fieldDimensions && (
+                                                        <span className="flex items-center gap-1.5"><Maximize className="h-4 w-4"/> {session.fieldDimensions}</span>
+                                                    )}
+                                                    {session.recoveryTime && (
+                                                        <span className="flex items-center gap-1.5"><GlassWater className="h-4 w-4"/> {session.recoveryTime}</span>
+                                                    )}
+                                                </div>
+                                                <p className="text-muted-foreground whitespace-pre-wrap mt-2">{session.activities}</p>
                                             </div>
                                         );
                                     })}

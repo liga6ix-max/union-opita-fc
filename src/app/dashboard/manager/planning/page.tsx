@@ -20,7 +20,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BrainCircuit, Loader2, Trash2 } from 'lucide-react';
+import { BrainCircuit, Loader2, Trash2, Maximize, GlassWater } from 'lucide-react';
 import {
   Form,
   FormControl,
@@ -281,7 +281,15 @@ export default function ManagerPlanningPage() {
                                   {cycle.sessions.map((session:any, index:number) => (
                                       <div key={index} className="border-l-2 border-primary pl-4 py-2">
                                           <p className="font-bold">{session.day} - {session.focus} ({session.duration} min)</p>
-                                          <p className="text-muted-foreground whitespace-pre-wrap">{session.activities}</p>
+                                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
+                                              {session.fieldDimensions && (
+                                                  <span className="flex items-center gap-1.5"><Maximize className="h-4 w-4"/> {session.fieldDimensions}</span>
+                                              )}
+                                              {session.recoveryTime && (
+                                                  <span className="flex items-center gap-1.5"><GlassWater className="h-4 w-4"/> {session.recoveryTime}</span>
+                                              )}
+                                          </div>
+                                          <p className="text-muted-foreground whitespace-pre-wrap mt-2">{session.activities}</p>
                                       </div>
                                   ))}
                               </div>
