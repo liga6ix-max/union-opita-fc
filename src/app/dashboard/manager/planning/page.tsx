@@ -61,9 +61,9 @@ import {
 type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica';
 
 const methodologyLabels: Record<MicrocycleMethodology, string> = {
-    tecnificacion: 'Tecnificación (4-7 años)',
-    futbol_medida: 'Fútbol a la Medida (8-11 años)',
-    periodizacion_tactica: 'Periodización Táctica (12-20 años)'
+    tecnificacion: 'Tecnificación',
+    futbol_medida: 'Fútbol a la Medida',
+    periodizacion_tactica: 'Periodización Táctica'
 };
 
 const PlanningFormSchema = TrainingPlanInputSchema.extend({
