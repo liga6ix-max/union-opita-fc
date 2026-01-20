@@ -301,7 +301,7 @@ export default function ManagerAthleteProfilePage() {
                              <FormField control={control} name="coachId" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Entrenador Asignado</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl><SelectTrigger><SelectValue placeholder="Asignar Entrenador" /></SelectTrigger></FormControl>
                                         <SelectContent>
                                             {coaches?.map(c => (
@@ -315,7 +315,7 @@ export default function ManagerAthleteProfilePage() {
                              <FormField control={control} name="documentType" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Tipo de Documento</FormLabel>
-                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger></FormControl>
                                         <SelectContent>
                                             <SelectItem value="TI">Tarjeta de Identidad</SelectItem>
@@ -338,7 +338,7 @@ export default function ManagerAthleteProfilePage() {
                              <FormField control={control} name="gender" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Género</FormLabel>
-                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger></FormControl>
                                         <SelectContent>
                                             <SelectItem value="Masculino">Masculino</SelectItem>
