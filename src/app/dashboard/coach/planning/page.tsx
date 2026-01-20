@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -10,7 +10,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Printer, Loader2, Maximize, GlassWater } from 'lucide-react';
+import { Printer, Loader2, Maximize, GlassWater, Users } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -57,6 +57,19 @@ export default function CoachPlanningPage() {
     return doc(firestore, 'clubs', profile.clubId);
   }, [firestore, profile]));
 
+  const cyclesByCategory = useMemo(() => {
+    if (!coachCycles) return {};
+    return coachCycles.reduce((acc, cycle) => {
+        const category = cycle.team || 'Sin Categoría';
+        if (!acc[category]) {
+            acc[category] = [];
+        }
+        acc[category].push(cycle);
+        return acc;
+    }, {} as Record<string, any[]>);
+  }, [coachCycles]);
+
+
   const handlePrint = () => {
     setTimeout(() => {
         window.print();
@@ -78,59 +91,69 @@ export default function CoachPlanningPage() {
         <CardHeader>
           <CardTitle className="font-headline">Mi Planificación Semanal</CardTitle>
           <CardDescription>
-            Consulta los microciclos de entrenamiento que te ha asignado el administrador.
+            Consulta los microciclos de entrenamiento que te ha asignado el administrador, organizados por categoría.
           </CardDescription>
         </CardHeader>
         <CardContent>
             {!coachCycles || coachCycles.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">Aún no tienes microciclos asignados.</p>
             ) : (
-                <Accordion type="single" collapsible className="w-full space-y-4">
-                {coachCycles.map((cycle) => (
-                    <Card key={cycle.id}>
-                    <AccordionItem value={`cycle-${cycle.id}`} className="border-b-0">
-                        <AccordionTrigger className="p-6 hover:no-underline">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full pr-4 text-left">
-                            <div>
-                                <h4 className="font-bold text-lg">{cycle.week} - {cycle.team}</h4>
-                                <Badge variant="secondary" className="mt-2">{methodologyLabels[cycle.methodology as MicrocycleMethodology]}</Badge>
-                            </div>
-                        </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="p-6 pt-0">
-                        <div className="space-y-4">
-                            <div>
-                                <h5 className="font-semibold">Objetivo Principal</h5>
-                                <p className="text-muted-foreground">{cycle.mainObjective}</p>
-                            </div>
-                            <div className="space-y-2">
-                                <h5 className="font-semibold">Sesiones</h5>
-                                {cycle.sessions.map((session: any, index: number) => (
-                                    <div key={index} className="border-l-2 border-primary pl-4 py-2">
-                                        <p className="font-bold">{session.day} - {session.focus} ({session.duration} min)</p>
-                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
-                                            {session.fieldDimensions && (
-                                                <span className="flex items-center gap-1.5"><Maximize className="h-4 w-4"/> {session.fieldDimensions}</span>
-                                            )}
-                                            {session.recoveryTime && (
-                                                <span className="flex items-center gap-1.5"><GlassWater className="h-4 w-4"/> {session.recoveryTime}</span>
-                                            )}
-                                        </div>
-                                        <p className="text-muted-foreground whitespace-pre-wrap mt-2">{session.activities}</p>
+                <div className="space-y-8">
+                {Object.entries(cyclesByCategory).map(([category, cycles]) => (
+                    <div key={category}>
+                        <h3 className="text-2xl font-bold font-headline text-primary mb-4 flex items-center gap-2">
+                            <Users className="h-6 w-6" />
+                            Categoría: {category}
+                        </h3>
+                        <Accordion type="single" collapsible className="w-full space-y-4">
+                        {cycles.map((cycle) => (
+                            <Card key={cycle.id}>
+                            <AccordionItem value={`cycle-${cycle.id}`} className="border-b-0">
+                                <AccordionTrigger className="p-6 hover:no-underline">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full pr-4 text-left">
+                                    <div>
+                                        <h4 className="font-bold text-lg">{cycle.week}</h4>
+                                        <Badge variant="secondary" className="mt-2">{methodologyLabels[cycle.methodology as MicrocycleMethodology]}</Badge>
                                     </div>
-                                ))}
-                            </div>
-                            <div className='pt-4'>
-                                <Button onClick={() => openPrintModal(cycle)}>
-                                    <Printer className="mr-2" /> Imprimir Plan
-                                </Button>
-                            </div>
-                        </div>
-                        </AccordionContent>
-                    </AccordionItem>
-                    </Card>
+                                </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="p-6 pt-0">
+                                <div className="space-y-4">
+                                    <div>
+                                        <h5 className="font-semibold">Objetivo Principal</h5>
+                                        <p className="text-muted-foreground">{cycle.mainObjective}</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h5 className="font-semibold">Sesiones</h5>
+                                        {cycle.sessions.map((session: any, index: number) => (
+                                            <div key={index} className="border-l-2 border-primary pl-4 py-2">
+                                                <p className="font-bold">{session.day} - {session.focus} ({session.duration} min)</p>
+                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
+                                                    {session.fieldDimensions && (
+                                                        <span className="flex items-center gap-1.5"><Maximize className="h-4 w-4"/> {session.fieldDimensions}</span>
+                                                    )}
+                                                    {session.recoveryTime && (
+                                                        <span className="flex items-center gap-1.5"><GlassWater className="h-4 w-4"/> {session.recoveryTime}</span>
+                                                    )}
+                                                </div>
+                                                <p className="text-muted-foreground whitespace-pre-wrap mt-2">{session.activities}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className='pt-4'>
+                                        <Button onClick={() => openPrintModal(cycle)}>
+                                            <Printer className="mr-2" /> Imprimir Plan
+                                        </Button>
+                                    </div>
+                                </div>
+                                </AccordionContent>
+                            </AccordionItem>
+                            </Card>
+                        ))}
+                        </Accordion>
+                    </div>
                 ))}
-                </Accordion>
+                </div>
             )}
         </CardContent>
       </Card>
