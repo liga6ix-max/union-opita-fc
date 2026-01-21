@@ -28,8 +28,7 @@ import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase/provider';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { doc, setDoc } from 'firebase/firestore';
 
 const registerSchema = z.object({
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres.'),
@@ -84,7 +83,7 @@ export default function RegisterPage() {
             role: 'athlete', // Default role is athlete
             disabled: true, // User is disabled by default until a manager enables them
         };
-        setDocumentNonBlocking(userDocRef, userData, {});
+        await setDoc(userDocRef, userData);
         
         const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, user.uid);
         const athleteData = {
@@ -94,7 +93,7 @@ export default function RegisterPage() {
             firstName: data.name.split(' ')[0] || '',
             lastName: data.name.split(' ').slice(1).join(' ') || '',
         };
-        setDocumentNonBlocking(athleteDocRef, athleteData, { merge: true });
+        await setDoc(athleteDocRef, athleteData, { merge: true });
 
         setIsLoading(false);
 
