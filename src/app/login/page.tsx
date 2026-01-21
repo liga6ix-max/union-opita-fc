@@ -73,12 +73,22 @@ export default function LoginPage() {
     } catch (error: any) {
         console.error("Error al iniciar sesión:", error);
         setIsLoading(false);
-        let description = "No se pudo iniciar sesión. Por favor, verifica tus credenciales.";
-        if(error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-            description = 'Correo o contraseña incorrectos.';
-        } else if (error.code === 'auth/user-disabled') {
-            description = 'Tu cuenta ha sido deshabilitada por un administrador.'
+        let description = "Ocurrió un error inesperado al intentar iniciar sesión.";
+        
+        switch (error.code) {
+            case 'auth/invalid-credential':
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+                description = 'Correo electrónico o contraseña incorrectos. Por favor, verifica tus datos.';
+                break;
+            case 'auth/user-disabled':
+                description = 'Tu cuenta ha sido inhabilitada por un administrador.';
+                break;
+            case 'auth/too-many-requests':
+                description = 'Acceso bloqueado temporalmente por demasiados intentos fallidos. Intenta más tarde.';
+                break;
         }
+
         toast({
             variant: "destructive",
             title: "Error al iniciar sesión",
