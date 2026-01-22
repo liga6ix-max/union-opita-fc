@@ -6,6 +6,8 @@ import { Firestore, doc, onSnapshot, DocumentData } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 import { useRouter, usePathname } from 'next/navigation';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 // Define the shape of the user profile data stored in Firestore
 export interface UserProfile {
@@ -102,8 +104,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
               }
             },
             (error) => {
-              console.error("FirebaseProvider: Firestore onSnapshot error:", error);
-              setUserAuthState({ user: firebaseUser, profile: null, isUserLoading: false, userError: error });
+              const contextualError = new FirestorePermissionError({
+                operation: 'get',
+                path: userDocRef.path,
+              });
+              setUserAuthState({ user: firebaseUser, profile: null, isUserLoading: false, userError: contextualError });
+              errorEmitter.emit('permission-error', contextualError);
             }
           );
           // Return the profile listener's unsubscribe function to be called on cleanup
