@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -83,15 +82,22 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       (firebaseUser) => {
         if (firebaseUser) {
-          // User is signed in, now fetch their profile from Firestore
-          if (!firestore) return;
+          // User is signed in. Set loading to true while we fetch their profile.
+          setUserAuthState(prevState => ({ ...prevState, user: firebaseUser, isUserLoading: true }));
+
+          if (!firestore) {
+             setUserAuthState({ user: firebaseUser, profile: null, isUserLoading: false, userError: new Error("Firestore service not available.") });
+             return;
+          };
+
           const userDocRef = doc(firestore, 'users', firebaseUser.uid);
           const profileUnsubscribe = onSnapshot(userDocRef, 
             (docSnap) => {
               if (docSnap.exists()) {
+                // Profile exists, set it and mark loading as false
                 setUserAuthState({ user: firebaseUser, profile: docSnap.data() as UserProfile, isUserLoading: false, userError: null });
               } else {
-                // Profile doesn't exist, might be an error state or sign-up in progress
+                // Profile doesn't exist, might be a new registration or an error.
                 setUserAuthState({ user: firebaseUser, profile: null, isUserLoading: false, userError: null });
               }
             },
@@ -103,7 +109,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           // Return the profile listener's unsubscribe function to be called on cleanup
           return () => profileUnsubscribe();
         } else {
-          // User is signed out. Clear user state.
+          // User is signed out. Clear user state and set loading to false.
           setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: null });
         }
       },
