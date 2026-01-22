@@ -79,10 +79,18 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
       return;
     }
+    
+    let profileUnsubscribe: (() => void) | null = null;
 
     const authUnsubscribe = onAuthStateChanged(
       auth,
       (firebaseUser) => {
+        // First, clean up any existing profile listener
+        if (profileUnsubscribe) {
+          profileUnsubscribe();
+          profileUnsubscribe = null;
+        }
+
         if (firebaseUser) {
           // User is signed in. Set loading to true while we fetch their profile.
           setUserAuthState(prevState => ({ ...prevState, user: firebaseUser, isUserLoading: true }));
@@ -93,7 +101,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           };
 
           const userDocRef = doc(firestore, 'users', firebaseUser.uid);
-          const profileUnsubscribe = onSnapshot(userDocRef, 
+          // Set up the new profile listener
+          profileUnsubscribe = onSnapshot(userDocRef, 
             (docSnap) => {
               if (docSnap.exists()) {
                 // Profile exists, set it and mark loading as false
@@ -112,8 +121,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
               errorEmitter.emit('permission-error', contextualError);
             }
           );
-          // Return the profile listener's unsubscribe function to be called on cleanup
-          return () => profileUnsubscribe();
         } else {
           // User is signed out. Clear user state and set loading to false.
           setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: null });
@@ -125,7 +132,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       }
     );
     
-    return () => authUnsubscribe();
+    return () => {
+      authUnsubscribe();
+      if (profileUnsubscribe) {
+        profileUnsubscribe();
+      }
+    };
   }, [auth, firestore]);
 
   // Effect to handle redirection on auth state change
