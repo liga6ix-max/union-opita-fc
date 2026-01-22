@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, User, Target, ArrowRight, Loader2, MoreVertical } from "lucide-react";
+import { Users, User, Target, ArrowRight, Loader2, MoreVertical, CalendarDays, Clock, MapPin } from "lucide-react";
 import { useUser, useCollection, useMemoFirebase, useFirebase, useDoc, errorEmitter, FirestorePermissionError } from "@/firebase";
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -22,7 +22,8 @@ import clubConfig from "@/lib/club-config.json";
 const MAIN_CLUB_ID = 'OpitaClub';
 
 const createSafeKeyForTeam = (teamName: string) => {
-    return teamName.replace(/\s/g, '').replace(/\//g, '-');
+    if (!teamName) return '';
+    return teamName.replace(/[\s/]/g, '-');
 }
 
 export default function ManagerTeamsPage() {
@@ -106,6 +107,12 @@ export default function ManagerTeamsPage() {
         });
     };
 
+    const getScheduleForTeam = (teamName: string) => {
+        if (!clubData?.trainingSchedules) return [];
+        const safeKey = createSafeKeyForTeam(teamName);
+        return clubData.trainingSchedules[safeKey] || [];
+    };
+
     const { categories } = clubConfig;
 
     return (
@@ -119,6 +126,7 @@ export default function ManagerTeamsPage() {
                     const teamName = category.name;
                     const teamAthletes = athletes?.filter(a => a.team === teamName) || [];
                     const currentCoach = getCoachForTeam(teamName);
+                    const schedule = getScheduleForTeam(teamName);
                     
                     return (
                         <Card key={teamName} className="flex flex-col">
@@ -163,6 +171,22 @@ export default function ManagerTeamsPage() {
                                         <span className="font-semibold text-foreground">Objetivo Actual:</span>
                                         <p className="text-sm">{getObjectiveForTeam(teamName)}</p>
                                     </div>
+                                </div>
+                                <div className="space-y-2 pt-4 border-t">
+                                    <h4 className="font-semibold text-sm flex items-center gap-2"><CalendarDays className="h-4 w-4 text-muted-foreground"/> Horario</h4>
+                                    {schedule && schedule.length > 0 ? (
+                                        <div className="text-sm space-y-1">
+                                            {schedule.map((session, index) => (
+                                                <div key={index} className="flex items-center gap-2">
+                                                    <span className="font-medium text-foreground w-24">{session.day}:</span>
+                                                    <span className="text-muted-foreground">{session.time}</span>
+                                                    <span className="text-muted-foreground truncate">({session.location})</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">No hay horario definido.</p>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
