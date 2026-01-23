@@ -203,7 +203,42 @@ export default function CoachMatchesPage() {
                 <DialogHeader><DialogTitle>Crear Nuevo Partido</DialogTitle></DialogHeader>
                 <Form {...createForm}>
                   <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-6 py-4 max-h-[80vh] overflow-y-auto pr-6">
-                      <FormField control={createForm.control} name="categories" render={() => ( <FormItem> <FormLabel>Categorías Convocadas</FormLabel> <div className="grid grid-cols-2 md:grid-cols-4 gap-4 rounded-lg border p-4"> {clubConfig.categories.map((item) => ( <FormField key={item.name} control={createForm.control} name="categories" render={({ field }) => ( <FormItem key={item.name} className="flex flex-row items-start space-x-3 space-y-0"> <FormControl> <Checkbox checked={field.value?.includes(item.name)} onCheckedChange={(checked) => { return checked ? field.onChange([...(field.value || []), item.name]) : field.onChange(field.value?.filter((value) => value !== item.name)); }} /> </FormControl> <FormLabel className="font-normal">{item.name}</FormLabel> </FormItem> )} /> ))} </div> <FormMessage /> </FormItem> )}/>
+                      <FormField
+                        control={createForm.control}
+                        name="categories"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Categorías Convocadas</FormLabel>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 rounded-lg border p-4">
+                              {clubConfig.categories.map((item) => (
+                                <FormItem
+                                  key={item.name}
+                                  className="flex flex-row items-start space-x-3 space-y-0"
+                                >
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(item.name)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([...(field.value || []), item.name])
+                                          : field.onChange(
+                                              (field.value || []).filter(
+                                                (value) => value !== item.name
+                                              )
+                                            );
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="font-normal">
+                                    {item.name}
+                                  </FormLabel>
+                                </FormItem>
+                              ))}
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <FormField control={createForm.control} name="matchDate" render={({ field }) => (<FormItem><FormLabel>Fecha del Partido</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                           <FormField control={createForm.control} name="matchTime" render={({ field }) => (<FormItem><FormLabel>Hora del Partido</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>)}/>
@@ -281,7 +316,42 @@ export default function CoachMatchesPage() {
           <DialogHeader><DialogTitle>Editar Partido</DialogTitle></DialogHeader>
           <Form {...editForm}>
             <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-6 py-4 max-h-[80vh] overflow-y-auto pr-6">
-                 <FormField control={editForm.control} name="categories" render={() => ( <FormItem> <FormLabel>Categorías Convocadas</FormLabel> <div className="grid grid-cols-2 md:grid-cols-4 gap-4 rounded-lg border p-4"> {clubConfig.categories.map((item) => ( <FormField key={item.name} control={editForm.control} name="categories" render={({ field }) => ( <FormItem key={item.name} className="flex flex-row items-start space-x-3 space-y-0"> <FormControl> <Checkbox checked={field.value?.includes(item.name)} onCheckedChange={(checked) => { return checked ? field.onChange([...(field.value || []), item.name]) : field.onChange(field.value?.filter((value) => value !== item.name)); }} /> </FormControl> <FormLabel className="font-normal">{item.name}</FormLabel> </FormItem> )} /> ))} </div> <FormMessage /> </FormItem> )}/>
+                 <FormField
+                    control={editForm.control}
+                    name="categories"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Categorías Convocadas</FormLabel>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 rounded-lg border p-4">
+                          {clubConfig.categories.map((item) => (
+                            <FormItem
+                              key={item.name}
+                              className="flex flex-row items-start space-x-3 space-y-0"
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(item.name)}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...(field.value || []), item.name])
+                                      : field.onChange(
+                                          (field.value || []).filter(
+                                            (value) => value !== item.name
+                                          )
+                                        );
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                {item.name}
+                              </FormLabel>
+                            </FormItem>
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <FormField control={editForm.control} name="matchDate" render={({ field }) => (<FormItem><FormLabel>Fecha del Partido</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                      <FormField control={editForm.control} name="matchTime" render={({ field }) => (<FormItem><FormLabel>Hora del Partido</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>)}/>
