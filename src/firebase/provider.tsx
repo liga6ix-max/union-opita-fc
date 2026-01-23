@@ -19,7 +19,25 @@ export interface UserProfile {
   role: 'manager' | 'coach' | 'athlete';
   disabled?: boolean;
   salary?: number;
+  team?: string;
+  birthDate?: string;
+  gender?: 'Masculino' | 'Femenino';
+  bloodType?: string;
+  documentType?: 'TI' | 'CC' | 'RC';
+  documentNumber?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  medicalInformation?: string;
+  coachId?: string;
+  weight?: number;
+  height?: number;
+  vo2max?: number;
+  jumpHeight?: number;
+  speedTest30mTime?: number;
+  ankleFlexibility?: number;
+  enduranceTest8kmTime?: string;
 }
+
 
 interface UserAuthState {
   user: User | null;
@@ -73,70 +91,78 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     userError: null,
   });
 
-  // Effect to subscribe to Firebase auth state changes
+  // Effect to subscribe to Firebase auth state changes and fetch user profiles
   useEffect(() => {
     if (!auth) {
       setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
       return;
     }
-    
+
     let profileUnsubscribe: (() => void) | null = null;
+    let athleteUnsubscribe: (() => void) | null = null;
 
-    const authUnsubscribe = onAuthStateChanged(
-      auth,
-      (firebaseUser) => {
-        // First, clean up any existing profile listener
-        if (profileUnsubscribe) {
-          profileUnsubscribe();
-          profileUnsubscribe = null;
+    const authUnsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      // Clean up previous data listeners on auth state change
+      profileUnsubscribe?.();
+      athleteUnsubscribe?.();
+
+      if (firebaseUser) {
+        setUserAuthState(prevState => ({ ...prevState, user: firebaseUser, isUserLoading: true }));
+
+        if (!firestore) {
+          setUserAuthState({ user: firebaseUser, profile: null, isUserLoading: false, userError: new Error("Firestore service not available.") });
+          return;
         }
 
-        if (firebaseUser) {
-          // User is signed in. Set loading to true while we fetch their profile.
-          setUserAuthState(prevState => ({ ...prevState, user: firebaseUser, isUserLoading: true }));
+        const userDocRef = doc(firestore, 'users', firebaseUser.uid);
 
-          if (!firestore) {
-             setUserAuthState({ user: firebaseUser, profile: null, isUserLoading: false, userError: new Error("Firestore service not available.") });
-             return;
-          };
+        profileUnsubscribe = onSnapshot(userDocRef, (userDocSnap) => {
+          if (userDocSnap.exists()) {
+            const userData = userDocSnap.data() as UserProfile;
 
-          const userDocRef = doc(firestore, 'users', firebaseUser.uid);
-          // Set up the new profile listener
-          profileUnsubscribe = onSnapshot(userDocRef, 
-            (docSnap) => {
-              if (docSnap.exists()) {
-                // Profile exists, set it and mark loading as false
-                setUserAuthState({ user: firebaseUser, profile: docSnap.data() as UserProfile, isUserLoading: false, userError: null });
-              } else {
-                // Profile doesn't exist, might be a new registration or an error.
-                setUserAuthState({ user: firebaseUser, profile: null, isUserLoading: false, userError: null });
-              }
-            },
-            (error) => {
-              const contextualError = new FirestorePermissionError({
-                operation: 'get',
-                path: userDocRef.path,
-              });
-              setUserAuthState({ user: firebaseUser, profile: null, isUserLoading: false, userError: contextualError });
-              errorEmitter.emit('permission-error', contextualError);
+            // If the user is an athlete, we also need to fetch their specific data
+            // from the athletes subcollection to get properties like 'team'.
+            if (userData.role === 'athlete' && userData.clubId) {
+              const athleteDocRef = doc(firestore, `clubs/${userData.clubId}/athletes`, firebaseUser.uid);
+              athleteUnsubscribe = onSnapshot(athleteDocRef,
+                (athleteDocSnap) => {
+                  const athleteData = athleteDocSnap.exists() ? athleteDocSnap.data() : {};
+                  const combinedProfile = { ...userData, ...athleteData };
+                  setUserAuthState({ user: firebaseUser, profile: combinedProfile, isUserLoading: false, userError: null });
+                },
+                (error) => {
+                  // If athlete doc fails, proceed with the main user profile
+                  setUserAuthState({ user: firebaseUser, profile: userData, isUserLoading: false, userError: error });
+                }
+              );
+            } else {
+              // For non-athletes, the main user document is enough
+              setUserAuthState({ user: firebaseUser, profile: userData, isUserLoading: false, userError: null });
             }
-          );
-        } else {
-          // User is signed out. Clear user state and set loading to false.
-          setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: null });
-        }
-      },
-      (error) => {
-        console.error("FirebaseProvider: onAuthStateChanged error:", error);
-        setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: error });
+          } else {
+            // User is authenticated, but no profile document found
+            setUserAuthState({ user: firebaseUser, profile: null, isUserLoading: false, userError: null });
+          }
+        }, (error) => {
+          // Error fetching the main user document
+          const contextualError = new FirestorePermissionError({ operation: 'get', path: userDocRef.path });
+          setUserAuthState({ user: firebaseUser, profile: null, isUserLoading: false, userError: contextualError });
+          errorEmitter.emit('permission-error', contextualError);
+        });
+      } else {
+        // User is signed out
+        setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: null });
       }
-    );
-    
+    }, (error) => {
+      // Error with the auth listener itself
+      setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: error });
+    });
+
+    // Cleanup function for the useEffect hook
     return () => {
       authUnsubscribe();
-      if (profileUnsubscribe) {
-        profileUnsubscribe();
-      }
+      profileUnsubscribe?.();
+      athleteUnsubscribe?.();
     };
   }, [auth, firestore]);
 
@@ -227,6 +253,3 @@ export const useUser = (): UserHookResult => {
   const { user, profile, isUserLoading, userError, firestore } = context;
   return { user, profile, isUserLoading, userError, firestore };
 };
-
-
-    
