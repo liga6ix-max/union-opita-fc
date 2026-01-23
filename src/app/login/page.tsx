@@ -77,8 +77,6 @@ export default function LoginPage() {
         
         switch (error.code) {
             case 'auth/invalid-credential':
-            case 'auth/user-not-found':
-            case 'auth/wrong-password':
                 description = 'Correo electrónico o contraseña incorrectos. Por favor, verifica tus datos.';
                 break;
             case 'auth/user-disabled':
