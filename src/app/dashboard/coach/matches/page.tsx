@@ -31,10 +31,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
-import { collection, query, serverTimestamp, doc } from 'firebase/firestore';
+import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, serverTimestamp, doc, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { Swords, PlusCircle, Loader2, Users, MoreVertical, Pencil, Trash2, Calendar, Clock, MapPin } from 'lucide-react';
+import { Swords, PlusCircle, Loader2, Users, MoreVertical, Pencil, Trash2, Calendar, Clock, MapPin, CheckCircle, XCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -58,6 +58,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Separator } from '@/components/ui/separator';
 
 const matchSchema = z.object({
   categories: z.array(z.string()).min(1, "Debes seleccionar al menos una categoría."),
@@ -86,16 +87,40 @@ export default function CoachMatchesPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
+  const [attendanceList, setAttendanceList] = useState<any[]>([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
 
-  const { profile, isUserLoading } = useUser();
-  const { firestore } = useFirebase();
+  const { profile, isUserLoading, firestore } = useUser();
   
   const matchesQuery = useMemoFirebase(() => {
     if (!firestore || !profile) return null;
     return query(collection(firestore, `clubs/${MAIN_CLUB_ID}/matches`));
   }, [firestore, profile]);
-  
   const { data: matches, isLoading: matchesLoading } = useCollection(matchesQuery);
+
+  const allUsersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID));
+  }, [firestore]);
+  const { data: allUsers, isLoading: usersLoading } = useCollection(allUsersQuery);
+
+  useEffect(() => {
+    if (isEditDialogOpen && selectedMatch && firestore) {
+      setAttendanceLoading(true);
+      const attendanceQuery = query(
+        collection(firestore, `clubs/${MAIN_CLUB_ID}/attendance`),
+        where("matchId", "==", selectedMatch.id)
+      );
+      const unsubscribe = onSnapshot(attendanceQuery, (snapshot) => {
+        const attendances = snapshot.docs.map(doc => doc.data());
+        setAttendanceList(attendances);
+        setAttendanceLoading(false);
+      });
+      return () => unsubscribe();
+    } else {
+      setAttendanceList([]);
+    }
+  }, [isEditDialogOpen, selectedMatch, firestore]);
 
   const createForm = useForm<MatchFormValues>({
     resolver: zodResolver(matchSchema),
@@ -136,11 +161,17 @@ export default function CoachMatchesPage() {
     }
   }, [selectedMatch, isEditDialogOpen, editForm]);
 
-  const onCreateSubmit = (data: MatchFormValues) => {
+  const onCreateSubmit = async (data: MatchFormValues) => {
     if (!firestore || !profile) return;
     
+    const athletesCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`);
+    const athletesQuery = query(athletesCollection, where('team', 'in', data.categories));
+    const athleteDocs = await getDocs(athletesQuery);
+    const calledPlayers = athleteDocs.docs.map(doc => doc.id);
+
     addDocumentNonBlocking(collection(firestore, `clubs/${MAIN_CLUB_ID}/matches`), {
       ...data,
+      calledPlayers,
       clubId: MAIN_CLUB_ID,
       createdBy: profile.id,
       createdAt: serverTimestamp(),
@@ -151,12 +182,18 @@ export default function CoachMatchesPage() {
     createForm.reset();
   };
   
-  const onEditSubmit = (data: MatchFormValues) => {
+  const onEditSubmit = async (data: MatchFormValues) => {
     if (!firestore || !profile || !selectedMatch) return;
     
+    const athletesCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`);
+    const athletesQuery = query(athletesCollection, where('team', 'in', data.categories));
+    const athleteDocs = await getDocs(athletesQuery);
+    const calledPlayers = athleteDocs.docs.map(doc => doc.id);
+
     const matchRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/matches`, selectedMatch.id);
     updateDocumentNonBlocking(matchRef, {
       ...data,
+      calledPlayers,
       updatedAt: serverTimestamp(),
     });
     
@@ -186,7 +223,7 @@ export default function CoachMatchesPage() {
     setIsDeleteDialogOpen(true);
   }
   
-  const isLoading = isUserLoading || matchesLoading;
+  const isLoading = isUserLoading || matchesLoading || usersLoading;
 
   return (
     <>
@@ -206,33 +243,42 @@ export default function CoachMatchesPage() {
                       <FormField
                         control={createForm.control}
                         name="categories"
-                        render={({ field }) => (
+                        render={() => (
                           <FormItem>
                             <FormLabel>Categorías Convocadas</FormLabel>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 rounded-lg border p-4">
                               {clubConfig.categories.map((item) => (
-                                <FormItem
+                                <FormField
                                   key={item.name}
-                                  className="flex flex-row items-start space-x-3 space-y-0"
-                                >
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(item.name)}
-                                      onCheckedChange={(checked) => {
-                                        return checked
-                                          ? field.onChange([...(field.value || []), item.name])
-                                          : field.onChange(
-                                              (field.value || []).filter(
-                                                (value) => value !== item.name
-                                              )
-                                            );
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="font-normal">
-                                    {item.name}
-                                  </FormLabel>
-                                </FormItem>
+                                  control={createForm.control}
+                                  name="categories"
+                                  render={({ field }) => {
+                                    return (
+                                      <FormItem
+                                        key={item.name}
+                                        className="flex flex-row items-start space-x-3 space-y-0"
+                                      >
+                                        <FormControl>
+                                          <Checkbox
+                                            checked={field.value?.includes(item.name)}
+                                            onCheckedChange={(checked) => {
+                                              return checked
+                                                ? field.onChange([...(field.value || []), item.name])
+                                                : field.onChange(
+                                                    (field.value || []).filter(
+                                                      (value) => value !== item.name
+                                                    )
+                                                  );
+                                            }}
+                                          />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">
+                                          {item.name}
+                                        </FormLabel>
+                                      </FormItem>
+                                    )
+                                  }}
+                                />
                               ))}
                             </div>
                             <FormMessage />
@@ -319,33 +365,42 @@ export default function CoachMatchesPage() {
                  <FormField
                     control={editForm.control}
                     name="categories"
-                    render={({ field }) => (
+                    render={() => (
                       <FormItem>
                         <FormLabel>Categorías Convocadas</FormLabel>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 rounded-lg border p-4">
                           {clubConfig.categories.map((item) => (
-                            <FormItem
-                              key={item.name}
-                              className="flex flex-row items-start space-x-3 space-y-0"
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(item.name)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...(field.value || []), item.name])
-                                      : field.onChange(
-                                          (field.value || []).filter(
-                                            (value) => value !== item.name
-                                          )
-                                        );
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                {item.name}
-                              </FormLabel>
-                            </FormItem>
+                             <FormField
+                                key={item.name}
+                                control={editForm.control}
+                                name="categories"
+                                render={({ field }) => {
+                                return (
+                                    <FormItem
+                                    key={item.name}
+                                    className="flex flex-row items-start space-x-3 space-y-0"
+                                    >
+                                    <FormControl>
+                                        <Checkbox
+                                        checked={field.value?.includes(item.name)}
+                                        onCheckedChange={(checked) => {
+                                            return checked
+                                            ? field.onChange([...(field.value || []), item.name])
+                                            : field.onChange(
+                                                (field.value || []).filter(
+                                                    (value) => value !== item.name
+                                                )
+                                                );
+                                        }}
+                                        />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">
+                                        {item.name}
+                                    </FormLabel>
+                                    </FormItem>
+                                )
+                                }}
+                            />
                           ))}
                         </div>
                         <FormMessage />
@@ -372,6 +427,31 @@ export default function CoachMatchesPage() {
                  <FormField control={editForm.control} name="gameStructure" render={({ field }) => (<FormItem><FormLabel>Estructura de Juego</FormLabel><FormControl><Input placeholder="Ej: 1-4-3-3" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>
                  <FormField control={editForm.control} name="gameIdea" render={({ field }) => (<FormItem><FormLabel>Idea de Juego</FormLabel><FormControl><Textarea placeholder="Describe la idea de juego principal..." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>
                  <FormField control={editForm.control} name="gameModel" render={({ field }) => (<FormItem><FormLabel>Modelo de Juego</FormLabel><FormControl><Textarea placeholder="Describe el modelo de juego a utilizar..." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>
+                 <Separator />
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Asistencia</h3>
+                  {attendanceLoading ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <div className="space-y-2 rounded-lg border max-h-60 overflow-y-auto p-4">
+                      {(selectedMatch?.calledPlayers || []).length > 0 ? (selectedMatch?.calledPlayers.map((athleteId: string) => {
+                        const athlete = allUsers?.find(u => u.id === athleteId);
+                        const attendance = attendanceList.find(a => a.athleteId === athleteId);
+                        const status = attendance?.status || 'Pendiente';
+                        return (
+                          <div key={athleteId} className="flex justify-between items-center">
+                            <span>{athlete?.firstName} {athlete?.lastName}</span>
+                            <Badge variant={status === 'Confirmado' ? 'default' : status === 'Rechazado' ? 'destructive' : 'outline'}>
+                              {status === 'Confirmado' && <CheckCircle className="mr-1 h-3 w-3" />}
+                              {status === 'Rechazado' && <XCircle className="mr-1 h-3 w-3" />}
+                              {status}
+                            </Badge>
+                          </div>
+                        );
+                      })) : (<p className="text-sm text-muted-foreground text-center">No hay jugadores convocados para este partido.</p>)}
+                    </div>
+                  )}
+                </div>
                  <DialogFooter> <Button type="submit" disabled={editForm.formState.isSubmitting}> {editForm.formState.isSubmitting ? <Loader2 className="animate-spin" /> : "Guardar Cambios"} </Button> </DialogFooter>
             </form>
           </Form>

@@ -392,6 +392,21 @@
         "calledPlayers": { "type": "array", "items": { "type": "string" }, "description": "List of athlete IDs." }
       },
       "required": ["id", "clubId", "categories", "matchDate", "matchTime", "attendanceTime", "location", "opponent", "modality"]
+    },
+    "Attendance": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Attendance",
+      "type": "object",
+      "description": "Represents an athlete's attendance confirmation for a match.",
+      "properties": {
+        "id": { "type": "string" },
+        "clubId": { "type": "string" },
+        "matchId": { "type": "string" },
+        "athleteId": { "type": "string" },
+        "status": { "type": "string", "enum": ["Confirmado", "Rechazado"] },
+        "submittedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "clubId", "matchId", "athleteId", "status", "submittedAt"]
     }
   },
   "auth": {
@@ -553,6 +568,20 @@
           "params": [
             { "name": "clubId" },
             { "name": "matchId" }
+          ]
+        }
+      },
+      {
+        "path": "/clubs/{clubId}/attendance/{attendanceId}",
+        "definition": {
+          "entityName": "Attendance",
+          "schema": {
+            "$ref": "#/backend/entities/Attendance"
+          },
+          "description": "Stores athlete attendance responses for matches.",
+          "params": [
+            { "name": "clubId" },
+            { "name": "attendanceId" }
           ]
         }
       }
