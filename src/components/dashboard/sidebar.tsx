@@ -32,6 +32,7 @@ import {
   Loader2,
   BrainCircuit,
   CalendarDays,
+  Swords,
 } from "lucide-react";
 import { useFirebase } from "@/firebase";
 
@@ -43,6 +44,7 @@ const managerNav = [
   { href: "/dashboard/manager/approvals", label: "Aprobaciones", icon: UserPlus },
   { href: "/dashboard/manager/tasks", label: "Tareas", icon: ClipboardList },
   { href: "/dashboard/manager/planning", label: "Planificación", icon: CalendarClock },
+  { href: "/dashboard/manager/matches", label: "Partidos", icon: Swords },
   { href: "/dashboard/manager/evaluations", label: "Evaluaciones", icon: BrainCircuit },
   { href: "/dashboard/manager/payments", label: "Pagos", icon: Wallet },
   { href: "/dashboard/manager/landing", label: "Página Inicio", icon: ImageIcon },
@@ -54,6 +56,7 @@ const coachNav = [
     { href: "/dashboard/coach/athletes", label: "Mis Deportistas", icon: Users },
     { href: "/dashboard/coach/planning", label: "Planificación", icon: CalendarClock },
     { href: "/dashboard/coach/schedule", label: "Mis Horarios", icon: CalendarDays },
+    { href: "/dashboard/coach/matches", label: "Partidos", icon: Swords },
     { href: "/dashboard/coach/attendance", label: "Asistencia", icon: UserCheck },
     { href: "/dashboard/coach/tasks", label: "Mis Tareas", icon: ListTodo },
     { href: "/dashboard/coach/profile", label: "Mi Perfil", icon: User },
@@ -61,6 +64,7 @@ const coachNav = [
 
 const athleteNav = [
     { href: "/dashboard/athlete/profile", label: "Mi Perfil", icon: User },
+    { href: "/dashboard/athlete/matches", label: "Mis Partidos", icon: Swords },
     { href: "/dashboard/athlete/evaluations", label: "Mis Evaluaciones", icon: BrainCircuit },
 ];
 
