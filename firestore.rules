@@ -29,6 +29,22 @@ service cloud.firestore {
       return isSignedIn() && userDoc != null && userDoc.data.role in ['manager', 'coach'];
     }
 
+    function isAssignedCoach(athleteId) {
+      // First, check if the current user is a coach or manager
+      if (!isCoach()) {
+        return false;
+      }
+      // Get the user document of the athlete being modified to find their clubId
+      let athleteUserDoc = getUserDoc(athleteId);
+      if (athleteUserDoc == null || !('clubId' in athleteUserDoc.data)) {
+        return false;
+      }
+      // Get the athlete-specific document from the subcollection
+      let athleteDoc = get(/databases/$(database)/documents/clubs/$(athleteUserDoc.data.clubId)/athletes/$(athleteId));
+      // Check if the athlete document exists and if the current user is the assigned coach
+      return athleteDoc != null && ('coachId' in athleteDoc.data) && athleteDoc.data.coachId == request.auth.uid;
+    }
+
     function isAthlete() {
       let userDoc = getUserDoc(request.auth.uid);
       return isSignedIn() && userDoc != null && userDoc.data.role == 'athlete';
@@ -63,8 +79,8 @@ service cloud.firestore {
       // Anyone can create a user account (e.g., during sign-up).
       allow create: if true;
       
-      // Managers can update any user. Users can update their own profile.
-      allow update: if isManager() || isOwner(userId);
+      // Managers can update any user. Users can update their own profile. Coaches can update their assigned athletes.
+      allow update: if isManager() || isOwner(userId) || isAssignedCoach(userId);
       
       // Only managers can delete users.
       allow delete: if isManager();
