@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -175,10 +174,10 @@ export default function ManagerMatchesPage() {
                             <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                         </FormItem>
                     )}/>
-                    {isVisitor && <FormField control={form.control} name="departureTime" render={({ field }) => (<FormItem><FormLabel>Hora de Salida</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>)}/>}
+                    {isVisitor && <FormField control={form.control} name="departureTime" render={({ field }) => (<FormItem><FormLabel>Hora de Salida</FormLabel><FormControl><Input type="time" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="arbitrationValue" render={({ field }) => (<FormItem><FormLabel>Valor Arbitraje (por persona)</FormLabel><FormControl><Input type="number" placeholder="Ej: 5000" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="arbitrationValue" render={({ field }) => (<FormItem><FormLabel>Valor Arbitraje (por persona)</FormLabel><FormControl><Input type="number" placeholder="Ej: 5000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>
                     <FormField control={form.control} name="modality" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Modalidad</FormLabel>
@@ -195,9 +194,9 @@ export default function ManagerMatchesPage() {
                         </FormItem>
                     )}/>
                   </div>
-                  <FormField control={form.control} name="gameStructure" render={({ field }) => (<FormItem><FormLabel>Estructura de Juego</FormLabel><FormControl><Input placeholder="Ej: 1-4-3-3" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                  <FormField control={form.control} name="gameIdea" render={({ field }) => (<FormItem><FormLabel>Idea de Juego</FormLabel><FormControl><Textarea placeholder="Describe la idea de juego principal..." {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                  <FormField control={form.control} name="gameModel" render={({ field }) => (<FormItem><FormLabel>Modelo de Juego</FormLabel><FormControl><Textarea placeholder="Describe el modelo de juego a utilizar..." {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                  <FormField control={form.control} name="gameStructure" render={({ field }) => (<FormItem><FormLabel>Estructura de Juego</FormLabel><FormControl><Input placeholder="Ej: 1-4-3-3" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>
+                  <FormField control={form.control} name="gameIdea" render={({ field }) => (<FormItem><FormLabel>Idea de Juego</FormLabel><FormControl><Textarea placeholder="Describe la idea de juego principal..." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>
+                  <FormField control={form.control} name="gameModel" render={({ field }) => (<FormItem><FormLabel>Modelo de Juego</FormLabel><FormControl><Textarea placeholder="Describe el modelo de juego a utilizar..." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>
 
                   <DialogFooter>
                     <Button type="submit" disabled={form.formState.isSubmitting}>
