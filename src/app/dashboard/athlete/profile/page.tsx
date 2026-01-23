@@ -129,7 +129,7 @@ export default function AthleteProfilePage() {
       // It gets all attendance records for the club and we filter client-side.
       return collection(firestore, `clubs/${profile.clubId}/attendance`);
   }, [firestore, user?.uid, profile?.clubId]);
-  const { data: allAttendance, isLoading: attendanceLoading } = useCollection(attendanceQuery);
+  const { data: allAttendance, isLoading: attendanceLoading } = useCollection(allAttendance);
   
   const athleteAttendance = useMemo(() => {
       if (!allAttendance || !user?.uid) return {};
@@ -206,7 +206,7 @@ export default function AthleteProfilePage() {
       profileForm.reset({
         firstName: combinedData.firstName || '',
         lastName: combinedData.lastName || '',
-        birthDate: combinedData.birthDate ? format(parseISO(combinedData.birthDate), 'yyyy-MM-dd') : '',
+        birthDate: (combinedData.birthDate && isValid(parseISO(combinedData.birthDate))) ? format(parseISO(combinedData.birthDate), 'yyyy-MM-dd') : '',
         gender: combinedData.gender || undefined,
         bloodType: combinedData.bloodType || '',
         documentType: combinedData.documentType || undefined,
@@ -217,23 +217,26 @@ export default function AthleteProfilePage() {
         team: combinedData.team || '',
       });
     }
-  }, [profile, athleteData, profileForm.reset]);
+  }, [profile, athleteData, profileForm]);
 
   const onProfileSubmit = (data: ProfileFormValues) => {
     if (!user || !profile || !firestore || !athleteDocRef) return;
     
-    setDocumentNonBlocking(athleteDocRef, {
-        birthDate: data.birthDate,
-        gender: data.gender,
-        bloodType: data.bloodType,
-        documentType: data.documentType,
-        documentNumber: data.documentNumber,
-        emergencyContactName: data.emergencyContactName,
-        emergencyContactPhone: data.emergencyContactPhone,
-        medicalInformation: data.medicalInformation,
-        team: data.team,
-        coachId: calculatedCoachId,
-    }, { merge: true });
+    // The team is derived from birthdate, and that's what we save.
+    // We should NOT save the coachId from here, as that is a manager's responsibility.
+    const athletePayload = {
+        birthDate: data.birthDate || null,
+        gender: data.gender || null,
+        bloodType: data.bloodType || null,
+        documentType: data.documentType || null,
+        documentNumber: data.documentNumber || null,
+        emergencyContactName: data.emergencyContactName || null,
+        emergencyContactPhone: data.emergencyContactPhone || null,
+        medicalInformation: data.medicalInformation || null,
+        team: data.team || null,
+    };
+    
+    setDocumentNonBlocking(athleteDocRef, athletePayload, { merge: true });
 
     const userDocRef = doc(firestore, 'users', user.uid);
     updateDocumentNonBlocking(userDocRef, { firstName: data.firstName, lastName: data.lastName });
