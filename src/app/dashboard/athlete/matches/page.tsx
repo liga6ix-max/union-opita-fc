@@ -5,6 +5,8 @@ import { collection, query, where } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, Swords, Calendar, Clock, MapPin, Users, Shield, Bus, HandCoins, Goal, GitBranch, Lightbulb } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const MAIN_CLUB_ID = 'OpitaClub';
 
@@ -28,7 +30,16 @@ export default function AthleteMatchesPage() {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
   }
 
-  const upcomingMatches = matches?.filter(match => new Date(match.matchDate) >= new Date()) || [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const upcomingMatches =
+    matches?.filter((match) => {
+      // The match date from Firestore is a string like 'YYYY-MM-DD'.
+      // Adding 'T00:00:00' ensures it's parsed in the local timezone, not UTC.
+      const matchDate = new Date(`${match.matchDate}T00:00:00`);
+      return matchDate >= today;
+    }) || [];
 
   return (
     <div className="space-y-8">
@@ -46,7 +57,7 @@ export default function AthleteMatchesPage() {
                     <div className="flex justify-between items-start">
                         <div>
                             <CardTitle className="font-headline text-2xl text-primary">Rival: {match.opponent}</CardTitle>
-                            <CardDescription className="flex items-center gap-2 pt-1"><Calendar/> {match.matchDate}</CardDescription>
+                            <CardDescription className="flex items-center gap-2 pt-1"><Calendar/> {format(new Date(`${match.matchDate}T00:00:00`), "d 'de' MMMM, yyyy", { locale: es })}</CardDescription>
                         </div>
                         <Badge variant={match.isVisitor ? 'destructive' : 'secondary'}>{match.isVisitor ? 'Visitante' : 'Local'}</Badge>
                     </div>
