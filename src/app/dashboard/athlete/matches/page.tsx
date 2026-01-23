@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, Swords, Calendar, Clock, MapPin, Users, Shield, Bus, HandCoins, Goal, GitBranch, Lightbulb } from 'lucide-react';
