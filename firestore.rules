@@ -29,20 +29,23 @@ service cloud.firestore {
       return isSignedIn() && userDoc != null && userDoc.data.role in ['manager', 'coach'];
     }
 
-    function isAssignedCoach(athleteId) {
-      // First, check if the current user is a coach or manager
+    function isCoachAndTargetIsAthleteInSameClub(userId) {
+      // Check if the requester is a coach
       if (!isCoach()) {
         return false;
       }
-      // Get the user document of the athlete being modified to find their clubId
-      let athleteUserDoc = getUserDoc(athleteId);
-      if (athleteUserDoc == null || !('clubId' in athleteUserDoc.data)) {
+      
+      // Get both user documents
+      let coachUserDoc = getUserDoc(request.auth.uid);
+      let targetUserDoc = getUserDoc(userId);
+
+      // Check if both documents exist
+      if (coachUserDoc == null || targetUserDoc == null) {
         return false;
       }
-      // Get the athlete-specific document from the subcollection
-      let athleteDoc = get(/databases/$(database)/documents/clubs/$(athleteUserDoc.data.clubId)/athletes/$(athleteId));
-      // Check if the athlete document exists and if the current user is the assigned coach
-      return athleteDoc != null && ('coachId' in athleteDoc.data) && athleteDoc.data.coachId == request.auth.uid;
+      
+      // Check if both users are in the same club and the target is an athlete
+      return coachUserDoc.data.clubId == targetUserDoc.data.clubId && targetUserDoc.data.role == 'athlete';
     }
 
     function isAthlete() {
@@ -79,8 +82,8 @@ service cloud.firestore {
       // Anyone can create a user account (e.g., during sign-up).
       allow create: if true;
       
-      // Managers can update any user. Users can update their own profile. Coaches can update their assigned athletes.
-      allow update: if isManager() || isOwner(userId) || isAssignedCoach(userId);
+      // Managers can update any user. Users can update their own profile. Coaches can update athletes in their club.
+      allow update: if isManager() || isOwner(userId) || isCoachAndTargetIsAthleteInSameClub(userId);
       
       // Only managers can delete users.
       allow delete: if isManager();
