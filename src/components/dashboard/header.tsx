@@ -33,6 +33,7 @@ const pageTitles: { [key: string]: string } = {
   "/dashboard/manager/settings": "Configuración del Club",
   "/dashboard/manager/unifit": "Gestión de UNIFIT",
   "/dashboard/manager/unifit-schedule": "Gestionar Horario UNIFIT",
+  "/dashboard/manager/underwater-activities": "Actividades Subacuáticas",
   "/dashboard/coach": "Resumen del Entrenador",
   "/dashboard/coach/athletes": "Mis Deportistas",
   "/dashboard/coach/tasks": "Mis Tareas",
@@ -41,6 +42,7 @@ const pageTitles: { [key: string]: string } = {
   "/dashboard/coach/profile": "Mi Perfil",
   "/dashboard/coach/unifit": "Deportistas UNIFIT",
   "/dashboard/coach/unifit-schedule": "Gestionar Horario UNIFIT",
+  "/dashboard/coach/underwater-activities": "Actividades Subacuáticas",
   "/dashboard/athlete": "Mis Pagos",
   "/dashboard/athlete/profile": "Mi Perfil",
   "/dashboard/athlete/evaluations": "Mis Evaluaciones",
@@ -127,5 +129,3 @@ export function DashboardHeader() {
     </header>
   );
 }
-
-    

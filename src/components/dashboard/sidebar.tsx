@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from "next/link";
@@ -46,6 +47,7 @@ const managerNav = [
   { href: "/dashboard/manager/approvals", label: "Aprobaciones", icon: UserPlus },
   { href: "/dashboard/manager/unifit", label: "UNIFIT", icon: HeartPulse },
   { href: "/dashboard/manager/unifit-schedule", label: "Horarios UNIFIT", icon: CalendarDays },
+  { href: "/dashboard/manager/underwater-activities", label: "Act. Subacuáticas", icon: Waves },
   { href: "/dashboard/manager/tasks", label: "Tareas", icon: ClipboardList },
   { href: "/dashboard/manager/planning", label: "Planificación", icon: CalendarClock },
   { href: "/dashboard/manager/matches", label: "Partidos", icon: Swords },
@@ -60,6 +62,7 @@ const coachNav = [
     { href: "/dashboard/coach/athletes", label: "Mis Deportistas", icon: Users },
     { href: "/dashboard/coach/unifit", label: "UNIFIT", icon: HeartPulse },
     { href: "/dashboard/coach/unifit-schedule", label: "Horarios UNIFIT", icon: CalendarDays },
+    { href: "/dashboard/coach/underwater-activities", label: "Act. Subacuáticas", icon: Waves },
     { href: "/dashboard/coach/planning", label: "Planificación", icon: CalendarClock },
     { href: "/dashboard/coach/schedule", label: "Mis Horarios", icon: CalendarDays },
     { href: "/dashboard/coach/matches", label: "Partidos", icon: Swords },
@@ -204,5 +207,3 @@ export function DashboardSidebar() {
     </Sidebar>
   );
 }
-
-    
