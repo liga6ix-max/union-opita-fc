@@ -43,6 +43,7 @@ const managerNav = [
   { href: "/dashboard/manager/athletes", label: "Deportistas", icon: Users },
   { href: "/dashboard/manager/teams", label: "Equipos", icon: Shield },
   { href: "/dashboard/manager/approvals", label: "Aprobaciones", icon: UserPlus },
+  { href: "/dashboard/manager/unifit", label: "UNIFIT", icon: HeartPulse },
   { href: "/dashboard/manager/tasks", label: "Tareas", icon: ClipboardList },
   { href: "/dashboard/manager/planning", label: "Planificación", icon: CalendarClock },
   { href: "/dashboard/manager/matches", label: "Partidos", icon: Swords },
@@ -55,6 +56,7 @@ const managerNav = [
 const coachNav = [
     { href: "/dashboard/coach", label: "Resumen", icon: LayoutDashboard },
     { href: "/dashboard/coach/athletes", label: "Mis Deportistas", icon: Users },
+    { href: "/dashboard/coach/unifit", label: "UNIFIT", icon: HeartPulse },
     { href: "/dashboard/coach/planning", label: "Planificación", icon: CalendarClock },
     { href: "/dashboard/coach/schedule", label: "Mis Horarios", icon: CalendarDays },
     { href: "/dashboard/coach/matches", label: "Partidos", icon: Swords },
@@ -150,7 +152,7 @@ export function DashboardSidebar() {
   const currentNav = navItems[role] || [];
 
   const isLinkActive = (href: string) => {
-    if (href.endsWith('/manager') || href.endsWith('/coach') || href.endsWith('/athlete')) {
+    if (href.endsWith('/manager') || href.endsWith('/coach') || href.endsWith('/athlete') || href.endsWith('/unifit')) {
         return pathname === href;
     }
      if (href.endsWith('/athlete/profile')) {
