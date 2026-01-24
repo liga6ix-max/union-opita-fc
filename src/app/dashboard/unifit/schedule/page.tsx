@@ -5,17 +5,13 @@ import { useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
-import { format, getDay } from 'date-fns';
+import { format, getDay, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { cn } from "@/lib/utils";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CalendarIcon, MapPin, Clock } from 'lucide-react';
+import { Loader2, CalendarIcon, MapPin, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-
 
 const MAIN_CLUB_ID = 'OpitaClub';
 const TOTAL_SLOTS = 20;
@@ -23,7 +19,7 @@ const TOTAL_SLOTS = 20;
 export default function UnifitSchedulePage() {
     const { user, firestore, isUserLoading } = useUser();
     const { toast } = useToast();
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
     const clubConfigRef = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -75,17 +71,18 @@ export default function UnifitSchedulePage() {
     const isLoading = isUserLoading || clubLoading;
     const schedule = clubData?.unifitSchedule || [];
 
-    const dayNameToIndex = (name: string) => {
-        if (!name) return -1;
-        const names = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-        return names.indexOf(name.toLowerCase());
-    }
-
-    const sessionsForSelectedDay = useMemo(() => {
+    const sessionsForSelectedDate = useMemo(() => {
         if (!selectedDate || !schedule) return [];
-        const dateDayIndex = getDay(selectedDate);
-        return schedule.filter((s:any) => s && s.day && dayNameToIndex(s.day) === dateDayIndex);
+        const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const dayIndex = getDay(selectedDate);
+        const currentDayName = dayNames[dayIndex];
+        
+        return schedule.filter((s:any) => s.day === currentDayName);
     }, [selectedDate, schedule]);
+    
+    const handleDateChange = (amount: number) => {
+      setSelectedDate(currentDate => addDays(currentDate, amount));
+    };
 
 
     return (
@@ -104,35 +101,24 @@ export default function UnifitSchedulePage() {
                          <div className="flex h-40 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
                     ) : (
                         <div>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                    "w-[280px] justify-start text-left font-normal",
-                                    !selectedDate && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {selectedDate ? format(selectedDate, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
+                            <div className="flex items-center justify-center gap-4 mb-6">
+                                <Button variant="outline" size="icon" onClick={() => handleDateChange(-1)}>
+                                    <ChevronLeft className="h-4 w-4" />
                                 </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={selectedDate}
-                                    onSelect={setSelectedDate}
-                                    initialFocus
-                                />
-                                </PopoverContent>
-                            </Popover>
+                                <h3 className="text-lg font-semibold text-center font-headline capitalize w-64">
+                                    {format(selectedDate, "eeee, d 'de' MMMM", { locale: es })}
+                                </h3>
+                                <Button variant="outline" size="icon" onClick={() => handleDateChange(1)}>
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
                             
                             <div className="mt-6">
                                 {bookingsLoading ? (
                                     <div className="flex h-40 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-                                ) : sessionsForSelectedDay.length > 0 ? (
+                                ) : sessionsForSelectedDate.length > 0 ? (
                                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                                        {sessionsForSelectedDay.map((session, index) => {
+                                        {sessionsForSelectedDate.map((session, index) => {
                                             const sessionBookings = bookings?.filter(b => b.sessionId === session.id) || [];
                                             const userBooking = sessionBookings.find(b => b.userId === user?.uid);
                                             const isFull = sessionBookings.length >= TOTAL_SLOTS;
