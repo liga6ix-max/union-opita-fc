@@ -1,8 +1,7 @@
-
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
+import { useState, useMemo, useEffect } from 'react';
+import { useUser, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 import { format, addDays, startOfWeek, getDay } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -11,17 +10,33 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Loader2, CalendarDays, Users, User, Clock, MapPin } from 'lucide-react';
+import { Loader2, CalendarDays, Users, User, Clock, MapPin, PlusCircle, Trash2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 const MAIN_CLUB_ID = 'OpitaClub';
 
-const createSessionId = (session: { day: string; time: string; location: string; activity: string }) => {
+type UnifitScheduleItem = {
+    day: string;
+    time: string;
+    location: string;
+    activity: string;
+};
+
+const createSessionId = (session: UnifitScheduleItem) => {
     return `${session.day}-${session.time}-${session.location}-${session.activity}`.replace(/[^a-zA-Z0-9-]/g, '');
 };
 
 export default function CoachUnifitSchedulePage() {
     const { firestore, isUserLoading } = useUser();
+    const { toast } = useToast();
     const [today] = useState(new Date());
+
+    const [isSavingUnifitSchedules, setIsSavingUnifitSchedules] = useState(false);
+    const [unifitSchedule, setUnifitSchedule] = useState<UnifitScheduleItem[]>([]);
 
     const weekDates = useMemo(() => {
         const start = startOfWeek(today, { weekStartsOn: 1 }); // Start week on Monday
@@ -32,6 +47,12 @@ export default function CoachUnifitSchedulePage() {
 
     const clubConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'clubs', MAIN_CLUB_ID) : null, [firestore]);
     const { data: clubData, isLoading: clubLoading } = useDoc(clubConfigRef);
+
+    useEffect(() => {
+        if (clubData?.unifitSchedule) {
+            setUnifitSchedule(clubData.unifitSchedule);
+        }
+    }, [clubData]);
 
     const bookingsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -49,9 +70,33 @@ export default function CoachUnifitSchedulePage() {
         if (!allUsers) return new Map();
         return new Map(allUsers.map(u => [u.id, u]));
     }, [allUsers]);
+    
+    const handleUnifitScheduleChange = (index: number, field: keyof UnifitScheduleItem, value: string) => {
+        const newSchedule = [...unifitSchedule];
+        newSchedule[index] = { ...newSchedule[index], [field]: value };
+        setUnifitSchedule(newSchedule);
+    };
+
+    const handleAddUnifitSession = () => {
+        setUnifitSchedule([...unifitSchedule, { day: '', time: '', location: '', activity: '' }]);
+    };
+
+    const handleRemoveUnifitSession = (index: number) => {
+        const newSchedule = [...unifitSchedule];
+        newSchedule.splice(index, 1);
+        setUnifitSchedule(newSchedule);
+    };
+
+    const handleSaveUnifitSchedule = () => {
+        if (!clubConfigRef) return;
+        setIsSavingUnifitSchedules(true);
+        updateDocumentNonBlocking(clubConfigRef, { unifitSchedule: unifitSchedule });
+        toast({ title: "¡Horario UNIFIT Guardado!", description: "El horario del programa UNIFIT ha sido actualizado." });
+        setIsSavingUnifitSchedules(false);
+    };
 
     const isLoading = isUserLoading || clubLoading || usersLoading;
-    const schedule = clubData?.unifitSchedule || [];
+    const scheduleForViewer = clubData?.unifitSchedule || [];
 
     const dayNameToIndex = (name: string) => {
         const names = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -62,8 +107,69 @@ export default function CoachUnifitSchedulePage() {
         <div className="space-y-8">
             <Card>
                 <CardHeader>
+                <CardTitle>Gestión de Horarios (UNIFIT)</CardTitle>
+                <CardDescription>
+                    Define los días, horas, lugares y actividades para el programa UNIFIT.
+                </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    {isLoading ? (
+                        <div className="flex h-40 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                    ) : (
+                        <>
+                            {unifitSchedule.map((session, index) => (
+                                <div key={index} className="grid grid-cols-1 md:grid-cols-9 gap-2 items-end border-t pt-4 first:border-t-0">
+                                    <div className="space-y-2 md:col-span-2">
+                                        <Label>Día</Label>
+                                        <Select value={session.day} onValueChange={(value) => handleUnifitScheduleChange(index, 'day', value)}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Seleccionar día" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Lunes">Lunes</SelectItem>
+                                                <SelectItem value="Martes">Martes</SelectItem>
+                                                <SelectItem value="Miércoles">Miércoles</SelectItem>
+                                                <SelectItem value="Jueves">Jueves</SelectItem>
+                                                <SelectItem value="Viernes">Viernes</SelectItem>
+                                                <SelectItem value="Sábado">Sábado</SelectItem>
+                                                <SelectItem value="Domingo">Domingo</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2 md:col-span-2">
+                                        <Label htmlFor={`unifit-time-${index}`}>Horario</Label>
+                                        <Input id={`unifit-time-${index}`} value={session.time} onChange={(e) => handleUnifitScheduleChange(index, 'time', e.target.value)} placeholder="6-7 AM" />
+                                    </div>
+                                    <div className="space-y-2 md:col-span-2">
+                                        <Label htmlFor={`unifit-location-${index}`}>Lugar</Label>
+                                        <Input id={`unifit-location-${index}`} value={session.location} onChange={(e) => handleUnifitScheduleChange(index, 'location', e.target.value)} placeholder="Gimnasio" />
+                                    </div>
+                                    <div className="space-y-2 md:col-span-2">
+                                        <Label htmlFor={`unifit-activity-${index}`}>Actividad</Label>
+                                        <Input id={`unifit-activity-${index}`} value={session.activity} onChange={(e) => handleUnifitScheduleChange(index, 'activity', e.target.value)} placeholder="Funcional" />
+                                    </div>
+                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveUnifitSession(index)} className="md:col-span-1 text-destructive">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                            <div className="flex flex-wrap gap-4 pt-4 border-t">
+                                <Button variant="outline" onClick={handleAddUnifitSession}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Añadir Sesión UNIFIT
+                                </Button>
+                                <Button onClick={handleSaveUnifitSchedule} disabled={isSavingUnifitSchedules}>
+                                    {isSavingUnifitSchedules ? <Loader2 className="animate-spin" /> : "Guardar Horario UNIFIT"}
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
                     <CardTitle className="font-headline flex items-center gap-2">
-                        <Users /> Asistencia y Horarios UNIFIT
+                        <Users /> Asistencia por Día
                     </CardTitle>
                     <CardDescription>
                         Supervisa la asistencia a las sesiones de entrenamiento funcional.
@@ -85,7 +191,7 @@ export default function CoachUnifitSchedulePage() {
                             
                             {weekDates.map(date => {
                                 const dateDayIndex = getDay(date);
-                                const sessionsForDay = schedule.filter((s: any) => dayNameToIndex(s.day) === dateDayIndex);
+                                const sessionsForDay = scheduleForViewer.filter((s: any) => dayNameToIndex(s.day) === dateDayIndex);
 
                                 return (
                                     <TabsContent key={date.toISOString()} value={format(date, 'yyyy-MM-dd')}>

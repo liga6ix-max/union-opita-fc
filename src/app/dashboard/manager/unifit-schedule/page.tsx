@@ -14,6 +14,7 @@ import { Loader2, CalendarDays, Users, User, Clock, MapPin, PlusCircle, Trash2 }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const MAIN_CLUB_ID = 'OpitaClub';
 
@@ -119,8 +120,21 @@ export default function ManagerUnifitSchedulePage() {
                             {unifitSchedule.map((session, index) => (
                                 <div key={index} className="grid grid-cols-1 md:grid-cols-9 gap-2 items-end border-t pt-4 first:border-t-0">
                                     <div className="space-y-2 md:col-span-2">
-                                        <Label htmlFor={`unifit-day-${index}`}>Día</Label>
-                                        <Input id={`unifit-day-${index}`} value={session.day} onChange={(e) => handleUnifitScheduleChange(index, 'day', e.target.value)} placeholder="Ej: Lunes" />
+                                        <Label>Día</Label>
+                                        <Select value={session.day} onValueChange={(value) => handleUnifitScheduleChange(index, 'day', value)}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Seleccionar día" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Lunes">Lunes</SelectItem>
+                                                <SelectItem value="Martes">Martes</SelectItem>
+                                                <SelectItem value="Miércoles">Miércoles</SelectItem>
+                                                <SelectItem value="Jueves">Jueves</SelectItem>
+                                                <SelectItem value="Viernes">Viernes</SelectItem>
+                                                <SelectItem value="Sábado">Sábado</SelectItem>
+                                                <SelectItem value="Domingo">Domingo</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div className="space-y-2 md:col-span-2">
                                         <Label htmlFor={`unifit-time-${index}`}>Horario</Label>
