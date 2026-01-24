@@ -21,14 +21,11 @@ import { cn } from '@/lib/utils';
 const MAIN_CLUB_ID = 'OpitaClub';
 
 type UnifitScheduleItem = {
+    id: string;
     day: string;
     time: string;
     location: string;
     activity: string;
-};
-
-const createSessionId = (session: UnifitScheduleItem) => {
-    return `${session.day}-${session.time}-${session.location}-${session.activity}`.replace(/[^a-zA-Z0-9-]/g, '');
 };
 
 export default function CoachUnifitSchedulePage() {
@@ -65,14 +62,21 @@ export default function CoachUnifitSchedulePage() {
         return new Map(allUsers.map(u => [u.id, u]));
     }, [allUsers]);
     
-    const handleUnifitScheduleChange = (index: number, field: keyof UnifitScheduleItem, value: string) => {
+    const handleUnifitScheduleChange = (index: number, field: keyof Omit<UnifitScheduleItem, 'id'>, value: string) => {
         const newSchedule = [...unifitSchedule];
         newSchedule[index] = { ...newSchedule[index], [field]: value };
         setUnifitSchedule(newSchedule);
     };
 
     const handleAddUnifitSession = () => {
-        setUnifitSchedule([...unifitSchedule, { day: '', time: '', location: '', activity: '' }]);
+        const newSession: UnifitScheduleItem = {
+            id: `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+            day: 'Lunes',
+            time: '',
+            location: '',
+            activity: ''
+        };
+        setUnifitSchedule([...unifitSchedule, newSession]);
     };
 
     const handleRemoveUnifitSession = (index: number) => {
@@ -93,6 +97,7 @@ export default function CoachUnifitSchedulePage() {
     const scheduleForViewer = clubData?.unifitSchedule || [];
 
     const dayNameToIndex = (name: string) => {
+        if (!name) return -1;
         const names = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
         return names.indexOf(name.toLowerCase());
     }
@@ -100,7 +105,7 @@ export default function CoachUnifitSchedulePage() {
     const sessionsForSelectedDay = useMemo(() => {
         if (!selectedDate || !scheduleForViewer) return [];
         const dateDayIndex = getDay(selectedDate);
-        return scheduleForViewer.filter((s: any) => dayNameToIndex(s.day) === dateDayIndex);
+        return scheduleForViewer.filter((s: any) => s && s.day && dayNameToIndex(s.day) === dateDayIndex);
     }, [selectedDate, scheduleForViewer]);
 
 
@@ -119,7 +124,7 @@ export default function CoachUnifitSchedulePage() {
                     ) : (
                         <>
                             {unifitSchedule.map((session, index) => (
-                                <div key={index} className="grid grid-cols-1 md:grid-cols-9 gap-2 items-end border-t pt-4 first:border-t-0">
+                                <div key={session.id || index} className="grid grid-cols-1 md:grid-cols-9 gap-2 items-end border-t pt-4 first:border-t-0">
                                     <div className="space-y-2 md:col-span-2">
                                         <Label>Día</Label>
                                         <Select value={session.day} onValueChange={(value) => handleUnifitScheduleChange(index, 'day', value)}>
@@ -207,13 +212,12 @@ export default function CoachUnifitSchedulePage() {
                                 <div className="flex h-40 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
                             ) : sessionsForSelectedDay.length > 0 ? (
                                 <Accordion type="single" collapsible className="w-full space-y-4 mt-6">
-                                    {sessionsForSelectedDay.map((session: any, index: number) => {
-                                        const sessionId = createSessionId(session);
-                                        const sessionBookings = bookings?.filter(b => b.sessionId === sessionId) || [];
+                                    {sessionsForSelectedDay.map((session, index) => {
+                                        const sessionBookings = bookings?.filter(b => b.sessionId === session.id) || [];
                                         
                                         return (
-                                            <Card key={index}>
-                                                <AccordionItem value={`session-${index}`} className="border-b-0">
+                                            <Card key={session.id || index}>
+                                                <AccordionItem value={`session-${session.id}`} className="border-b-0">
                                                     <AccordionTrigger className="p-6 hover:no-underline">
                                                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full pr-4 text-left">
                                                             <div className='flex-grow'>

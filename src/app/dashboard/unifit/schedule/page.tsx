@@ -20,10 +20,6 @@ import { Calendar } from '@/components/ui/calendar';
 const MAIN_CLUB_ID = 'OpitaClub';
 const TOTAL_SLOTS = 20;
 
-const createSessionId = (session: { day: string; time: string; location: string; activity: string }) => {
-    return `${session.day}-${session.time}-${session.location}-${session.activity}`.replace(/[^a-zA-Z0-9-]/g, '');
-};
-
 export default function UnifitSchedulePage() {
     const { user, firestore, isUserLoading } = useUser();
     const { toast } = useToast();
@@ -45,9 +41,9 @@ export default function UnifitSchedulePage() {
     const { data: bookings, isLoading: bookingsLoading } = useCollection(bookingsQuery);
     
     const handleBooking = async (session: any) => {
-        if (!firestore || !user || !selectedDate) return;
+        if (!firestore || !user || !selectedDate || !session.id) return;
 
-        const sessionId = createSessionId(session);
+        const sessionId = session.id;
         const bookingDate = format(selectedDate, 'yyyy-MM-dd');
         
         const existingBooking = bookings?.find(b => b.userId === user.uid && b.sessionId === sessionId);
@@ -80,6 +76,7 @@ export default function UnifitSchedulePage() {
     const schedule = clubData?.unifitSchedule || [];
 
     const dayNameToIndex = (name: string) => {
+        if (!name) return -1;
         const names = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
         return names.indexOf(name.toLowerCase());
     }
@@ -87,7 +84,7 @@ export default function UnifitSchedulePage() {
     const sessionsForSelectedDay = useMemo(() => {
         if (!selectedDate || !schedule) return [];
         const dateDayIndex = getDay(selectedDate);
-        return schedule.filter((s:any) => dayNameToIndex(s.day) === dateDayIndex);
+        return schedule.filter((s:any) => s && s.day && dayNameToIndex(s.day) === dateDayIndex);
     }, [selectedDate, schedule]);
 
 
@@ -135,14 +132,13 @@ export default function UnifitSchedulePage() {
                                     <div className="flex h-40 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
                                 ) : sessionsForSelectedDay.length > 0 ? (
                                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                                        {sessionsForSelectedDay.map((session: any, index: number) => {
-                                            const sessionId = createSessionId(session);
-                                            const sessionBookings = bookings?.filter(b => b.sessionId === sessionId) || [];
+                                        {sessionsForSelectedDay.map((session, index) => {
+                                            const sessionBookings = bookings?.filter(b => b.sessionId === session.id) || [];
                                             const userBooking = sessionBookings.find(b => b.userId === user?.uid);
                                             const isFull = sessionBookings.length >= TOTAL_SLOTS;
 
                                             return (
-                                                <Card key={index}>
+                                                <Card key={session.id || index}>
                                                     <CardHeader>
                                                         <CardTitle>{session.activity}</CardTitle>
                                                         <div className="text-sm text-muted-foreground space-y-1 pt-2">
