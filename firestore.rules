@@ -52,11 +52,35 @@ service cloud.firestore {
       let userDoc = getUserDoc(request.auth.uid);
       return isSignedIn() && userDoc != null && userDoc.data.role == 'athlete';
     }
+    
+    function isUnifitMember() {
+      let userDoc = getUserDoc(request.auth.uid);
+      return isSignedIn() && userDoc != null && userDoc.data.role == 'unifit';
+    }
 
     function isMemberOfTheClub(clubId) {
       let userDoc = getUserDoc(request.auth.uid);
       // Check if the user document exists and has the corresponding clubId.
       return isSignedIn() && userDoc != null && ('clubId' in userDoc.data) && userDoc.data.clubId == clubId;
+    }
+    
+    function isCoachInSameClub(targetUserId) {
+      // Check if the requester is a coach
+      if (!isCoach()) {
+        return false;
+      }
+      
+      // Get both user documents
+      let coachUserDoc = getUserDoc(request.auth.uid);
+      let targetUserDoc = getUserDoc(targetUserId);
+
+      // Check if both documents exist
+      if (coachUserDoc == null || targetUserDoc == null) {
+        return false;
+      }
+      
+      // Check if both users are in the same club
+      return coachUserDoc.data.clubId == targetUserDoc.data.clubId;
     }
 
     // --------------------------------------------------------------------------------
@@ -87,6 +111,18 @@ service cloud.firestore {
       
       // Only managers can delete users.
       allow delete: if isManager();
+    }
+    
+    // UNIFIT
+    match /clubs/{clubId}/unifitMembers/{userId} {
+      allow read: if isOwner(userId) || isCoachInSameClub(userId) || isManager();
+      allow write: if isCoachInSameClub(userId) || isManager();
+    }
+
+    match /clubs/{clubId}/unifitMembers/{userId}/measurements/{measurementId} {
+      allow read: if isOwner(userId) || isCoachInSameClub(userId) || isManager();
+      allow create: if isCoachInSameClub(userId) || isManager();
+      allow update, delete: if isManager(); // Only managers can edit/delete history
     }
     
     // Subcollections need to verify the user is part of the parent club OR is a manager.

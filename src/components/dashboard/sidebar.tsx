@@ -33,6 +33,7 @@ import {
   BrainCircuit,
   CalendarDays,
   Swords,
+  HeartPulse,
 } from "lucide-react";
 import { useFirebase } from "@/firebase";
 
@@ -68,10 +69,15 @@ const athleteNav = [
     { href: "/dashboard/athlete/evaluations", label: "Mis Evaluaciones", icon: BrainCircuit },
 ];
 
+const unifitNav = [
+  { href: "/dashboard/unifit/athletes", label: "Deportistas", icon: Users },
+];
+
 const navItems = {
   manager: managerNav,
   coach: coachNav,
   athlete: athleteNav,
+  unifit: unifitNav,
 };
 
 export function DashboardSidebar() {

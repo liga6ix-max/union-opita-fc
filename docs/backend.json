@@ -118,8 +118,8 @@
         },
         "role": {
           "type": "string",
-          "description": "The role of the user (admin, manager, coach, athlete).",
-          "enum": ["admin", "manager", "coach", "athlete"]
+          "description": "The role of the user (admin, manager, coach, athlete, unifit).",
+          "enum": ["admin", "manager", "coach", "athlete", "unifit"]
         },
         "disabled": {
             "type": "boolean",
@@ -205,6 +205,88 @@
         "userId",
         "emergencyContactName",
         "emergencyContactPhone"
+      ]
+    },
+    "UnifitMember": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UnifitMember",
+      "type": "object",
+      "description": "Represents a member of the Unifit program.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "User ID, same as the user this profile belongs to."
+        },
+        "clubId": {
+          "type": "string"
+        },
+        "coachId": {
+          "type": "string",
+          "description": "ID of the assigned Unifit coach."
+        }
+      },
+      "required": [
+        "id",
+        "clubId"
+      ]
+    },
+    "UnifitMeasurement": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UnifitMeasurement",
+      "type": "object",
+      "description": "A single set of body measurements taken at a specific date.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "weight": {
+          "type": "number",
+          "description": "Weight in kg."
+        },
+        "height": {
+          "type": "number",
+          "description": "Height in cm."
+        },
+        "armRight": {
+          "type": "number",
+          "description": "Right arm measurement in cm."
+        },
+        "armLeft": {
+          "type": "number",
+          "description": "Left arm measurement in cm."
+        },
+        "legRight": {
+          "type": "number",
+          "description": "Right leg measurement in cm."
+        },
+        "legLeft": {
+          "type": "number",
+          "description": "Left leg measurement in cm."
+        },
+        "back": {
+          "type": "number",
+          "description": "Back measurement in cm."
+        },
+        "waist": {
+          "type": "number",
+          "description": "Waist measurement in cm."
+        },
+        "calfRight": {
+          "type": "number",
+          "description": "Right calf measurement in cm."
+        },
+        "calfLeft": {
+          "type": "number",
+          "description": "Left calf measurement in cm."
+        }
+      },
+      "required": [
+        "id",
+        "date"
       ]
     },
     "Payment": {
@@ -470,6 +552,45 @@
         }
       },
       {
+        "path": "/clubs/{clubId}/unifitMembers/{userId}",
+        "definition": {
+          "entityName": "UnifitMember",
+          "schema": {
+            "$ref": "#/backend/entities/UnifitMember"
+          },
+          "description": "Stores Unifit program member details, like their assigned coach.",
+          "params": [
+            {
+              "name": "clubId"
+            },
+            {
+              "name": "userId"
+            }
+          ]
+        }
+      },
+      {
+        "path": "/clubs/{clubId}/unifitMembers/{userId}/measurements/{measurementId}",
+        "definition": {
+          "entityName": "UnifitMeasurement",
+          "schema": {
+            "$ref": "#/backend/entities/UnifitMeasurement"
+          },
+          "description": "Stores historical body measurements for a Unifit member.",
+          "params": [
+            {
+              "name": "clubId"
+            },
+            {
+              "name": "userId"
+            },
+            {
+              "name": "measurementId"
+            }
+          ]
+        }
+      },
+      {
         "path": "/clubs/{clubId}/payments/{paymentId}",
         "definition": {
           "entityName": "Payment",
@@ -586,6 +707,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to manage a sports club (Opita Club Manager) with role-based access control. It prioritizes authorization independence by denormalizing clubId into every collection that requires club-specific data, eliminating the need for `get()` calls in security rules and enabling atomic operations.\n\n- `/clubs`: Stores club details. This top-level collection allows easy querying for clubs.\n- `/users`: Stores user details, including their role and clubId. This enables role-based access control at the user level.\n- `/clubs/{clubId}/athletes`: Stores athlete information related to a specific club. The clubId is denormalized to enable secure querying of athletes within a club without requiring a `get()` call to the clubs collection. This supports QAPs by ensuring that listing athletes is secure and efficient.\n- `/clubs/{clubId}/payments`: Stores payment information for athletes within a specific club. The clubId is denormalized here as well, ensuring secure and efficient payment listing.\n- `/clubs/{clubId}/tasks`: Stores tasks assigned to coaches or staff within a club. The clubId is denormalized.\n- `/clubs/{clubId}/landingPageContent`: Stores landing page content specific to each club. The clubId is denormalized.\n- `/clubs/{clubId}/matches`: Stores match details. Denormalizing `clubId` allows for secure and efficient querying of matches within a club."
+    "reasoning": "The Firestore structure is designed to manage a sports club (Opita Club Manager) with role-based access control. It prioritizes authorization independence by denormalizing clubId into every collection that requires club-specific data, eliminating the need for `get()` calls in security rules and enabling atomic operations.\n\n- `/clubs`: Stores club details. This top-level collection allows easy querying for clubs.\n- `/users`: Stores user details, including their role and clubId. This enables role-based access control at the user level.\n- `/clubs/{clubId}/athletes`: Stores athlete information related to a specific club. The clubId is denormalized to enable secure querying of athletes within a club without requiring a `get()` call to the clubs collection. This supports QAPs by ensuring that listing athletes is secure and efficient.\n- `/clubs/{clubId}/unifitMembers`: Stores information about members of the functional training program, separate from regular athletes.\n- `/clubs/{clubId}/unifitMembers/{userId}/measurements`: A subcollection to store a history of body measurements for Unifit members, allowing for progress tracking over time.\n- `/clubs/{clubId}/payments`: Stores payment information for athletes within a specific club. The clubId is denormalized here as well, ensuring secure and efficient payment listing.\n- `/clubs/{clubId}/tasks`: Stores tasks assigned to coaches or staff within a club. The clubId is denormalized.\n- `/clubs/{clubId}/landingPageContent`: Stores landing page content specific to each club. The clubId is denormalized.\n- `/clubs/{clubId}/matches`: Stores match details. Denormalizing `clubId` allows for secure and efficient querying of matches within a club."
   }
 }

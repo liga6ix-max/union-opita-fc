@@ -22,12 +22,13 @@ import {
   DropdownMenuSubTrigger
 } from '@/components/ui/dropdown-menu';
 
-type UserRole = 'athlete' | 'coach' | 'manager';
+type UserRole = 'athlete' | 'coach' | 'manager' | 'unifit';
 
 const roleLabels: Record<UserRole, string> = {
     athlete: 'Deportista',
     coach: 'Entrenador',
-    manager: 'Gerente'
+    manager: 'Gerente',
+    unifit: 'UNIFIT',
 }
 
 const MAIN_CLUB_ID = 'OpitaClub';
@@ -92,6 +93,16 @@ export default function ApprovalsPage() {
                 }, { merge: true });
             }
         }
+        
+        if (newRole === 'unifit') {
+            const unifitMemberDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/unifitMembers`, userId);
+             setDocumentNonBlocking(unifitMemberDocRef, {
+                id: userId,
+                clubId: MAIN_CLUB_ID,
+                coachId: null,
+            }, { merge: true });
+        }
+
         toast({ title: 'Rol Actualizado', description: `El usuario ahora tiene el rol de ${roleLabels[newRole]}. Se requiere un nuevo inicio de sesión para que los permisos se apliquen.` });
     };
     
@@ -102,6 +113,9 @@ export default function ApprovalsPage() {
          
          const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, userId);
          deleteDocumentNonBlocking(athleteDocRef);
+
+         const unifitMemberDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/unifitMembers`, userId);
+         deleteDocumentNonBlocking(unifitMemberDocRef);
          
          toast({ title: 'Usuario Eliminado', description: 'El usuario ha sido eliminado permanentemente.' });
     };
@@ -157,6 +171,7 @@ export default function ApprovalsPage() {
                                                         <DropdownMenuSubTrigger>Cambiar Rol</DropdownMenuSubTrigger>
                                                         <DropdownMenuSubContent>
                                                             <DropdownMenuItem onClick={() => handleChangeRole(user.id, 'athlete')} disabled={user.role === 'athlete'}>Asignar como Deportista</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleChangeRole(user.id, 'unifit')} disabled={user.role === 'unifit'}>Asignar como UNIFIT</DropdownMenuItem>
                                                             <DropdownMenuItem onClick={() => handleChangeRole(user.id, 'coach')} disabled={user.role === 'coach'}>Asignar como Entrenador</DropdownMenuItem>
                                                             <DropdownMenuItem onClick={() => handleChangeRole(user.id, 'manager')} disabled={user.role === 'manager'}>Asignar como Gerente</DropdownMenuItem>
                                                         </DropdownMenuSubContent>

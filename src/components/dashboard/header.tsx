@@ -40,6 +40,7 @@ const pageTitles: { [key: string]: string } = {
   "/dashboard/athlete": "Mis Pagos",
   "/dashboard/athlete/profile": "Mi Perfil",
   "/dashboard/athlete/evaluations": "Mis Evaluaciones",
+  "/dashboard/unifit/athletes": "Deportistas UNIFIT",
 };
 
 const getDynamicTitle = (pathname: string): string => {
@@ -48,6 +49,9 @@ const getDynamicTitle = (pathname: string): string => {
   }
   if (pathname.startsWith('/dashboard/coach/athletes/')) {
     return "Perfil del Deportista (Entrenador)";
+  }
+  if (pathname.startsWith('/dashboard/unifit/athletes/')) {
+    return "Perfil del Deportista (UNIFIT)";
   }
   return pageTitles[pathname] || "Dashboard";
 };
