@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -27,6 +28,10 @@ const MAIN_CLUB_ID = 'OpitaClub';
 const measurementSchema = z.object({
     weight: z.coerce.number().positive("El peso debe ser positivo").optional().or(z.literal('')),
     height: z.coerce.number().positive("La estatura debe ser positiva").optional().or(z.literal('')),
+    bodyFatPercentage: z.coerce.number().positive("El % de grasa debe ser positivo").optional().or(z.literal('')),
+    chest: z.coerce.number().positive("Medida inválida").optional().or(z.literal('')),
+    shoulders: z.coerce.number().positive("Medida inválida").optional().or(z.literal('')),
+    hip: z.coerce.number().positive("Medida inválida").optional().or(z.literal('')),
     armRight: z.coerce.number().positive("Medida inválida").optional().or(z.literal('')),
     armLeft: z.coerce.number().positive("Medida inválida").optional().or(z.literal('')),
     legRight: z.coerce.number().positive("Medida inválida").optional().or(z.literal('')),
@@ -60,14 +65,16 @@ export default function UnifitAthleteProfilePage() {
 
     const form = useForm<MeasurementFormValues>({
         resolver: zodResolver(measurementSchema),
-        defaultValues: { weight: '', height: '', armRight: '', armLeft: '', legRight: '', legLeft: '', back: '', waist: '', calfRight: '', calfLeft: '' },
+        defaultValues: { weight: '', height: '', bodyFatPercentage: '', chest: '', shoulders: '', hip: '', armRight: '', armLeft: '', legRight: '', legLeft: '', back: '', waist: '', calfRight: '', calfLeft: '' },
     });
 
     useEffect(() => {
         if (measurements && measurements.length > 0) {
             const latest = measurements[0];
             form.reset({
-                weight: latest.weight || '', height: latest.height || '', armRight: latest.armRight || '', armLeft: latest.armLeft || '',
+                 weight: latest.weight || '', height: latest.height || '', bodyFatPercentage: latest.bodyFatPercentage || '',
+                chest: latest.chest || '', shoulders: latest.shoulders || '', hip: latest.hip || '',
+                armRight: latest.armRight || '', armLeft: latest.armLeft || '',
                 legRight: latest.legRight || '', legLeft: latest.legLeft || '', back: latest.back || '', waist: latest.waist || '',
                 calfRight: latest.calfRight || '', calfLeft: latest.calfLeft || '',
             });
@@ -136,21 +143,39 @@ export default function UnifitAthleteProfilePage() {
                 <CardContent>
                     {canEdit ? (
                         <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onAddMeasurement)} className="space-y-6">
-                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                                    <FormField control={form.control} name="weight" render={({ field }) => (<FormItem><FormLabel>Peso (kg)</FormLabel><FormControl><Input type="number" placeholder="kg" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    <FormField control={form.control} name="height" render={({ field }) => (<FormItem><FormLabel>Estatura (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    <FormField control={form.control} name="back" render={({ field }) => (<FormItem><FormLabel>Espalda (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    <FormField control={form.control} name="waist" render={({ field }) => (<FormItem><FormLabel>Cintura (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                </div>
-                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                                    <FormField control={form.control} name="armRight" render={({ field }) => (<FormItem><FormLabel>Brazo Der. (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    <FormField control={form.control} name="armLeft" render={({ field }) => (<FormItem><FormLabel>Brazo Izq. (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    <FormField control={form.control} name="legRight" render={({ field }) => (<FormItem><FormLabel>Pierna Der. (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    <FormField control={form.control} name="legLeft" render={({ field }) => (<FormItem><FormLabel>Pierna Izq. (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    <FormField control={form.control} name="calfRight" render={({ field }) => (<FormItem><FormLabel>Gemelo Der. (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    <FormField control={form.control} name="calfLeft" render={({ field }) => (<FormItem><FormLabel>Gemelo Izq. (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                </div>
+                            <form onSubmit={form.handleSubmit(onAddMeasurement)} className="space-y-8">
+                                <fieldset className="space-y-4 rounded-lg border p-4">
+                                     <legend className="-ml-1 px-1 text-base font-medium">Medidas Generales</legend>
+                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2">
+                                        <FormField control={form.control} name="weight" render={({ field }) => (<FormItem><FormLabel>Peso (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="kg" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="height" render={({ field }) => (<FormItem><FormLabel>Estatura (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="bodyFatPercentage" render={({ field }) => (<FormItem><FormLabel>% Grasa Corporal</FormLabel><FormControl><Input type="number" step="0.1" placeholder="%" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    </div>
+                                </fieldset>
+                                
+                                <fieldset className="space-y-4 rounded-lg border p-4">
+                                     <legend className="-ml-1 px-1 text-base font-medium">Medidas del Torso (cm)</legend>
+                                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-2">
+                                        <FormField control={form.control} name="shoulders" render={({ field }) => (<FormItem><FormLabel>Hombros</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="chest" render={({ field }) => (<FormItem><FormLabel>Pecho</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="back" render={({ field }) => (<FormItem><FormLabel>Espalda</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="waist" render={({ field }) => (<FormItem><FormLabel>Cintura</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="hip" render={({ field }) => (<FormItem><FormLabel>Cadera</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    </div>
+                                </fieldset>
+
+                                <fieldset className="space-y-4 rounded-lg border p-4">
+                                     <legend className="-ml-1 px-1 text-base font-medium">Medidas de Extremidades (cm)</legend>
+                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+                                        <FormField control={form.control} name="armRight" render={({ field }) => (<FormItem><FormLabel>Brazo Der.</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="armLeft" render={({ field }) => (<FormItem><FormLabel>Brazo Izq.</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="legRight" render={({ field }) => (<FormItem><FormLabel>Pierna Der.</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="legLeft" render={({ field }) => (<FormItem><FormLabel>Pierna Izq.</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="calfRight" render={({ field }) => (<FormItem><FormLabel>Gemelo Der.</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="calfLeft" render={({ field }) => (<FormItem><FormLabel>Gemelo Izq.</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    </div>
+                                </fieldset>
+
                                 <Button type="submit" disabled={form.formState.isSubmitting}>
                                     {form.formState.isSubmitting ? <Loader2 className="animate-spin" /> : <PlusCircle />}
                                     Añadir Medición al Historial
@@ -168,28 +193,30 @@ export default function UnifitAthleteProfilePage() {
                     <CardTitle className="font-headline flex items-center gap-2"><Calendar/> Historial de Mediciones</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Table>
+                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Fecha</TableHead>
                                 <TableHead>Peso</TableHead>
-                                <TableHead>Altura</TableHead>
+                                <TableHead>% Grasa</TableHead>
+                                <TableHead>Pecho</TableHead>
                                 <TableHead>Cintura</TableHead>
-                                <TableHead>Espalda</TableHead>
-                                <TableHead>B. Derecho</TableHead>
-                                <TableHead>B. Izquierdo</TableHead>
+                                <TableHead>Cadera</TableHead>
+                                <TableHead>B. Der.</TableHead>
+                                <TableHead>P. Der.</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {measurements?.map(m => (
                                 <TableRow key={m.id}>
                                     <TableCell>{m.date ? format(m.date.toDate(), "d MMM yyyy", { locale: es }) : 'N/A'}</TableCell>
-                                    <TableCell>{m.weight || '-'} kg</TableCell>
-                                    <TableCell>{m.height || '-'} cm</TableCell>
-                                    <TableCell>{m.waist || '-'} cm</TableCell>
-                                    <TableCell>{m.back || '-'} cm</TableCell>
-                                    <TableCell>{m.armRight || '-'} cm</TableCell>
-                                    <TableCell>{m.armLeft || '-'} cm</TableCell>
+                                    <TableCell>{m.weight ? `${m.weight} kg` : '-'}</TableCell>
+                                    <TableCell>{m.bodyFatPercentage ? `${m.bodyFatPercentage}%` : '-'}</TableCell>
+                                    <TableCell>{m.chest ? `${m.chest} cm` : '-'}</TableCell>
+                                    <TableCell>{m.waist ? `${m.waist} cm` : '-'}</TableCell>
+                                    <TableCell>{m.hip ? `${m.hip} cm` : '-'}</TableCell>
+                                    <TableCell>{m.armRight ? `${m.armRight} cm` : '-'}</TableCell>
+                                    <TableCell>{m.legRight ? `${m.legRight} cm` : '-'}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -202,3 +229,5 @@ export default function UnifitAthleteProfilePage() {
         </div>
     );
 }
+
+    

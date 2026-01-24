@@ -59,32 +59,48 @@ export default function UnifitAthleteDashboardPage() {
                     <CardDescription>Tu evolución a lo largo del tiempo.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Fecha</TableHead>
-                                <TableHead>Peso</TableHead>
-                                <TableHead>Altura</TableHead>
-                                <TableHead>Cintura</TableHead>
-                                <TableHead>Espalda</TableHead>
-                                <TableHead>B. Derecho</TableHead>
-                                <TableHead>B. Izquierdo</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {measurements?.map(m => (
-                                <TableRow key={m.id}>
-                                    <TableCell>{m.date ? format(m.date.toDate(), "d MMM yyyy", { locale: es }) : 'N/A'}</TableCell>
-                                    <TableCell>{m.weight || '-'} kg</TableCell>
-                                    <TableCell>{m.height || '-'} cm</TableCell>
-                                    <TableCell>{m.waist || '-'} cm</TableCell>
-                                    <TableCell>{m.back || '-'} cm</TableCell>
-                                    <TableCell>{m.armRight || '-'} cm</TableCell>
-                                    <TableCell>{m.armLeft || '-'} cm</TableCell>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Fecha</TableHead>
+                                    <TableHead>Peso</TableHead>
+                                    <TableHead>% Grasa</TableHead>
+                                    <TableHead>Hombros</TableHead>
+                                    <TableHead>Pecho</TableHead>
+                                    <TableHead>Espalda</TableHead>
+                                    <TableHead>Cintura</TableHead>
+                                    <TableHead>Cadera</TableHead>
+                                    <TableHead>B. Der.</TableHead>
+                                    <TableHead>B. Izq.</TableHead>
+                                    <TableHead>P. Der.</TableHead>
+                                    <TableHead>P. Izq.</TableHead>
+                                    <TableHead>G. Der.</TableHead>
+                                    <TableHead>G. Izq.</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {measurements?.map(m => (
+                                    <TableRow key={m.id}>
+                                        <TableCell>{m.date ? format(m.date.toDate(), "d MMM yyyy", { locale: es }) : 'N/A'}</TableCell>
+                                        <TableCell>{m.weight ? `${m.weight} kg` : '-'}</TableCell>
+                                        <TableCell>{m.bodyFatPercentage ? `${m.bodyFatPercentage}%` : '-'}</TableCell>
+                                        <TableCell>{m.shoulders ? `${m.shoulders} cm` : '-'}</TableCell>
+                                        <TableCell>{m.chest ? `${m.chest} cm` : '-'}</TableCell>
+                                        <TableCell>{m.back ? `${m.back} cm` : '-'}</TableCell>
+                                        <TableCell>{m.waist ? `${m.waist} cm` : '-'}</TableCell>
+                                        <TableCell>{m.hip ? `${m.hip} cm` : '-'}</TableCell>
+                                        <TableCell>{m.armRight ? `${m.armRight} cm` : '-'}</TableCell>
+                                        <TableCell>{m.armLeft ? `${m.armLeft} cm` : '-'}</TableCell>
+                                        <TableCell>{m.legRight ? `${m.legRight} cm` : '-'}</TableCell>
+                                        <TableCell>{m.legLeft ? `${m.legLeft} cm` : '-'}</TableCell>
+                                        <TableCell>{m.calfRight ? `${m.calfRight} cm` : '-'}</TableCell>
+                                        <TableCell>{m.calfLeft ? `${m.calfLeft} cm` : '-'}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                     {(!measurements || measurements.length === 0) && (
                         <p className="text-center py-8 text-muted-foreground">No tienes mediciones registradas todavía.</p>
                     )}
@@ -93,3 +109,5 @@ export default function UnifitAthleteDashboardPage() {
         </div>
     );
 }
+
+    
