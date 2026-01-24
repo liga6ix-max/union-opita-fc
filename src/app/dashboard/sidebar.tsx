@@ -35,6 +35,7 @@ import {
   Swords,
   HeartPulse,
   Activity,
+  Waves,
 } from "lucide-react";
 import { useFirebase } from "@/firebase";
 
@@ -72,7 +73,11 @@ const athleteNav = [
 ];
 
 const unifitNav = [
-  { href: "/dashboard/unifit", label: "Mi Progreso", icon: Activity },
+  { href: "/dashboard/unifit/profile", label: "Mi Perfil", icon: User },
+  { href: "/dashboard/unifit/progress", label: "Mis Medidas", icon: Activity },
+  { href: "/dashboard/unifit/schedule", label: "Horarios y Lugar", icon: CalendarDays },
+  { href: "/dashboard/unifit/underwater-activities", label: "Act. Subacuáticas", icon: Waves },
+  { href: "/dashboard/unifit/payments", label: "Pagos", icon: Wallet },
 ];
 
 const navItems = {
