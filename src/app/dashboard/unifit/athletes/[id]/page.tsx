@@ -149,7 +149,7 @@ export default function UnifitAthleteProfilePage() {
                                     <FormField control={form.control} name="legRight" render={({ field }) => (<FormItem><FormLabel>Pierna Der. (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                     <FormField control={form.control} name="legLeft" render={({ field }) => (<FormItem><FormLabel>Pierna Izq. (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                     <FormField control={form.control} name="calfRight" render={({ field }) => (<FormItem><FormLabel>Gemelo Der. (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    <FormField control={form.control} name="calfLeft" render={({ field }) => (<FormItem><FormLabel>Gemelo Izq. (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormMessage>)} />
+                                    <FormField control={form.control} name="calfLeft" render={({ field }) => (<FormItem><FormLabel>Gemelo Izq. (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 </div>
                                 <Button type="submit" disabled={form.formState.isSubmitting}>
                                     {form.formState.isSubmitting ? <Loader2 className="animate-spin" /> : <PlusCircle />}
