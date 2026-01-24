@@ -129,7 +129,7 @@ export default function AthleteProfilePage() {
       // It gets all attendance records for the club and we filter client-side.
       return collection(firestore, `clubs/${profile.clubId}/attendance`);
   }, [firestore, user?.uid, profile?.clubId]);
-  const { data: allAttendance, isLoading: attendanceLoading } = useCollection(allAttendance);
+  const { data: allAttendance, isLoading: attendanceLoading } = useCollection(attendanceQuery);
   
   const athleteAttendance = useMemo(() => {
       if (!allAttendance || !user?.uid) return {};
