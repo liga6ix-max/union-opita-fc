@@ -18,7 +18,7 @@ import { Calendar } from '@/components/ui/calendar';
 
 
 const MAIN_CLUB_ID = 'OpitaClub';
-const TOTAL_SLOTS = 24;
+const TOTAL_SLOTS = 20;
 
 const createSessionId = (session: { day: string; time: string; location: string; activity: string }) => {
     return `${session.day}-${session.time}-${session.location}-${session.activity}`.replace(/[^a-zA-Z0-9-]/g, '');
@@ -146,6 +146,7 @@ export default function UnifitSchedulePage() {
                                                     <CardHeader>
                                                         <CardTitle>{session.activity}</CardTitle>
                                                         <div className="text-sm text-muted-foreground space-y-1 pt-2">
+                                                            {selectedDate && <div className="flex items-center gap-2"><CalendarIcon/> {format(selectedDate, "d 'de' MMMM", { locale: es })}</div>}
                                                             <div className="flex items-center gap-2"><Clock/> {session.time}</div>
                                                             <div className="flex items-center gap-2"><MapPin/> {session.location}</div>
                                                         </div>
