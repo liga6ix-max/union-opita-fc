@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import Link from "next/link";
@@ -34,6 +32,8 @@ import {
   CalendarDays,
   Swords,
   HeartPulse,
+  Activity,
+  Waves,
 } from "lucide-react";
 import { useFirebase } from "@/firebase";
 
@@ -70,7 +70,11 @@ const athleteNav = [
 ];
 
 const unifitNav = [
-  { href: "/dashboard/unifit/athletes", label: "Deportistas", icon: Users },
+  { href: "/dashboard/unifit/profile", label: "Mi Perfil", icon: User },
+  { href: "/dashboard/unifit/progress", label: "Mis Medidas", icon: Activity },
+  { href: "/dashboard/unifit/schedule", label: "Horarios y Lugar", icon: CalendarDays },
+  { href: "/dashboard/unifit/underwater-activities", label: "Act. Subacuáticas", icon: Waves },
+  { href: "/dashboard/unifit/payments", label: "Pagos", icon: Wallet },
 ];
 
 const navItems = {
