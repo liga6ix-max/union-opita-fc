@@ -31,12 +31,16 @@ const pageTitles: { [key: string]: string } = {
   "/dashboard/manager/approvals": "Aprobación de Usuarios",
   "/dashboard/manager/landing": "Gestión Página de Inicio",
   "/dashboard/manager/settings": "Configuración del Club",
+  "/dashboard/manager/unifit": "Gestión de UNIFIT",
+  "/dashboard/manager/unifit-schedule": "Gestionar Horario UNIFIT",
   "/dashboard/coach": "Resumen del Entrenador",
   "/dashboard/coach/athletes": "Mis Deportistas",
   "/dashboard/coach/tasks": "Mis Tareas",
   "/dashboard/coach/planning": "Mi Planificación",
   "/dashboard/coach/attendance": "Registro de Asistencia",
   "/dashboard/coach/profile": "Mi Perfil",
+  "/dashboard/coach/unifit": "Deportistas UNIFIT",
+  "/dashboard/coach/unifit-schedule": "Gestionar Horario UNIFIT",
   "/dashboard/athlete": "Mis Pagos",
   "/dashboard/athlete/profile": "Mi Perfil",
   "/dashboard/athlete/evaluations": "Mis Evaluaciones",
@@ -52,6 +56,12 @@ const getDynamicTitle = (pathname: string): string => {
   }
   if (pathname.startsWith('/dashboard/unifit/athletes/')) {
     return "Perfil del Deportista (UNIFIT)";
+  }
+   if (pathname.startsWith('/dashboard/manager/unifit/')) {
+    return "Perfil UNIFIT (Gerente)";
+  }
+  if (pathname.startsWith('/dashboard/coach/unifit/')) {
+    return "Perfil UNIFIT (Entrenador)";
   }
   return pageTitles[pathname] || "Dashboard";
 };
@@ -117,3 +127,5 @@ export function DashboardHeader() {
     </header>
   );
 }
+
+    
