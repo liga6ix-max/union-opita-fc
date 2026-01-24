@@ -3,19 +3,20 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useUser, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
-import { format, addDays, startOfWeek, getDay } from 'date-fns';
+import { format, getDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Loader2, CalendarDays, Users, User, Clock, MapPin, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2, Users, User, Clock, MapPin, PlusCircle, Trash2, CalendarIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 const MAIN_CLUB_ID = 'OpitaClub';
 
@@ -33,17 +34,10 @@ const createSessionId = (session: UnifitScheduleItem) => {
 export default function CoachUnifitSchedulePage() {
     const { firestore, isUserLoading } = useUser();
     const { toast } = useToast();
-    const [today] = useState(new Date());
-
+    
     const [isSavingUnifitSchedules, setIsSavingUnifitSchedules] = useState(false);
     const [unifitSchedule, setUnifitSchedule] = useState<UnifitScheduleItem[]>([]);
-
-    const weekDates = useMemo(() => {
-        const start = startOfWeek(today, { weekStartsOn: 1 }); // Start week on Monday
-        return Array.from({ length: 7 }).map((_, i) => addDays(start, i));
-    }, [today]);
-
-    const [selectedDate, setSelectedDate] = useState(format(today, 'yyyy-MM-dd'));
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
     const clubConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'clubs', MAIN_CLUB_ID) : null, [firestore]);
     const { data: clubData, isLoading: clubLoading } = useDoc(clubConfigRef);
@@ -55,10 +49,10 @@ export default function CoachUnifitSchedulePage() {
     }, [clubData]);
 
     const bookingsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !selectedDate) return null;
         return query(
             collection(firestore, `clubs/${MAIN_CLUB_ID}/unifitBookings`),
-            where("bookingDate", "==", selectedDate)
+            where("bookingDate", "==", format(selectedDate, 'yyyy-MM-dd'))
         );
     }, [firestore, selectedDate]);
     const { data: bookings, isLoading: bookingsLoading } = useCollection(bookingsQuery);
@@ -102,6 +96,13 @@ export default function CoachUnifitSchedulePage() {
         const names = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
         return names.indexOf(name.toLowerCase());
     }
+    
+    const sessionsForSelectedDay = useMemo(() => {
+        if (!selectedDate || !scheduleForViewer) return [];
+        const dateDayIndex = getDay(selectedDate);
+        return scheduleForViewer.filter((s: any) => dayNameToIndex(s.day) === dateDayIndex);
+    }, [selectedDate, scheduleForViewer]);
+
 
     return (
         <div className="space-y-8">
@@ -175,78 +176,82 @@ export default function CoachUnifitSchedulePage() {
                         Supervisa la asistencia a las sesiones de entrenamiento funcional.
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
-                    {isLoading ? (
+                <CardContent className="space-y-6">
+                   {isLoading ? (
                         <div className="flex h-40 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
                     ) : (
-                        <Tabs defaultValue={selectedDate} onValueChange={setSelectedDate} className="w-full">
-                            <TabsList className="grid w-full grid-cols-3 md:grid-cols-7">
-                                {weekDates.map(date => (
-                                    <TabsTrigger key={date.toISOString()} value={format(date, 'yyyy-MM-dd')}>
-                                        <div className="capitalize">{format(date, 'eee', { locale: es })}</div>
-                                        <div className="text-xs">{format(date, 'd', { locale: es })}</div>
-                                    </TabsTrigger>
-                                ))}
-                            </TabsList>
-                            
-                            {weekDates.map(date => {
-                                const dateDayIndex = getDay(date);
-                                const sessionsForDay = scheduleForViewer.filter((s: any) => dayNameToIndex(s.day) === dateDayIndex);
-
-                                return (
-                                    <TabsContent key={date.toISOString()} value={format(date, 'yyyy-MM-dd')}>
-                                        {bookingsLoading ? (
-                                            <div className="flex h-40 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-                                        ) : sessionsForDay.length > 0 ? (
-                                            <Accordion type="single" collapsible className="w-full space-y-4 mt-6">
-                                                {sessionsForDay.map((session: any, index: number) => {
-                                                    const sessionId = createSessionId(session);
-                                                    const sessionBookings = bookings?.filter(b => b.sessionId === sessionId) || [];
-                                                    
-                                                    return (
-                                                        <Card key={index}>
-                                                            <AccordionItem value={`session-${index}`} className="border-b-0">
-                                                                <AccordionTrigger className="p-6 hover:no-underline">
-                                                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full pr-4 text-left">
-                                                                        <div className='flex-grow'>
-                                                                            <h4 className="font-bold text-lg">{session.activity}</h4>
-                                                                            <div className="text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 mt-1">
-                                                                                <span className="flex items-center gap-1.5"><Clock size={16}/> {session.time}</span>
-                                                                                <span className="flex items-center gap-1.5"><MapPin size={16}/> {session.location}</span>
-                                                                            </div>
+                        <div>
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                    "w-[280px] justify-start text-left font-normal",
+                                    !selectedDate && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {selectedDate ? format(selectedDate, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
+                                </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={selectedDate}
+                                    onSelect={setSelectedDate}
+                                    initialFocus
+                                />
+                                </PopoverContent>
+                            </Popover>
+                             {bookingsLoading ? (
+                                <div className="flex h-40 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                            ) : sessionsForSelectedDay.length > 0 ? (
+                                <Accordion type="single" collapsible className="w-full space-y-4 mt-6">
+                                    {sessionsForSelectedDay.map((session: any, index: number) => {
+                                        const sessionId = createSessionId(session);
+                                        const sessionBookings = bookings?.filter(b => b.sessionId === sessionId) || [];
+                                        
+                                        return (
+                                            <Card key={index}>
+                                                <AccordionItem value={`session-${index}`} className="border-b-0">
+                                                    <AccordionTrigger className="p-6 hover:no-underline">
+                                                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full pr-4 text-left">
+                                                            <div className='flex-grow'>
+                                                                <h4 className="font-bold text-lg">{session.activity}</h4>
+                                                                <div className="text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                                                                    <span className="flex items-center gap-1.5"><Clock size={16}/> {session.time}</span>
+                                                                    <span className="flex items-center gap-1.5"><MapPin size={16}/> {session.location}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="font-semibold text-lg text-primary mt-2 md:mt-0">{sessionBookings.length} Asistentes</div>
+                                                        </div>
+                                                    </AccordionTrigger>
+                                                    <AccordionContent className="p-6 pt-0">
+                                                        {sessionBookings.length > 0 ? (
+                                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2">
+                                                                {sessionBookings.map(booking => {
+                                                                    const bookingUser = usersMap.get(booking.userId);
+                                                                    return (
+                                                                        <div key={booking.id} className="flex items-center gap-2">
+                                                                            <User size={16} className="text-muted-foreground"/>
+                                                                            <span>{bookingUser?.firstName} {bookingUser?.lastName}</span>
                                                                         </div>
-                                                                        <div className="font-semibold text-lg text-primary mt-2 md:mt-0">{sessionBookings.length} Asistentes</div>
-                                                                    </div>
-                                                                </AccordionTrigger>
-                                                                <AccordionContent className="p-6 pt-0">
-                                                                    {sessionBookings.length > 0 ? (
-                                                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2">
-                                                                            {sessionBookings.map(booking => {
-                                                                                const bookingUser = usersMap.get(booking.userId);
-                                                                                return (
-                                                                                    <div key={booking.id} className="flex items-center gap-2">
-                                                                                        <User size={16} className="text-muted-foreground"/>
-                                                                                        <span>{bookingUser?.firstName} {bookingUser?.lastName}</span>
-                                                                                    </div>
-                                                                                );
-                                                                            })}
-                                                                        </div>
-                                                                    ) : (
-                                                                        <p className="text-muted-foreground">Nadie ha reservado para esta sesión todavía.</p>
-                                                                    )}
-                                                                </AccordionContent>
-                                                            </AccordionItem>
-                                                        </Card>
-                                                    );
-                                                })}
-                                            </Accordion>
-                                        ) : (
-                                            <p className="text-center py-12 text-muted-foreground">No hay sesiones programadas para este día.</p>
-                                        )}
-                                    </TabsContent>
-                                );
-                            })}
-                        </Tabs>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-muted-foreground">Nadie ha reservado para esta sesión todavía.</p>
+                                                        )}
+                                                    </AccordionContent>
+                                                </AccordionItem>
+                                            </Card>
+                                        );
+                                    })}
+                                </Accordion>
+                            ) : (
+                                <p className="text-center py-12 text-muted-foreground">No hay sesiones programadas para este día.</p>
+                            )}
+                        </div>
                     )}
                 </CardContent>
             </Card>
