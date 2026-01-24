@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -53,9 +52,9 @@ export default function CoachPlanningPage() {
   const { data: coachCycles, isLoading: cyclesLoading } = useCollection(microcyclesQuery);
   
   const { data: clubData, isLoading: clubLoading } = useDoc(useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore || !profile?.clubId) return null;
     return doc(firestore, 'clubs', profile.clubId);
-  }, [firestore, profile]));
+  }, [firestore, profile?.clubId]));
 
   const cyclesByCategory = useMemo(() => {
     if (!coachCycles) return {};

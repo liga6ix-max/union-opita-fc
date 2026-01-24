@@ -24,7 +24,6 @@ import { BrainCircuit, Loader2, Trash2, Maximize, GlassWater } from 'lucide-reac
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -81,16 +80,16 @@ export default function ManagerPlanningPage() {
   const { firestore } = useFirebase();
 
   const cyclesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore) return null;
     return collection(firestore, `clubs/${MAIN_CLUB_ID}/microcycles`);
-  }, [firestore, profile]);
+  }, [firestore]);
   const { data: cycleList, isLoading: cyclesLoading } = useCollection(cyclesQuery);
   
   const coachesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore) return null;
     // Query for all users that are staff (coaches or managers).
     return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "in", ["coach", "manager"]));
-  }, [firestore, profile]);
+  }, [firestore]);
   const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
   const form = useForm<PlanningFormValues>({

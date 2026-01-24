@@ -32,28 +32,28 @@ export default function ManagerTeamsPage() {
     const { toast } = useToast();
 
     const athletesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile) return null;
+        if (!firestore) return null;
         return collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`);
-    }, [firestore, profile]);
+    }, [firestore]);
     
     const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
     
     const coachesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile) return null;
+        if (!firestore) return null;
         return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "in", ["coach", "manager"]));
-    }, [firestore, profile]);
+    }, [firestore]);
     const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
     const microcyclesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile) return null;
+        if (!firestore) return null;
         return collection(firestore, `clubs/${MAIN_CLUB_ID}/microcycles`);
-    }, [firestore, profile]);
+    }, [firestore]);
     const { data: microcycles, isLoading: cyclesLoading } = useCollection(microcyclesQuery);
 
     const clubDocRef = useMemoFirebase(() => {
-        if (!firestore || !profile) return null;
+        if (!firestore) return null;
         return doc(firestore, `clubs/${MAIN_CLUB_ID}`);
-    }, [firestore, profile]);
+    }, [firestore]);
     const { data: clubData, isLoading: clubLoading } = useDoc(clubDocRef);
 
     if (isUserLoading || athletesLoading || coachesLoading || cyclesLoading || clubLoading) {

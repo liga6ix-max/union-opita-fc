@@ -21,26 +21,26 @@ export default function ManagerAthletesPage() {
     const { firestore } = useFirebase();
 
     const athletesSubCollectionQuery = useMemoFirebase(() => {
-      if (!firestore || !profile) return null;
+      if (!firestore) return null;
       let q = query(collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`));
       if (teamFilter) {
           q = query(q, where("team", "==", teamFilter));
       }
       return q;
-    }, [firestore, teamFilter, profile]);
+    }, [firestore, teamFilter]);
 
-    const allUsersQuery = useMemoFirebase(() => {
-        if (!firestore || !profile) return null;
+    const allAthletesUsersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
         return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "athlete"));
-    }, [firestore, profile]);
+    }, [firestore]);
     
     const coachesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile) return null;
+        if (!firestore) return null;
         return query(collection(firestore, `users`), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "coach"));
-    }, [firestore, profile]);
+    }, [firestore]);
     
     const { data: athletesSubCollection, isLoading: athletesLoading } = useCollection(athletesSubCollectionQuery);
-    const { data: allAthletesUsers, isLoading: usersLoading } = useCollection(allUsersQuery);
+    const { data: allAthletesUsers, isLoading: usersLoading } = useCollection(allAthletesUsersQuery);
     const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
     
     const enabledAndEnrichedAthletes = useMemo(() => {

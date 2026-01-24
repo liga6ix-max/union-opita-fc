@@ -93,16 +93,16 @@ export default function ManagerMatchesPage() {
   const { profile, isUserLoading, firestore } = useUser();
   
   const matchesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore) return null;
     return query(collection(firestore, `clubs/${MAIN_CLUB_ID}/matches`));
-  }, [firestore, profile]);
+  }, [firestore]);
   
   const { data: matches, isLoading: matchesLoading } = useCollection(matchesQuery);
 
   const allUsersQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore) return null;
     return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID));
-  }, [firestore, profile]);
+  }, [firestore]);
   const { data: allUsers, isLoading: usersLoading } = useCollection(allUsersQuery);
 
 
