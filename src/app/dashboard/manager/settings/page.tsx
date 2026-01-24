@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -45,6 +46,13 @@ const categorySchema = z.object({
   maxYear: z.number(),
 });
 
+type UnifitScheduleItem = {
+    day: string;
+    time: string;
+    location: string;
+    activity: string;
+};
+
 const clubSettingsSchema = z.object({
   name: z.string().min(1, "El nombre del club es requerido."),
   bankAccount: bankAccountSchema,
@@ -55,6 +63,12 @@ const clubSettingsSchema = z.object({
     time: z.string(),
     location: z.string(),
   }))).optional(),
+  unifitSchedule: z.array(z.object({
+    day: z.string(),
+    time: z.string(),
+    location: z.string(),
+    activity: z.string(),
+  })).optional(),
 });
 
 type ClubSettings = z.infer<typeof clubSettingsSchema>;
@@ -76,11 +90,12 @@ export default function ManagerSettingsPage() {
   const [isSavingCategories, setIsSavingCategories] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
   const [isSavingSchedules, setIsSavingSchedules] = useState(false);
+  const [isSavingUnifitSchedules, setIsSavingUnifitSchedules] = useState(false);
   
   const [clubName, setClubName] = useState('');
   const [categories, setCategories] = useState<z.infer<typeof categorySchema>[]>([]);
   const [trainingSchedules, setTrainingSchedules] = useState<Record<string, { day: string; time: string; location: string }[]>>({});
-
+  const [unifitSchedule, setUnifitSchedule] = useState<UnifitScheduleItem[]>([]);
 
   const clubConfigRef = useMemoFirebase(() => {
       if (!firestore) return null;
@@ -117,6 +132,7 @@ export default function ManagerSettingsPage() {
         setClubName(clubData.name || '');
         setCategories(clubData.categories && clubData.categories.length > 0 ? clubData.categories : clubConfig.categories);
         setTrainingSchedules(clubData.trainingSchedules || {});
+        setUnifitSchedule(clubData.unifitSchedule || []);
 
     } else if (!clubLoading) {
         setCategories(clubConfig.categories);
@@ -227,6 +243,30 @@ export default function ManagerSettingsPage() {
     toast({ title: "¡Horarios Guardados!", description: "Los horarios de entrenamiento han sido actualizados." });
     setIsSavingSchedules(false);
   };
+
+  const handleUnifitScheduleChange = (index: number, field: keyof UnifitScheduleItem, value: string) => {
+    const newSchedule = [...unifitSchedule];
+    newSchedule[index] = { ...newSchedule[index], [field]: value };
+    setUnifitSchedule(newSchedule);
+  };
+
+  const handleAddUnifitSession = () => {
+    setUnifitSchedule([...unifitSchedule, { day: '', time: '', location: '', activity: '' }]);
+  };
+
+  const handleRemoveUnifitSession = (index: number) => {
+    const newSchedule = [...unifitSchedule];
+    newSchedule.splice(index, 1);
+    setUnifitSchedule(newSchedule);
+  };
+
+  const handleSaveUnifitSchedule = () => {
+    if (!clubConfigRef) return;
+    setIsSavingUnifitSchedules(true);
+    updateDocumentNonBlocking(clubConfigRef, { unifitSchedule: unifitSchedule });
+    toast({ title: "¡Horario UNIFIT Guardado!", description: "El horario del programa UNIFIT ha sido actualizado." });
+    setIsSavingUnifitSchedules(false);
+  };
   
   if (isUserLoading || clubLoading || coachesLoading) {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
@@ -308,9 +348,9 @@ export default function ManagerSettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Gestión de Horarios de Entrenamiento</CardTitle>
+          <CardTitle>Gestión de Horarios de Entrenamiento (Fútbol)</CardTitle>
           <CardDescription>
-            Define los días, horas y lugares de entrenamiento para cada categoría.
+            Define los días, horas y lugares de entrenamiento para cada categoría de fútbol.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -350,8 +390,50 @@ export default function ManagerSettingsPage() {
             })}
           </div>
           <Button onClick={handleSaveSchedules} className="mt-6" disabled={isSavingSchedules}>
-            {isSavingSchedules ? <Loader2 className="animate-spin" /> : "Guardar Horarios"}
+            {isSavingSchedules ? <Loader2 className="animate-spin" /> : "Guardar Horarios de Fútbol"}
           </Button>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Gestión de Horarios (UNIFIT)</CardTitle>
+          <CardDescription>
+            Define los días, horas, lugares y actividades para el programa UNIFIT.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+            {unifitSchedule.map((session, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-9 gap-2 items-end border-t pt-4 first:border-t-0">
+                    <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor={`unifit-day-${index}`}>Día</Label>
+                        <Input id={`unifit-day-${index}`} value={session.day} onChange={(e) => handleUnifitScheduleChange(index, 'day', e.target.value)} placeholder="Ej: Lunes" />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor={`unifit-time-${index}`}>Horario</Label>
+                        <Input id={`unifit-time-${index}`} value={session.time} onChange={(e) => handleUnifitScheduleChange(index, 'time', e.target.value)} placeholder="6-7 AM" />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor={`unifit-location-${index}`}>Lugar</Label>
+                        <Input id={`unifit-location-${index}`} value={session.location} onChange={(e) => handleUnifitScheduleChange(index, 'location', e.target.value)} placeholder="Gimnasio" />
+                    </div>
+                     <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor={`unifit-activity-${index}`}>Actividad</Label>
+                        <Input id={`unifit-activity-${index}`} value={session.activity} onChange={(e) => handleUnifitScheduleChange(index, 'activity', e.target.value)} placeholder="Funcional" />
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => handleRemoveUnifitSession(index)} className="md:col-span-1 text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </div>
+            ))}
+            <div className="flex flex-wrap gap-4 pt-4 border-t">
+                 <Button variant="outline" onClick={handleAddUnifitSession}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Añadir Sesión UNIFIT
+                </Button>
+                <Button onClick={handleSaveUnifitSchedule} disabled={isSavingUnifitSchedules}>
+                    {isSavingUnifitSchedules ? <Loader2 className="animate-spin" /> : "Guardar Horario UNIFIT"}
+                </Button>
+            </div>
         </CardContent>
       </Card>
       
