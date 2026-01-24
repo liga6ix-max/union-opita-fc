@@ -25,6 +25,7 @@ import { BrainCircuit, Loader2, Trash2, Maximize, GlassWater } from 'lucide-reac
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -337,4 +338,3 @@ export default function ManagerPlanningPage() {
     </>
   );
 }
-
