@@ -15,6 +15,7 @@ const methodologyDescriptions = {
   tecnificacion: 'Tecnificación (4-7 años): Enfocado en la familiarización con el balón, la coordinación motriz y juegos lúdicos. Las actividades deben ser simples, divertidas y con mucho contacto con la pelota.',
   futbol_medida: 'Fútbol a la Medida (8-11 años): Se introducen los fundamentos técnicos (pase, control, conducción, tiro) y los principios tácticos básicos (juego en equipo, ocupación de espacios). El juego sigue siendo el eje central, pero con mayor estructura.',
   periodizacion_tactica: 'Periodización Táctica (12-20 años): El entrenamiento se organiza en torno a un modelo de juego. Cada ejercicio tiene un objetivo táctico claro, y las dimensiones técnicas, físicas y psicológicas se trabajan de forma integrada dentro del contexto de juego.',
+  unifit: 'Entrenamiento Funcional UNIFIT: Sesiones de alta intensidad en un circuito de 10 estaciones. Cada estación se enfoca en un ejercicio diferente utilizando materiales como balones de pilates, lazos, bancos, bandas de poder, sacos de boxeo, colchonetas, platillos, conos y vallas de salto. El objetivo es mejorar la fuerza, resistencia, agilidad y coordinación general.',
 };
 
 export async function createTrainingPlan(input: TrainingPlanInput): Promise<TrainingPlanOutput> {
@@ -55,11 +56,11 @@ const prompt = ai.definePrompt({
 
         Para cada **sesión**, debes definir:
         -   'day': El día de la semana.
-        -   'focus': El foco de la sesión (Técnico, Táctico, Físico, etc.).
-        -   'duration': La duración en minutos (ajusta la duración según la edad/metodología, ej: 45-60 min para tecnificación, 90 min para periodización táctica).
-        -   'activities': Una descripción clara y concisa de los ejercicios. Estructura las actividades en "Calentamiento", "Parte Principal" y "Vuelta a la Calma".
-        -   'fieldDimensions': Las dimensiones del terreno a utilizar (Ej: 'Medio campo', '20x30m'). Debe ser adecuado para la categoría y el objetivo.
-        -   'recoveryTime': Indicaciones sobre las pausas de recuperación e hidratación (Ej: 'Pausas de 2 min cada 15 min', 'Hidratación libre'). Debe ser adecuado para la categoría y la intensidad del entrenamiento.
+        -   'focus': El foco de la sesión (Técnico, Táctico, Físico, etc.). Si la metodología es UNIFIT, el foco debe ser 'Entrenamiento Funcional en Circuito'.
+        -   'duration': La duración en minutos (ajusta la duración según la edad/metodología, ej: 45-60 min para tecnificación, 90 min para periodización táctica). Para UNIFIT, usa 60 minutos.
+        -   'activities': Una descripción clara y concisa de los ejercicios. Estructura las actividades en "Calentamiento", "Parte Principal" y "Vuelta a la Calma". Para UNIFIT, la "Parte Principal" debe detallar 10 estaciones de ejercicios diferentes, especificando el tiempo de trabajo y descanso y los materiales (balones de pilates, lazos, bancos, bandas de poder, sacos de boxeo, colchonetas, platillos, conos, vallas de salto).
+        -   'fieldDimensions': Las dimensiones del terreno a utilizar (Ej: 'Medio campo', '20x30m'). Para UNIFIT, usa 'Gimnasio / Zona Funcional'.
+        -   'recoveryTime': Indicaciones sobre las pausas de recuperación e hidratación (Ej: 'Pausas de 2 min cada 15 min', 'Hidratación libre'). Para UNIFIT, especifica la recuperación entre estaciones.
 
         **IMPORTANTE:** El contenido debe ser 100% en español. Asegúrate de que la progresión de los objetivos y la complejidad de las actividades sean coherentes con la metodología y la categoría de edad.
     `,
@@ -81,3 +82,4 @@ const createTrainingPlanFlow = ai.defineFlow(
     return output;
   }
 );
+

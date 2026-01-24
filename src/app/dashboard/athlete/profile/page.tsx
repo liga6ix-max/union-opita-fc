@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -62,12 +63,13 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 type PaymentFormValues = z.infer<typeof paymentSchema>;
 type PaymentStatus = 'Pagado' | 'Pendiente' | 'En Verificación' | 'Rechazado';
 const MAIN_CLUB_ID = 'OpitaClub';
-type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica';
+type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica' | 'unifit';
 
 const methodologyLabels: Record<MicrocycleMethodology, string> = {
     tecnificacion: 'Tecnificación',
     futbol_medida: 'Fútbol a la Medida',
-    periodizacion_tactica: 'Periodización Táctica'
+    periodizacion_tactica: 'Periodización Táctica',
+    unifit: 'UNIFIT',
 };
 
 const createSafeKeyForCategory = (categoryName: string) => {
@@ -550,3 +552,4 @@ export default function AthleteProfilePage() {
     </div>
   );
 }
+

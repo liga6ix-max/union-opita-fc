@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -29,14 +30,15 @@ import { useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 
 
-type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica';
+type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica' | 'unifit';
 const MAIN_CLUB_ID = 'OpitaClub';
 
 
 const methodologyLabels: Record<MicrocycleMethodology, string> = {
     tecnificacion: 'Tecnificación',
     futbol_medida: 'Fútbol a la Medida',
-    periodizacion_tactica: 'Periodización Táctica'
+    periodizacion_tactica: 'Periodización Táctica',
+    unifit: 'UNIFIT'
 };
 
 export default function CoachPlanningPage() {

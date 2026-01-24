@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -57,12 +58,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica';
+type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica' | 'unifit';
 
 const methodologyLabels: Record<MicrocycleMethodology, string> = {
     tecnificacion: 'Tecnificación',
     futbol_medida: 'Fútbol a la Medida',
-    periodizacion_tactica: 'Periodización Táctica'
+    periodizacion_tactica: 'Periodización Táctica',
+    unifit: 'UNIFIT',
 };
 
 const PlanningFormSchema = TrainingPlanInputSchema.extend({
@@ -95,13 +97,15 @@ export default function ManagerPlanningPage() {
   const form = useForm<PlanningFormValues>({
     resolver: zodResolver(PlanningFormSchema),
     defaultValues: {
-      category: clubConfig.categories[0]?.name || 'Juvenil',
-      methodology: 'periodizacion_tactica',
-      mesocycleObjective: 'Mejorar la transición defensa-ataque y la finalización.',
+      category: 'UNIFIT',
+      methodology: 'unifit',
+      mesocycleObjective: 'Mejorar la fuerza explosiva y la resistencia cardiovascular.',
       weeks: 4,
       coachId: '',
     },
   });
+
+  const watchMethodology = form.watch('methodology');
 
   const onSubmit = (data: PlanningFormValues) => {
     setIsGenerating(true);
@@ -179,26 +183,13 @@ export default function ManagerPlanningPage() {
               <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                           <FormField control={form.control} name="category" render={({ field }) => (
-                              <FormItem>
-                                  <FormLabel>Categoría / Equipo</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                      <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger></FormControl>
-                                      <SelectContent>
-                                      {clubConfig.categories.map(cat => (
-                                          <SelectItem key={cat.name} value={cat.name}>{cat.name}</SelectItem>
-                                      ))}
-                                      </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                              </FormItem>
-                          )}/>
-                          <FormField control={form.control} name="methodology" render={({ field }) => (
+                           <FormField control={form.control} name="methodology" render={({ field }) => (
                               <FormItem>
                                   <FormLabel>Metodología</FormLabel>
                                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                                       <FormControl><SelectTrigger><SelectValue placeholder="Selecciona una metodología" /></SelectTrigger></FormControl>
                                       <SelectContent>
+                                          <SelectItem value="unifit">{methodologyLabels.unifit}</SelectItem>
                                           <SelectItem value="tecnificacion">{methodologyLabels.tecnificacion}</SelectItem>
                                           <SelectItem value="futbol_medida">{methodologyLabels.futbol_medida}</SelectItem>
                                           <SelectItem value="periodizacion_tactica">{methodologyLabels.periodizacion_tactica}</SelectItem>
@@ -207,6 +198,22 @@ export default function ManagerPlanningPage() {
                                   <FormMessage />
                               </FormItem>
                           )}/>
+                          {watchMethodology !== 'unifit' && (
+                             <FormField control={form.control} name="category" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Categoría / Equipo</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                        {clubConfig.categories.map(cat => (
+                                            <SelectItem key={cat.name} value={cat.name}>{cat.name}</SelectItem>
+                                        ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                          )}
                            <FormField control={form.control} name="weeks" render={({ field }) => (
                               <FormItem>
                                   <FormLabel>Duración (Semanas)</FormLabel>
@@ -330,3 +337,4 @@ export default function ManagerPlanningPage() {
     </>
   );
 }
+
