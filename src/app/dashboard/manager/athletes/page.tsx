@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import Link from 'next/link';
 import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
@@ -30,9 +30,9 @@ export default function ManagerAthletesPage() {
     }, [firestore, teamFilter]);
 
     const allAthletesUsersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !profile) return null;
         return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "athlete"));
-    }, [firestore]);
+    }, [firestore, profile]);
     
     const coachesQuery = useMemoFirebase(() => {
         if (!firestore) return null;

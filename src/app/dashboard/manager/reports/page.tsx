@@ -44,9 +44,9 @@ export default function ManagerReportsPage() {
     const { data: tasks, isLoading: tasksLoading } = useCollection(tasksQuery);
   
     const allCoachesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !profile) return null;
         return query(collection(firestore, `users`), where("clubId", "==", MAIN_CLUB_ID));
-    }, [firestore]);
+    }, [firestore, profile]);
     const { data: allUsers, isLoading: allUsersLoading } = useCollection(allCoachesQuery);
 
 

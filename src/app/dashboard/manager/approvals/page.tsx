@@ -38,9 +38,9 @@ export default function ApprovalsPage() {
 
     // We query all users for the specific club to show on the approvals page.
     const usersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !profile) return null;
         return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID));
-    }, [firestore]);
+    }, [firestore, profile]);
 
     const { data: userList, isLoading: usersLoading, error } = useCollection(usersQuery);
     

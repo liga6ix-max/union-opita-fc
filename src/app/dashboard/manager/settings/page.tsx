@@ -89,9 +89,9 @@ export default function ManagerSettingsPage() {
   const {data: clubData, isLoading: clubLoading} = useDoc<ClubSettings>(clubConfigRef);
 
   const coachesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "coach"));
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
   const [salaries, setSalaries] = useState<Record<string, number>>({});
