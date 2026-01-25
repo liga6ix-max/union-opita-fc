@@ -96,7 +96,7 @@ export default function UnifitSchedulePage() {
 
         const today = startOfDay(new Date());
 
-        for (let i = -1; i < 31; i++) { // Start from yesterday to show past sessions
+        for (let i = 0; i < 31; i++) { // Only show today and future sessions
             const date = addDays(today, i);
             const dayName = dayNames[getDay(date)];
             
@@ -166,9 +166,10 @@ export default function UnifitSchedulePage() {
                                                         const sessionBookings = bookings?.filter(b => b.sessionId === session.id && b.bookingDate === bookingDate) || [];
                                                         const userBooking = sessionBookings.find(b => b.userId === user?.uid);
                                                         const isFull = sessionBookings.length >= TOTAL_SLOTS;
+                                                        const fallbackId = `${session.day}-${session.time.replace(/\s/g, '')}`;
 
                                                         return (
-                                                            <Card key={`${instance.date.toISOString()}-${session.id}`} 
+                                                            <Card key={`${instance.date.toISOString()}-${session.id || fallbackId}`} 
                                                                 className={cn(
                                                                     "shadow-md", 
                                                                     isDayPast && "bg-yellow-100/50 border-yellow-200/60 dark:bg-yellow-950/30 dark:border-yellow-900/40"
