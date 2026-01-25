@@ -23,9 +23,9 @@ export default function CoachUnifitPage() {
 
     // 2. Get all users in the club to find their names
     const allUsersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !profile) return null;
         return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID));
-    }, [firestore]);
+    }, [firestore, profile]);
     const { data: allUsers, isLoading: usersLoading } = useCollection(allUsersQuery);
 
 

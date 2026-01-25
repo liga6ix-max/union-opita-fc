@@ -39,9 +39,9 @@ export default function ManagerTeamsPage() {
     const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
     
     const coachesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !profile) return null;
         return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "in", ["coach", "manager"]));
-    }, [firestore]);
+    }, [firestore, profile]);
     const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
     const microcyclesQuery = useMemoFirebase(() => {
