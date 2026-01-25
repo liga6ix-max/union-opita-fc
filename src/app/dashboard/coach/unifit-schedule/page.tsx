@@ -29,7 +29,7 @@ type UnifitScheduleItem = {
 };
 
 export default function CoachUnifitSchedulePage() {
-    const { firestore, isUserLoading } = useUser();
+    const { profile, firestore, isUserLoading } = useUser();
     const { toast } = useToast();
     
     const [isSavingUnifitSchedules, setIsSavingUnifitSchedules] = useState(false);
@@ -61,6 +61,21 @@ export default function CoachUnifitSchedulePage() {
         if (!allUsers) return new Map();
         return new Map(allUsers.map(u => [u.id, u]));
     }, [allUsers]);
+
+    // Fetch UNIFIT members assigned to this coach
+    const assignedMembersQuery = useMemoFirebase(() => {
+        if (!firestore || !profile?.id) return null;
+        return query(
+            collection(firestore, `clubs/${MAIN_CLUB_ID}/unifitMembers`),
+            where("coachId", "==", profile.id)
+        );
+    }, [firestore, profile?.id]);
+    const { data: assignedMembers, isLoading: membersLoading } = useCollection(assignedMembersQuery);
+
+    const assignedMemberIds = useMemo(() => {
+        if (!assignedMembers) return new Set();
+        return new Set(assignedMembers.map(m => m.id));
+    }, [assignedMembers]);
     
     const handleUnifitScheduleChange = (index: number, field: keyof Omit<UnifitScheduleItem, 'id'>, value: string) => {
         const newSchedule = [...unifitSchedule];
@@ -93,7 +108,7 @@ export default function CoachUnifitSchedulePage() {
         setIsSavingUnifitSchedules(false);
     };
 
-    const isLoading = isUserLoading || clubLoading || usersLoading;
+    const isLoading = isUserLoading || clubLoading || usersLoading || membersLoading;
     const scheduleForViewer = clubData?.unifitSchedule || [];
 
     const dayNameToIndex = (name: string) => {
@@ -178,7 +193,7 @@ export default function CoachUnifitSchedulePage() {
                         <Users /> Asistencia por Día
                     </CardTitle>
                     <CardDescription>
-                        Supervisa la asistencia a las sesiones de entrenamiento funcional.
+                        Supervisa la asistencia a las sesiones de los deportistas que tienes a tu cargo.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -214,7 +229,8 @@ export default function CoachUnifitSchedulePage() {
                                 <Accordion type="single" collapsible className="w-full space-y-4 mt-6">
                                     {sessionsForSelectedDay.map((session, index) => {
                                         const sessionBookings = bookings?.filter(b => b.sessionId === session.id) || [];
-                                        
+                                        const coachSessionBookings = sessionBookings.filter(b => assignedMemberIds.has(b.userId));
+
                                         return (
                                             <Card key={session.id || index}>
                                                 <AccordionItem value={`session-${session.id}`} className="border-b-0">
@@ -227,13 +243,13 @@ export default function CoachUnifitSchedulePage() {
                                                                     <span className="flex items-center gap-1.5"><MapPin size={16}/> {session.location}</span>
                                                                 </div>
                                                             </div>
-                                                            <div className="font-semibold text-lg text-primary mt-2 md:mt-0">{sessionBookings.length} Asistentes</div>
+                                                            <div className="font-semibold text-lg text-primary mt-2 md:mt-0">{coachSessionBookings.length} Asistentes</div>
                                                         </div>
                                                     </AccordionTrigger>
                                                     <AccordionContent className="p-6 pt-0">
-                                                        {sessionBookings.length > 0 ? (
+                                                        {coachSessionBookings.length > 0 ? (
                                                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2">
-                                                                {sessionBookings.map(booking => {
+                                                                {coachSessionBookings.map(booking => {
                                                                     const bookingUser = usersMap.get(booking.userId);
                                                                     return (
                                                                         <div key={booking.id} className="flex items-center gap-2">
@@ -244,7 +260,7 @@ export default function CoachUnifitSchedulePage() {
                                                                 })}
                                                             </div>
                                                         ) : (
-                                                            <p className="text-muted-foreground">Nadie ha reservado para esta sesión todavía.</p>
+                                                            <p className="text-muted-foreground">Ninguno de tus deportistas ha reservado para esta sesión.</p>
                                                         )}
                                                     </AccordionContent>
                                                 </AccordionItem>
