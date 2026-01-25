@@ -116,7 +116,7 @@ export default function UnifitSchedulePage() {
             }))
             .filter(group => group.instances.length > 0); // Only include days that have scheduled sessions
 
-    }, [clubData?.unifitSchedule, bookings, user]);
+    }, [clubData?.unifitSchedule]);
 
     const isLoading = isUserLoading || clubLoading || bookingsLoading;
 
@@ -147,7 +147,7 @@ export default function UnifitSchedulePage() {
                                 <CardContent className="space-y-6">
                                     {dayGroup.instances.map(instance => (
                                         <div key={instance.date.toISOString()} className="border-t pt-4 first:border-t-0">
-                                            <h4 className="font-semibold text-lg">{format(instance.date, "d 'de' MMMM, yyyy", { locale: es })}</h4>
+                                            <h4 className="font-semibold text-lg">{format(instance.date, "EEEE, d 'de' MMMM", { locale: es })}</h4>
                                             <div className="grid gap-4 mt-3 sm:grid-cols-2 lg:grid-cols-3">
                                                 {instance.sessions.map(session => {
                                                     const bookingDate = format(instance.date, 'yyyy-MM-dd');
@@ -156,7 +156,7 @@ export default function UnifitSchedulePage() {
                                                     const isFull = sessionBookings.length >= TOTAL_SLOTS;
 
                                                     return (
-                                                        <Card key={session.id} className="shadow-md">
+                                                        <Card key={`${instance.date.toISOString()}-${session.id}`} className="shadow-md">
                                                             <CardHeader>
                                                                 <CardTitle className="text-base">{session.activity}</CardTitle>
                                                                 <div className="text-sm text-muted-foreground space-y-1 pt-1">
