@@ -252,7 +252,7 @@ export default function CoachUnifitSchedulePage() {
                                                                 {coachSessionBookings.map(booking => {
                                                                     const bookingUser = usersMap.get(booking.userId);
                                                                     return (
-                                                                        <div key={booking.userId} className="flex items-center gap-2">
+                                                                        <div key={booking.id} className="flex items-center gap-2">
                                                                             <User size={16} className="text-muted-foreground"/>
                                                                             <span>{bookingUser?.firstName} {bookingUser?.lastName}</span>
                                                                         </div>
