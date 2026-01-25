@@ -185,10 +185,6 @@
           "type": "string",
           "description": "Reference to User. (Relationship: User 1:1 Athlete)"
         },
-        "level": {
-            "type": "number",
-            "description": "Athlete's skill level from 1 to 12."
-        },
         "emergencyContactName": {
           "type": "string",
           "description": "Name of the emergency contact."
@@ -565,7 +561,6 @@
         "clubId": { "type": "string" },
         "mesocycleObjective": { "type": "string" },
         "team": { "type": "string", "description": "The team/category this plan is assigned to." },
-        "level": { "type": "number", "description": "The skill level this plan is for (1-12)." },
         "coachId": { "type": "string", "description": "The ID of the coach this plan is assigned to." },
         "methodology": { "type": "string", "enum": ["tecnificacion", "futbol_medida", "periodizacion_tactica", "unifit"] },
         "createdAt": { "type": "string", "format": "date-time" },
@@ -595,7 +590,7 @@
           }
         }
       },
-      "required": ["id", "clubId", "mesocycleObjective", "team", "level", "coachId", "methodology", "createdAt", "microcycles"]
+      "required": ["id", "clubId", "mesocycleObjective", "team", "coachId", "methodology", "createdAt", "microcycles"]
     }
   },
   "auth": {

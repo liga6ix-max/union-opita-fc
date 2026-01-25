@@ -18,7 +18,7 @@ const methodologyDescriptions = {
   unifit: 'Entrenamiento Funcional UNIFIT: Sesiones de alta intensidad en un circuito de 10 estaciones. Cada estación se enfoca en un ejercicio diferente utilizando materiales como balones de pilates, lazos, bancos, bandas de poder, sacos de boxeo, colchonetas, platillos, conos y vallas de salto. El objetivo es mejorar la fuerza, resistencia, agilidad y coordinación general.',
 };
 
-export async function createTrainingPlan(input: TrainingPlanInput & { level: number }): Promise<TrainingPlanOutput> {
+export async function createTrainingPlan(input: TrainingPlanInput & { level?: number }): Promise<TrainingPlanOutput> {
   // Augment the input with the methodology description for the AI.
   const augmentedInput = {
     ...input,
@@ -41,7 +41,7 @@ const prompt = ai.definePrompt({
         Tu tarea es generar un plan de entrenamiento (mesociclo) completo y coherente basado en los siguientes parámetros:
 
         1.  **Categoría del Equipo:** {{{category}}}
-        2.  **Nivel de Habilidad:** {{{level}}} (en una escala de 1 a 12)
+        {{#if level}}2.  **Nivel de Habilidad:** {{{level}}} (en una escala de 1 a 12){{/if}}
         3.  **Metodología a Aplicar:** {{methodology}} - {{{methodologyDescription}}}
         4.  **Objetivo Principal del Mesociclo:** {{{mesocycleObjective}}}
         5.  **Duración del Mesociclo:** {{{weeks}}} semanas

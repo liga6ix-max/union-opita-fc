@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -25,7 +24,6 @@ import { BrainCircuit, Loader2, Trash2, Maximize, GlassWater, Copy } from 'lucid
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -78,6 +76,14 @@ const methodologyLabels: Record<MicrocycleMethodology, string> = {
 
 const PlanningFormSchema = TrainingPlanInputSchema.extend({
   coachId: z.string().min(1, "Debes asignar un entrenador."),
+}).superRefine((data, ctx) => {
+    if (data.methodology === 'unifit' && (data.level === undefined || data.level === null || data.level === 0)) {
+        ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "El nivel es requerido para UNIFIT.",
+        path: ["level"],
+        });
+    }
 });
 type PlanningFormValues = z.infer<typeof PlanningFormSchema>;
 
@@ -147,7 +153,7 @@ export default function ManagerPlanningPage() {
         addDocumentNonBlocking(trainingPlansCollection, {
             ...generatedPlan,
             team: data.category,
-            level: data.level,
+            level: data.methodology === 'unifit' ? data.level : null,
             coachId: data.coachId,
             methodology: data.methodology,
             clubId: MAIN_CLUB_ID,
@@ -192,6 +198,7 @@ export default function ManagerPlanningPage() {
         ...originalPlanData,
         team: data.team,
         coachId: data.coachId,
+        level: originalPlanData.methodology === 'unifit' ? originalPlanData.level : null,
         createdAt: serverTimestamp(),
     });
 
@@ -257,20 +264,22 @@ export default function ManagerPlanningPage() {
                                 </FormItem>
                             )}/>
                           )}
-                           <FormField control={form.control} name="level" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Nivel</FormLabel>
-                                    <Select onValueChange={(val) => field.onChange(parseInt(val))} value={String(field.value)}>
-                                        <FormControl><SelectTrigger><SelectValue placeholder="Nivel" /></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                            {Array.from({length: 12}, (_, i) => i + 1).map(level => (
-                                                <SelectItem key={level} value={String(level)}>{level}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                           )}/>
+                          {watchMethodology === 'unifit' && (
+                               <FormField control={form.control} name="level" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nivel</FormLabel>
+                                        <Select onValueChange={(val) => field.onChange(parseInt(val))} value={String(field.value || '')}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Nivel" /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                {Array.from({length: 12}, (_, i) => i + 1).map(level => (
+                                                    <SelectItem key={level} value={String(level)}>{level}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                               )}/>
+                          )}
                            <FormField control={form.control} name="weeks" render={({ field }) => (
                               <FormItem>
                                   <FormLabel>Duración (Semanas)</FormLabel>
@@ -298,7 +307,6 @@ export default function ManagerPlanningPage() {
                           <FormItem>
                               <FormLabel>Objetivo Principal del Mesociclo</FormLabel>
                               <FormControl><Textarea placeholder="Describe el objetivo principal para este plan..." {...field} /></FormControl>
-                              <FormDescription>La IA usará este objetivo para estructurar los microciclos.</FormDescription>
                               <FormMessage />
                           </FormItem>
                       )}/>
@@ -331,7 +339,7 @@ export default function ManagerPlanningPage() {
                                       <p className='text-sm text-muted-foreground'>Asignado a: {coach?.firstName || 'N/A'}</p>
                                   </div>
                                   <div className='flex items-center gap-2 mt-2 md:mt-0'>
-                                    <Badge variant="outline">Nivel {plan.level}</Badge>
+                                    {plan.level && <Badge variant="outline">Nivel {plan.level}</Badge>}
                                     <Badge variant="secondary">{plan.team}</Badge>
                                   </div>
                              </div>
@@ -393,7 +401,8 @@ export default function ManagerPlanningPage() {
             <Form {...cloneForm}>
                 <form onSubmit={cloneForm.handleSubmit(handleCloneSubmit)} className='space-y-4 py-4'>
                     <p className='text-sm text-muted-foreground'>
-                        Reutiliza el plan <span className='font-semibold text-foreground'>{planToClone?.mesocycleObjective}</span> (Nivel {planToClone?.level}) para un nuevo equipo.
+                        Reutiliza el plan <span className='font-semibold text-foreground'>{planToClone?.mesocycleObjective}</span> 
+                        {planToClone?.level ? ` (Nivel ${planToClone.level})` : ''} para un nuevo equipo.
                     </p>
                     <FormField control={cloneForm.control} name="team" render={({ field }) => (
                        <FormItem>

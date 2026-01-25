@@ -109,13 +109,12 @@ export default function AthleteProfilePage() {
   
   // Training Plans query
   const trainingPlansQuery = useMemoFirebase(() => {
-      if (!firestore || !profile?.clubId || !athleteData?.team || !athleteData?.level) return null;
+      if (!firestore || !profile?.clubId || !athleteData?.team) return null;
       return query(
           collection(firestore, `clubs/${profile.clubId}/trainingPlans`),
-          where("team", "==", athleteData.team),
-          where("level", "==", athleteData.level)
+          where("team", "==", athleteData.team)
       );
-  }, [firestore, profile?.clubId, athleteData?.team, athleteData?.level]);
+  }, [firestore, profile?.clubId, athleteData?.team]);
   const { data: trainingPlans, isLoading: plansLoading } = useCollection(trainingPlansQuery);
   
   const coachQuery = useMemoFirebase(() => {
@@ -341,7 +340,6 @@ export default function AthleteProfilePage() {
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
                         <div className="flex items-center gap-4"><User className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Nombre Completo</p><p className="font-medium">{displayData.firstName} {displayData.lastName}</p></div></div>
                         <div className="flex items-center gap-4"><Shield className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Equipo</p><p className="font-medium">{athleteData?.team || 'No asignado'}</p></div></div>
-                        <div className="flex items-center gap-4"><Star className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Nivel</p><p className="font-medium">{athleteData?.level || 'No asignado'}</p></div></div>
                         <div className="flex items-center gap-4"><Cake className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Fecha de Nacimiento</p><p className="font-medium">{displayData.birthDate ? `${format(parseISO(displayData.birthDate), "d 'de' MMMM, yyyy", { locale: es })} (${age} años)` : 'No especificada'}</p></div></div>
                         <div className="flex items-center gap-4"><FileText className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Documento</p><p className="font-medium">{displayData.documentType} {displayData.documentNumber || 'No especificado'}</p></div></div>
                         <div className="flex items-center gap-4"><VenetianMask className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Género</p><p className="font-medium">{displayData.gender || 'No especificado'}</p></div></div>
