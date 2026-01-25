@@ -218,10 +218,10 @@ export default function CoachUnderwaterActivitiesPage() {
                      <FormField control={form.control} name="level" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Nivel (Opcional)</FormLabel>
-                            <Select onValueChange={(val) => field.onChange(val ? parseInt(val) : '')} value={String(field.value || '')}>
+                            <Select onValueChange={(val) => field.onChange(val === 'all' ? '' : val)} value={field.value ? String(field.value) : 'all'}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                    <SelectItem value="">Todos</SelectItem>
+                                    <SelectItem value="all">Todos</SelectItem>
                                     {Array.from({length: 12}, (_, i) => i + 1).map(level => (
                                         <SelectItem key={level} value={String(level)}>Nivel {level}</SelectItem>
                                     ))}
