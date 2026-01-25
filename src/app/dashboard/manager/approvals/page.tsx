@@ -73,16 +73,23 @@ export default function ApprovalsPage() {
         if (!firestore) return;
 
         const userDocRef = doc(firestore, 'users', userId);
+        const userToUpdate = userList?.find(u => u.id === userId);
+        const oldRole = userToUpdate?.role;
         
         updateDocumentNonBlocking(userDocRef, {
             role: newRole,
             clubId: MAIN_CLUB_ID
         });
 
-        // If the new role is 'athlete', ensure the subcollection document exists.
+        // Clean up old role-specific data and create new data
         if (newRole === 'athlete') {
+            // If they were a unifit member, delete that profile
+            if (oldRole === 'unifit') {
+                const unifitMemberDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/unifitMembers`, userId);
+                deleteDocumentNonBlocking(unifitMemberDocRef);
+            }
+            // Create or update athlete profile
             const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, userId);
-            const userToUpdate = userList?.find(u => u.id === userId);
             if (userToUpdate) {
                 setDocumentNonBlocking(athleteDocRef, {
                     userId: userId,
@@ -92,15 +99,29 @@ export default function ApprovalsPage() {
                     lastName: userToUpdate.lastName,
                 }, { merge: true });
             }
-        }
-        
-        if (newRole === 'unifit') {
+        } else if (newRole === 'unifit') {
+            // If they were an athlete, delete that profile
+            if (oldRole === 'athlete') {
+                const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, userId);
+                deleteDocumentNonBlocking(athleteDocRef);
+            }
+            // Create or update unifit profile
             const unifitMemberDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/unifitMembers`, userId);
              setDocumentNonBlocking(unifitMemberDocRef, {
                 id: userId,
                 clubId: MAIN_CLUB_ID,
                 coachId: null,
             }, { merge: true });
+        } else {
+             // If new role is manager or coach, clean up both possible old profiles
+            if (oldRole === 'athlete') {
+                const athleteDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/athletes`, userId);
+                deleteDocumentNonBlocking(athleteDocRef);
+            }
+            if (oldRole === 'unifit') {
+                const unifitMemberDocRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/unifitMembers`, userId);
+                deleteDocumentNonBlocking(unifitMemberDocRef);
+            }
         }
 
         toast({ title: 'Rol Actualizado', description: `El usuario ahora tiene el rol de ${roleLabels[newRole]}. Se requiere un nuevo inicio de sesión para que los permisos se apliquen.` });
