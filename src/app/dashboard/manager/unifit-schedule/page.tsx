@@ -105,7 +105,12 @@ export default function ManagerUnifitSchedulePage() {
     const sessionsForSelectedDay = useMemo(() => {
         if (!selectedDate || !scheduleForViewer) return [];
         const dateDayIndex = getDay(selectedDate);
-        return scheduleForViewer.filter((s: any) => s && s.day && dayNameToIndex(s.day) === dateDayIndex);
+        return scheduleForViewer
+            .filter((s: any) => s && s.day && dayNameToIndex(s.day) === dateDayIndex)
+            .map((s: any) => ({
+                ...s,
+                id: s.id || `${s.day}-${s.time.replace(/\s/g, '')}`
+            }));
     }, [selectedDate, scheduleForViewer]);
 
 
@@ -212,11 +217,11 @@ export default function ManagerUnifitSchedulePage() {
                                 <div className="flex h-40 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
                             ) : sessionsForSelectedDay.length > 0 ? (
                                 <Accordion type="single" collapsible className="w-full space-y-4 mt-6">
-                                    {sessionsForSelectedDay.map((session, index) => {
+                                    {sessionsForSelectedDay.map((session) => {
                                         const sessionBookings = bookings?.filter(b => b.sessionId === session.id) || [];
                                         
                                         return (
-                                            <Card key={session.id || index}>
+                                            <Card key={session.id}>
                                                 <AccordionItem value={`session-${session.id}`} className="border-b-0">
                                                     <AccordionTrigger className="p-6 hover:no-underline">
                                                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full pr-4 text-left">
