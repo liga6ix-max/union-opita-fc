@@ -591,6 +591,21 @@
         }
       },
       "required": ["id", "clubId", "mesocycleObjective", "team", "coachId", "methodology", "createdAt", "microcycles"]
+    },
+    "UnderwaterActivity": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UnderwaterActivity",
+      "type": "object",
+      "description": "Represents a scheduled underwater activity session.",
+      "properties": {
+        "id": { "type": "string" },
+        "clubId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string", "format": "time" },
+        "location": { "type": "string" },
+        "activity": { "type": "string", "description": "Description of the activity to be performed." }
+      },
+      "required": ["id", "clubId", "date", "time", "location", "activity"]
     }
   },
   "auth": {
@@ -837,6 +852,20 @@
             {
               "name": "planId"
             }
+          ]
+        }
+      },
+      {
+        "path": "/clubs/{clubId}/underwaterActivities/{activityId}",
+        "definition": {
+          "entityName": "UnderwaterActivity",
+          "schema": {
+            "$ref": "#/backend/entities/UnderwaterActivity"
+          },
+          "description": "Stores scheduled underwater activities for the club.",
+          "params": [
+            { "name": "clubId" },
+            { "name": "activityId" }
           ]
         }
       }

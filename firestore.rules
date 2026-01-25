@@ -132,6 +132,11 @@ service cloud.firestore {
       allow update: if false;
     }
     
+    // Underwater Activities
+    match /clubs/{clubId}/underwaterActivities/{activityId} {
+      allow read, write: if isCoach() && isMemberOfTheClub(clubId);
+    }
+    
     // Subcollections need to verify the user is part of the parent club OR is a manager.
     match /clubs/{clubId}/{document=**} {
         allow read, write: if isManager() || (isSignedIn() && isMemberOfTheClub(clubId));
