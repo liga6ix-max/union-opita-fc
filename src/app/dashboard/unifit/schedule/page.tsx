@@ -5,7 +5,7 @@ import { useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
-import { format, getDay, addDays } from 'date-fns';
+import { format, getDay, addDays, startOfWeek, getWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,6 +15,14 @@ import { Progress } from '@/components/ui/progress';
 
 const MAIN_CLUB_ID = 'OpitaClub';
 const TOTAL_SLOTS = 20;
+
+type UnifitScheduleItem = {
+    id: string;
+    day: string;
+    time: string;
+    location: string;
+    activity: string;
+};
 
 export default function UnifitSchedulePage() {
     const { user, firestore, isUserLoading } = useUser();
@@ -27,7 +35,7 @@ export default function UnifitSchedulePage() {
     }, [firestore]);
     const { data: clubData, isLoading: clubLoading } = useDoc(clubConfigRef);
 
-    // 2. Fetch all bookings from today onwards for the next month
+    // 2. Fetch all bookings for the next month to calculate availability
     const bookingsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         const today = format(new Date(), 'yyyy-MM-dd');
@@ -41,7 +49,7 @@ export default function UnifitSchedulePage() {
     }, [firestore]);
     const { data: bookings, isLoading: bookingsLoading } = useCollection(bookingsQuery);
     
-    // The core booking/cancellation logic remains the same
+    // Booking and cancellation logic
     const handleBooking = async (session: any, date: Date) => {
         if (!firestore || !user || !date || !session.id) return;
 
@@ -76,45 +84,50 @@ export default function UnifitSchedulePage() {
         }
     };
     
-    // Data processing to generate the schedule view grouped by day of the week
-    const scheduleByDayOfWeek = useMemo(() => {
-        const masterSchedule = clubData?.unifitSchedule || [];
+    // Process master schedule into a monthly view grouped by day of the week
+    const monthlySchedule = useMemo(() => {
+        const masterSchedule: UnifitScheduleItem[] = clubData?.unifitSchedule || [];
         if (masterSchedule.length === 0) return [];
         
         const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
         const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
         
-        // 1. Group all upcoming session instances by the name of the day (Lunes, Martes, etc.)
-        const instancesByDayName: Record<string, { date: Date; sessions: any[] }[]> = {};
+        const scheduleByDayOfWeek: Record<string, { date: Date; sessions: any[] }[]> = {};
 
         const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
         // Generate schedule for the next 31 days (a full mesociclo)
         for (let i = 0; i < 31; i++) {
             const date = addDays(today, i);
             const dayName = dayNames[getDay(date)];
             
-            // Find all master sessions scheduled for this day of the week
-            const sessionsForThisDay = masterSchedule.filter((s:any) => s.day === dayName);
+            const sessionsForThisDay = masterSchedule
+                .filter((s: any) => s.day === dayName)
+                .map(s => ({
+                    ...s,
+                    // Ensure there's always a stable ID for keys and booking logic,
+                    // falling back to a composite key if the DB entry is old.
+                    id: s.id || `${s.day}-${s.time}`
+                }));
 
             if (sessionsForThisDay.length > 0) {
-                if (!instancesByDayName[dayName]) {
-                    instancesByDayName[dayName] = [];
+                 if (!scheduleByDayOfWeek[dayName]) {
+                    scheduleByDayOfWeek[dayName] = [];
                 }
-                // Add the specific date and its corresponding sessions
-                instancesByDayName[dayName].push({
+                scheduleByDayOfWeek[dayName].push({
                     date: date,
-                    sessions: sessionsForThisDay.sort((a,b) => a.time.localeCompare(b.time)), // Sort sessions by time
+                    sessions: sessionsForThisDay.sort((a,b) => a.time.localeCompare(b.time)),
                 });
             }
         }
         
-        // 2. Format the data into the final structure, ordered by the day of the week
         return dayOrder
             .map(dayName => ({
                 dayName,
-                instances: instancesByDayName[dayName] || [],
+                instances: scheduleByDayOfWeek[dayName] || [],
             }))
-            .filter(group => group.instances.length > 0); // Only include days that have scheduled sessions
+            .filter(group => group.instances.length > 0);
 
     }, [clubData?.unifitSchedule]);
 
@@ -132,24 +145,24 @@ export default function UnifitSchedulePage() {
                         <CalendarIcon /> Reserva de Clases UNIFIT
                     </CardTitle>
                     <CardDescription>
-                        Selecciona las sesiones a las que deseas asistir para el próximo mes.
+                        Selecciona las sesiones a las que deseas asistir para las próximas 4 semanas.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
                     {isLoading ? (
                          <div className="flex h-40 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-                    ) : scheduleByDayOfWeek && scheduleByDayOfWeek.length > 0 ? (
-                        scheduleByDayOfWeek.map(dayGroup => (
+                    ) : monthlySchedule && monthlySchedule.length > 0 ? (
+                        monthlySchedule.map(dayGroup => (
                              <Card key={dayGroup.dayName} className="bg-background/50">
                                 <CardHeader>
                                     <CardTitle className="font-headline text-2xl text-primary">{dayGroup.dayName}</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
-                                    {dayGroup.instances.map(instance => (
-                                        <div key={instance.date.toISOString()} className="border-t pt-4 first:border-t-0">
+                                     {dayGroup.instances.map((instance) => (
+                                        <div key={instance.date.toISOString()} className="border-t pt-6 first:border-t-0">
                                             <h4 className="font-semibold text-lg">{format(instance.date, "EEEE, d 'de' MMMM", { locale: es })}</h4>
                                             <div className="grid gap-4 mt-3 sm:grid-cols-2 lg:grid-cols-3">
-                                                {instance.sessions.map(session => {
+                                                {instance.sessions.map((session) => {
                                                     const bookingDate = format(instance.date, 'yyyy-MM-dd');
                                                     const sessionBookings = bookings?.filter(b => b.sessionId === session.id && b.bookingDate === bookingDate) || [];
                                                     const userBooking = sessionBookings.find(b => b.userId === user?.uid);
