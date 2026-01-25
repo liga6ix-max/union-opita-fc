@@ -65,16 +65,28 @@ export default function CoachUnifitAthleteProfilePage() {
     const [measurementToDelete, setMeasurementToDelete] = useState<string | null>(null);
     
     // Data fetching
-    const userDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', memberId) : null, [firestore, memberId]);
+    const userDocRef = useMemoFirebase(() => {
+        if (!firestore || !currentUserProfile) return null;
+        return doc(firestore, 'users', memberId);
+    }, [firestore, memberId, currentUserProfile]);
     const { data: userData, isLoading: userLoading } = useDoc(userDocRef);
 
-    const unifitProfileDocRef = useMemoFirebase(() => firestore ? doc(firestore, `clubs/${MAIN_CLUB_ID}/unifitMembers`, memberId) : null, [firestore, memberId]);
+    const unifitProfileDocRef = useMemoFirebase(() => {
+        if (!firestore || !currentUserProfile) return null;
+        return doc(firestore, `clubs/${MAIN_CLUB_ID}/unifitMembers`, memberId);
+    }, [firestore, memberId, currentUserProfile]);
     const { data: unifitProfile, isLoading: profileLoading } = useDoc(unifitProfileDocRef);
 
-    const measurementsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `clubs/${MAIN_CLUB_ID}/unifitMembers/${memberId}/measurements`), orderBy('date', 'desc')) : null, [firestore, memberId]);
+    const measurementsQuery = useMemoFirebase(() => {
+        if (!firestore || !currentUserProfile) return null;
+        return query(collection(firestore, `clubs/${MAIN_CLUB_ID}/unifitMembers/${memberId}/measurements`), orderBy('date', 'desc'));
+    }, [firestore, memberId, currentUserProfile]);
     const { data: measurements, isLoading: measurementsLoading } = useCollection(measurementsQuery);
     
-    const coachesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "coach")) : null, [firestore]);
+    const coachesQuery = useMemoFirebase(() => {
+        if (!firestore || !currentUserProfile) return null;
+        return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "coach"));
+    }, [firestore, currentUserProfile]);
     const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
     const form = useForm<MeasurementFormValues>({

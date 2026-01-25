@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -22,9 +21,9 @@ export default function ManagerUnifitPage() {
     }, [firestore]);
 
     const unifitProfilesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !currentUserProfile) return null;
         return collection(firestore, `clubs/${MAIN_CLUB_ID}/unifitMembers`);
-    }, [firestore]);
+    }, [firestore, currentUserProfile]);
     
     const coachesQuery = useMemoFirebase(() => {
         if (!firestore) return null;
