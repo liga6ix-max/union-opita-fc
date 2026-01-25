@@ -8,7 +8,7 @@ import { createTrainingPlan } from '@/ai/flows/create-training-plan-flow';
 import { TrainingPlanInputSchema } from '@/ai/schemas/training-plan-schema';
 import clubConfig from '@/lib/club-config.json';
 import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
-import { collection, query, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, query, serverTimestamp, doc, where } from 'firebase/firestore';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
@@ -28,6 +28,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -307,6 +308,7 @@ export default function ManagerPlanningPage() {
                           <FormItem>
                               <FormLabel>Objetivo Principal del Mesociclo</FormLabel>
                               <FormControl><Textarea placeholder="Describe el objetivo principal para este plan..." {...field} /></FormControl>
+                              <FormDescription>La IA usará este objetivo para estructurar los microciclos.</FormDescription>
                               <FormMessage />
                           </FormItem>
                       )}/>
