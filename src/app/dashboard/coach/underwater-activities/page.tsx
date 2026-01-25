@@ -46,12 +46,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 const activitySchema = z.object({
   date: z.string().min(1, "La fecha es requerida."),
   time: z.string().min(1, "La hora es requerida."),
   location: z.string().min(3, "La ubicación es requerida."),
   activity: z.string().min(5, "La descripción de la actividad es requerida."),
+  level: z.coerce.number().min(1).max(12).optional().or(z.literal('')),
 });
 
 type ActivityFormValues = z.infer<typeof activitySchema>;
@@ -79,32 +82,38 @@ export default function CoachUnderwaterActivitiesPage() {
       time: '',
       location: '',
       activity: '',
+      level: '',
     },
   });
 
   useEffect(() => {
     if (selectedActivity && isDialogOpen) {
-      form.reset(selectedActivity);
+      form.reset({ ...selectedActivity, level: selectedActivity.level || '' });
     } else {
-      form.reset({ date: '', time: '', location: '', activity: '' });
+      form.reset({ date: '', time: '', location: '', activity: '', level: '' });
     }
   }, [selectedActivity, isDialogOpen, form]);
 
   const onSubmit = async (data: ActivityFormValues) => {
     if (!firestore || !profile) return;
     
+    const payload = {
+        ...data,
+        level: data.level || null,
+    };
+
     if (selectedActivity) {
       // Update existing activity
       const activityRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/underwaterActivities`, selectedActivity.id);
       updateDocumentNonBlocking(activityRef, {
-        ...data,
+        ...payload,
         updatedAt: serverTimestamp(),
       });
       toast({ title: '¡Actividad Actualizada!', description: 'La actividad ha sido actualizada.' });
     } else {
       // Create new activity
       addDocumentNonBlocking(collection(firestore, `clubs/${MAIN_CLUB_ID}/underwaterActivities`), {
-        ...data,
+        ...payload,
         clubId: MAIN_CLUB_ID,
         createdBy: profile.id,
         createdAt: serverTimestamp(),
@@ -163,15 +172,18 @@ export default function CoachUnderwaterActivitiesPage() {
                                       <CardTitle className="font-headline text-xl">{activity.activity}</CardTitle>
                                       <CardDescription className="flex items-center gap-2 pt-1"><Calendar/> {format(new Date(`${activity.date}T00:00:00`), "d 'de' MMMM, yyyy", { locale: es })}</CardDescription>
                                   </div>
-                                  <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                          <Button variant="ghost" size="icon" className="-mt-2 -mr-2"><MoreVertical className="h-4 w-4" /></Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent>
-                                          <DropdownMenuItem onClick={() => openDialog(activity)}><Pencil className="mr-2"/>Editar</DropdownMenuItem>
-                                          <DropdownMenuItem onClick={() => openDeleteDialog(activity)} className="text-destructive"><Trash2 className="mr-2"/>Eliminar</DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                  </DropdownMenu>
+                                  <div className="flex flex-col items-end gap-2">
+                                      <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                              <Button variant="ghost" size="icon" className="-mt-2 -mr-2"><MoreVertical className="h-4 w-4" /></Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent>
+                                              <DropdownMenuItem onClick={() => openDialog(activity)}><Pencil className="mr-2"/>Editar</DropdownMenuItem>
+                                              <DropdownMenuItem onClick={() => openDeleteDialog(activity)} className="text-destructive"><Trash2 className="mr-2"/>Eliminar</DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                      </DropdownMenu>
+                                      {activity.level && <Badge variant="secondary">Nivel {activity.level}</Badge>}
+                                  </div>
                               </div>
                           </CardHeader>
                           <CardContent>
@@ -201,7 +213,24 @@ export default function CoachUnderwaterActivitiesPage() {
                     <FormField control={form.control} name="date" render={({ field }) => (<FormItem><FormLabel>Fecha</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                     <FormField control={form.control} name="time" render={({ field }) => (<FormItem><FormLabel>Hora</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                 </div>
-                <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Lugar</FormLabel><FormControl><Input placeholder="Ej: Piscina Olímpica" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Lugar</FormLabel><FormControl><Input placeholder="Ej: Piscina Olímpica" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                     <FormField control={form.control} name="level" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Nivel (Opcional)</FormLabel>
+                            <Select onValueChange={(val) => field.onChange(val ? parseInt(val) : '')} value={String(field.value || '')}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="">Todos</SelectItem>
+                                    {Array.from({length: 12}, (_, i) => i + 1).map(level => (
+                                        <SelectItem key={level} value={String(level)}>Nivel {level}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}/>
+                </div>
                 <FormField control={form.control} name="activity" render={({ field }) => (<FormItem><FormLabel>Actividad</FormLabel><FormControl><Textarea placeholder="Describe la actividad o el enfoque de la sesión..." {...field} /></FormControl><FormMessage /></FormItem>)}/>
                 <DialogFooter> <Button type="submit" disabled={form.formState.isSubmitting}> {form.formState.isSubmitting ? <Loader2 className="animate-spin" /> : (selectedActivity ? "Guardar Cambios" : "Crear Actividad")} </Button> </DialogFooter>
             </form>

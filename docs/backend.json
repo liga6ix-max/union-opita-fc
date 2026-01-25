@@ -603,7 +603,8 @@
         "date": { "type": "string", "format": "date" },
         "time": { "type": "string", "format": "time" },
         "location": { "type": "string" },
-        "activity": { "type": "string", "description": "Description of the activity to be performed." }
+        "activity": { "type": "string", "description": "Description of the activity to be performed." },
+        "level": { "type": "number", "description": "The skill level (1-12) this activity is intended for." }
       },
       "required": ["id", "clubId", "date", "time", "location", "activity"]
     }
