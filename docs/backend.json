@@ -296,6 +296,15 @@
         "medicalInformation": {
           "type": "string",
           "description": "Important medical information about the member."
+        },
+        "lastPeriodDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Start date of the last menstrual period."
+        },
+        "cycleLength": {
+          "type": "number",
+          "description": "Average length of the menstrual cycle in days (e.g., 28)."
         }
       },
       "required": [

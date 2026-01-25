@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -38,6 +37,8 @@ export interface UserProfile {
   speedTest30mTime?: number;
   ankleFlexibility?: number;
   enduranceTest8kmTime?: string;
+  lastPeriodDate?: string;
+  cycleLength?: number;
 }
 
 
