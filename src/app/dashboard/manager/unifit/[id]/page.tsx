@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -11,7 +10,7 @@ import { es } from 'date-fns/locale';
 
 import { useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,9 +18,20 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, PlusCircle, User, Activity, Calendar, Ruler, Star } from 'lucide-react';
+import { Loader2, PlusCircle, User, Activity, Calendar, Ruler, Star, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
 
 const MAIN_CLUB_ID = 'OpitaClub';
 
@@ -51,6 +61,8 @@ export default function ManagerUnifitAthleteProfilePage() {
     const params = useParams();
     const { profile: currentUserProfile, isUserLoading, firestore } = useUser();
     const memberId = params.id as string;
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [measurementToDelete, setMeasurementToDelete] = useState<string | null>(null);
     
     // Data fetching
     const userDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', memberId) : null, [firestore, memberId]);
@@ -103,6 +115,20 @@ export default function ManagerUnifitAthleteProfilePage() {
         if (!unifitProfileDocRef) return;
         updateDocumentNonBlocking(unifitProfileDocRef, { coachId });
         toast({ title: "Entrenador Asignado", description: "Se ha actualizado el entrenador para este deportista." });
+    };
+
+    const handleDeleteMeasurement = () => {
+        if (!measurementToDelete || !firestore || !memberId) return;
+        const measurementRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/unifitMembers/${memberId}/measurements`, measurementToDelete);
+        deleteDocumentNonBlocking(measurementRef);
+        toast({ title: "Medición Eliminada", description: "El registro ha sido eliminado del historial." });
+        setIsDeleteDialogOpen(false);
+        setMeasurementToDelete(null);
+    };
+
+    const openDeleteDialog = (id: string) => {
+        setMeasurementToDelete(id);
+        setIsDeleteDialogOpen(true);
     };
 
     const canEdit = currentUserProfile?.role === 'manager' || currentUserProfile?.id === unifitProfile?.coachId;
@@ -225,6 +251,9 @@ export default function ManagerUnifitAthleteProfilePage() {
                                 <TableHead>Cadera</TableHead>
                                 <TableHead>B. Der.</TableHead>
                                 <TableHead>P. Der.</TableHead>
+                                {currentUserProfile?.role === 'manager' && (
+                                    <TableHead className="text-right">Acciones</TableHead>
+                                )}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -238,6 +267,13 @@ export default function ManagerUnifitAthleteProfilePage() {
                                     <TableCell>{m.hip ? `${m.hip} cm` : '-'}</TableCell>
                                     <TableCell>{m.armRight ? `${m.armRight} cm` : '-'}</TableCell>
                                     <TableCell>{m.legRight ? `${m.legRight} cm` : '-'}</TableCell>
+                                    {currentUserProfile?.role === 'manager' && (
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(m.id)}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -247,6 +283,23 @@ export default function ManagerUnifitAthleteProfilePage() {
                     )}
                 </CardContent>
             </Card>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Se eliminará el registro de medición permanentemente.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setMeasurementToDelete(null)}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteMeasurement} className="bg-destructive hover:bg-destructive/90">
+                            Eliminar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
