@@ -120,6 +120,9 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         const userDocRef = doc(firestore, 'users', firebaseUser.uid);
 
         profileUnsubscribe = onSnapshot(userDocRef, (userDocSnap) => {
+          // Cleanup previous subcollection listener before attaching a new one or setting state
+          subcollectionUnsubscribe?.();
+
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data() as UserProfile;
 
