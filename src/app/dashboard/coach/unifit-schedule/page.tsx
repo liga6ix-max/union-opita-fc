@@ -41,20 +41,23 @@ export default function CoachUnifitSchedulePage() {
 
     useEffect(() => {
         if (clubData?.unifitSchedule) {
-            setUnifitSchedule(clubData.unifitSchedule);
+            setUnifitSchedule(clubData.unifitSchedule.map((s: any) => ({ ...s, id: s.id || `${s.day}-${s.time.replace(/\s/g, '')}` })));
         }
     }, [clubData]);
 
     const bookingsQuery = useMemoFirebase(() => {
-        if (!firestore || !selectedDate) return null;
+        if (!firestore || !selectedDate || !profile) return null;
         return query(
             collection(firestore, `clubs/${MAIN_CLUB_ID}/unifitBookings`),
             where("bookingDate", "==", format(selectedDate, 'yyyy-MM-dd'))
         );
-    }, [firestore, selectedDate]);
+    }, [firestore, selectedDate, profile]);
     const { data: bookings, isLoading: bookingsLoading } = useCollection(bookingsQuery);
     
-    const allUsersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID)) : null, [firestore]);
+    const allUsersQuery = useMemoFirebase(() => {
+        if (!firestore || !profile) return null;
+        return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID));
+    }, [firestore, profile]);
     const { data: allUsers, isLoading: usersLoading } = useCollection(allUsersQuery);
 
     const usersMap = useMemo(() => {
@@ -121,11 +124,11 @@ export default function CoachUnifitSchedulePage() {
         if (!selectedDate || !scheduleForViewer) return [];
         const dateDayIndex = getDay(selectedDate);
         return scheduleForViewer
-            .filter((s: any) => s && s.day && dayNameToIndex(s.day) === dateDayIndex)
             .map((s: any) => ({
                 ...s,
                 id: s.id || `${s.day}-${s.time.replace(/\s/g, '')}`
-            }));
+            }))
+            .filter((s: any) => s && s.day && dayNameToIndex(s.day) === dateDayIndex);
     }, [selectedDate, scheduleForViewer]);
 
 

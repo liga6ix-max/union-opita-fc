@@ -39,7 +39,7 @@ export default function UnifitSchedulePage() {
 
     // 2. Fetch all bookings for the next month to calculate availability
     const bookingsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !user) return null;
         const today = format(startOfDay(new Date()), 'yyyy-MM-dd');
         // Let's use 31 days to be safe for a full month cycle
         const futureDate = format(addDays(new Date(), 31), 'yyyy-MM-dd');
@@ -48,7 +48,7 @@ export default function UnifitSchedulePage() {
             where("bookingDate", ">=", today),
             where("bookingDate", "<=", futureDate)
         );
-    }, [firestore]);
+    }, [firestore, user]);
     const { data: bookings, isLoading: bookingsLoading } = useCollection(bookingsQuery);
     
     // Booking and cancellation logic
@@ -166,13 +166,11 @@ export default function UnifitSchedulePage() {
                                                         const sessionBookings = bookings?.filter(b => b.sessionId === session.id && b.bookingDate === bookingDate) || [];
                                                         const userBooking = sessionBookings.find(b => b.userId === user?.uid);
                                                         const isFull = sessionBookings.length >= TOTAL_SLOTS;
-                                                        const fallbackId = `${session.day}-${session.time.replace(/\s/g, '')}`;
 
                                                         return (
-                                                            <Card key={`${instance.date.toISOString()}-${session.id || fallbackId}`} 
+                                                            <Card key={`${instance.date.toISOString()}-${session.id}`} 
                                                                 className={cn(
-                                                                    "shadow-md", 
-                                                                    isDayPast && "bg-yellow-100/50 border-yellow-200/60 dark:bg-yellow-950/30 dark:border-yellow-900/40"
+                                                                    "shadow-md"
                                                                 )}
                                                             >
                                                                 <CardHeader>
@@ -195,10 +193,10 @@ export default function UnifitSchedulePage() {
                                                                             size="sm" 
                                                                             className="w-full" 
                                                                             onClick={() => handleBooking(session, instance.date)} 
-                                                                            disabled={isDayPast || (isFull && !userBooking)} 
+                                                                            disabled={(isFull && !userBooking)} 
                                                                             variant={userBooking ? 'secondary' : 'default'}
                                                                         >
-                                                                            {isDayPast ? 'Finalizada' : userBooking ? 'Cancelar Reserva' : isFull ? 'Lleno Total' : 'Reservar Plaza'}
+                                                                            {userBooking ? 'Cancelar Reserva' : isFull ? 'Lleno Total' : 'Reservar Plaza'}
                                                                         </Button>
                                                                     </div>
                                                                 </CardContent>
