@@ -5,7 +5,7 @@ import { useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
-import { format, getDay, addDays, getWeek } from 'date-fns';
+import { format, getDay, addDays, getWeek, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -119,7 +119,7 @@ export default function UnifitSchedulePage() {
             days: Object.values(week.days).sort((a, b) => a.date.getTime() - b.date.getTime())
         }));
 
-    }, [clubData]);
+    }, [clubData?.unifitSchedule]);
 
     const isLoading = isUserLoading || clubLoading || bookingsLoading;
 
