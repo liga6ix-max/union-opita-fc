@@ -79,6 +79,7 @@ const athleteNav = [
 
 const unifitNav = [
   { href: "/dashboard/unifit/profile", label: "Mi Perfil", icon: User },
+  { href: "/dashboard/unifit/plan", label: "Mi Plan", icon: CalendarClock },
   { href: "/dashboard/unifit/progress", label: "Mis Medidas", icon: Activity },
   { href: "/dashboard/unifit/schedule", label: "Horarios y Lugar", icon: CalendarDays },
   { href: "/dashboard/unifit/underwater-activities", label: "Act. Subacuáticas", icon: Waves },

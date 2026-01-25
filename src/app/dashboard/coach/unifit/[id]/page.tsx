@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -18,13 +19,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, PlusCircle, User, Activity, Calendar, Ruler } from 'lucide-react';
+import { Loader2, PlusCircle, User, Activity, Calendar, Ruler, Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 
 const MAIN_CLUB_ID = 'OpitaClub';
 
 const measurementSchema = z.object({
+    level: z.coerce.number().min(1).max(12).optional().or(z.literal('')),
     weight: z.coerce.number().positive("El peso debe ser positivo").optional().or(z.literal('')),
     height: z.coerce.number().positive("La estatura debe ser positiva").optional().or(z.literal('')),
     bodyFatPercentage: z.coerce.number().positive("El % de grasa debe ser positivo").optional().or(z.literal('')),
@@ -65,32 +67,36 @@ export default function CoachUnifitAthleteProfilePage() {
 
     const form = useForm<MeasurementFormValues>({
         resolver: zodResolver(measurementSchema),
-        defaultValues: { weight: '', height: '', bodyFatPercentage: '', chest: '', shoulders: '', hip: '', armRight: '', armLeft: '', legRight: '', legLeft: '', back: '', waist: '', calfRight: '', calfLeft: '' },
+        defaultValues: { level: '', weight: '', height: '', bodyFatPercentage: '', chest: '', shoulders: '', hip: '', armRight: '', armLeft: '', legRight: '', legLeft: '', back: '', waist: '', calfRight: '', calfLeft: '' },
     });
 
     useEffect(() => {
-        if (measurements && measurements.length > 0) {
-            const latest = measurements[0];
-            form.reset({
-                weight: latest.weight || '', height: latest.height || '', bodyFatPercentage: latest.bodyFatPercentage || '',
-                chest: latest.chest || '', shoulders: latest.shoulders || '', hip: latest.hip || '',
-                armRight: latest.armRight || '', armLeft: latest.armLeft || '',
-                legRight: latest.legRight || '', legLeft: latest.legLeft || '', back: latest.back || '', waist: latest.waist || '',
-                calfRight: latest.calfRight || '', calfLeft: latest.calfLeft || '',
-            });
-        }
-    }, [measurements, form]);
+        const latest = measurements && measurements.length > 0 ? measurements[0] : {};
+        form.reset({
+            level: unifitProfile?.level || '',
+            weight: latest.weight || '', height: latest.height || '', bodyFatPercentage: latest.bodyFatPercentage || '',
+            chest: latest.chest || '', shoulders: latest.shoulders || '', hip: latest.hip || '',
+            armRight: latest.armRight || '', armLeft: latest.armLeft || '',
+            legRight: latest.legRight || '', legLeft: latest.legLeft || '', back: latest.back || '', waist: latest.waist || '',
+            calfRight: latest.calfRight || '', calfLeft: latest.calfLeft || '',
+        });
+    }, [measurements, unifitProfile, form]);
 
     const onAddMeasurement = (data: MeasurementFormValues) => {
-        if (!firestore) return;
+        if (!firestore || !unifitProfileDocRef) return;
         
+        const { level, ...measurementData } = data;
+
+        // Save level to the main unifit member doc
+        updateDocumentNonBlocking(unifitProfileDocRef, { level: level || null });
+
         const measurementsCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/unifitMembers/${memberId}/measurements`);
         const payload = {
-            ...data,
+            ...measurementData,
             date: serverTimestamp()
         };
         addDocumentNonBlocking(measurementsCollection, payload);
-        toast({ title: "¡Medición Guardada!", description: "El nuevo registro de medidas se ha añadido al historial." });
+        toast({ title: "¡Datos Guardados!", description: "El nivel y el nuevo registro de medidas se han guardado." });
     };
 
     const handleAssignCoach = (coachId: string) => {
@@ -137,13 +143,28 @@ export default function CoachUnifitAthleteProfilePage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="font-headline flex items-center gap-2"><Activity/> Registrar Nuevas Medidas</CardTitle>
+                    <CardTitle className="font-headline flex items-center gap-2"><Activity/> Registrar Nivel y Medidas</CardTitle>
                     <CardDescription>Añade un nuevo registro de medidas corporales. El sistema guardará la fecha actual.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {canEdit ? (
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onAddMeasurement)} className="space-y-8">
+                                <FormField control={form.control} name="level" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nivel de Habilidad</FormLabel>
+                                        <Select onValueChange={(val) => field.onChange(parseInt(val))} value={String(field.value || '')}>
+                                            <FormControl><SelectTrigger className="w-full sm:w-[280px]"><SelectValue placeholder="Asignar Nivel (1-12)" /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                {Array.from({length: 12}, (_, i) => i + 1).map(level => (
+                                                    <SelectItem key={level} value={String(level)}>{level}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+                                <Separator/>
                                 <fieldset className="space-y-4 rounded-lg border p-4">
                                      <legend className="-ml-1 px-1 text-base font-medium">Medidas Generales</legend>
                                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2">
@@ -178,7 +199,7 @@ export default function CoachUnifitAthleteProfilePage() {
 
                                 <Button type="submit" disabled={form.formState.isSubmitting}>
                                     {form.formState.isSubmitting ? <Loader2 className="animate-spin" /> : <PlusCircle />}
-                                    Añadir Medición al Historial
+                                    Añadir Medición y Guardar Nivel
                                 </Button>
                             </form>
                         </Form>

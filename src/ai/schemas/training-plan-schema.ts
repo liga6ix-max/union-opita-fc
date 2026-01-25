@@ -23,6 +23,7 @@ export const TrainingPlanInputSchemaAI = z.object({
   methodologyDescription: z.string().describe("La descripción de la metodología seleccionada."),
   mesocycleObjective: z.string().describe("El objetivo principal a lograr durante todo el mesociclo (varias semanas)."),
   weeks: z.coerce.number().describe("El número de semanas que durará el mesociclo (cuántos microciclos generar)."),
+  level: z.coerce.number().min(1).max(12).describe("El nivel de habilidad para el que se diseña el plan (1-12)."),
 });
 
 // Zod schema for the form input. It's almost the same but doesn't need methodologyDescription.
@@ -31,6 +32,7 @@ export const TrainingPlanInputSchema = z.object({
   methodology: z.enum(['tecnificacion', 'futbol_medida', 'periodizacion_tactica', 'unifit'], { required_error: 'La metodología es requerida.'}),
   mesocycleObjective: z.string().min(10, "El objetivo debe tener al menos 10 caracteres."),
   weeks: z.coerce.number().min(1, "Debe ser al menos 1 semana.").max(8, "No se pueden generar más de 8 semanas a la vez."),
+  level: z.coerce.number().min(1, "El nivel es requerido.").max(12, "El nivel debe ser entre 1 y 12."),
 });
 export type TrainingPlanInput = z.infer<typeof TrainingPlanInputSchema>;
 
@@ -40,4 +42,3 @@ export const TrainingPlanOutputSchema = z.object({
   microcycles: z.array(microcycleSchema).describe("Una lista de los microciclos (planes semanales) que componen el mesociclo."),
 });
 export type TrainingPlanOutput = z.infer<typeof TrainingPlanOutputSchema>;
-

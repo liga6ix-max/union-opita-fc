@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -19,6 +20,7 @@ export interface UserProfile {
   role: 'manager' | 'coach' | 'athlete' | 'unifit';
   disabled?: boolean;
   salary?: number;
+  level?: number;
   team?: string;
   birthDate?: string;
   gender?: 'Masculino' | 'Femenino';
@@ -99,12 +101,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     }
 
     let profileUnsubscribe: (() => void) | null = null;
-    let athleteUnsubscribe: (() => void) | null = null;
+    let subcollectionUnsubscribe: (() => void) | null = null;
 
     const authUnsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       // Clean up previous data listeners on auth state change
       profileUnsubscribe?.();
-      athleteUnsubscribe?.();
+      subcollectionUnsubscribe?.();
 
       if (firebaseUser) {
         setUserAuthState(prevState => ({ ...prevState, user: firebaseUser, isUserLoading: true }));
@@ -120,23 +122,23 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data() as UserProfile;
 
-            // If the user is an athlete, we also need to fetch their specific data
-            // from the athletes subcollection to get properties like 'team'.
-            if (userData.role === 'athlete' && userData.clubId) {
-              const athleteDocRef = doc(firestore, `clubs/${userData.clubId}/athletes`, firebaseUser.uid);
-              athleteUnsubscribe = onSnapshot(athleteDocRef,
-                (athleteDocSnap) => {
-                  const athleteData = athleteDocSnap.exists() ? athleteDocSnap.data() : {};
-                  const combinedProfile = { ...userData, ...athleteData };
+            // If the user is an athlete or unifit member, fetch their specific subcollection data
+            if ((userData.role === 'athlete' || userData.role === 'unifit') && userData.clubId) {
+              const subCollectionName = userData.role === 'athlete' ? 'athletes' : 'unifitMembers';
+              const subDocRef = doc(firestore, `clubs/${userData.clubId}/${subCollectionName}`, firebaseUser.uid);
+              subcollectionUnsubscribe = onSnapshot(subDocRef,
+                (subDocSnap) => {
+                  const subData = subDocSnap.exists() ? subDocSnap.data() : {};
+                  const combinedProfile = { ...userData, ...subData };
                   setUserAuthState({ user: firebaseUser, profile: combinedProfile, isUserLoading: false, userError: null });
                 },
                 (error) => {
-                  // If athlete doc fails, proceed with the main user profile
+                  // If subcollection doc fails, proceed with the main user profile
                   setUserAuthState({ user: firebaseUser, profile: userData, isUserLoading: false, userError: error });
                 }
               );
             } else {
-              // For non-athletes, the main user document is enough
+              // For non-athletes (manager, coach), the main user document is enough
               setUserAuthState({ user: firebaseUser, profile: userData, isUserLoading: false, userError: null });
             }
           } else {
@@ -162,7 +164,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     return () => {
       authUnsubscribe();
       profileUnsubscribe?.();
-      athleteUnsubscribe?.();
+      subcollectionUnsubscribe?.();
     };
   }, [auth, firestore]);
 

@@ -22,7 +22,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2, DollarSign, Banknote, Landmark, Hash, Info, Trophy, CalendarIcon, ShieldAlert, CheckCircle, XCircle, Wind, ArrowUpFromLine, Zap, Footprints, Timer, Scale, Ruler, Clock, MapPin, Maximize, GlassWater } from 'lucide-react';
+import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2, DollarSign, Banknote, Landmark, Hash, Info, Trophy, CalendarIcon, ShieldAlert, CheckCircle, XCircle, Wind, ArrowUpFromLine, Zap, Footprints, Timer, Scale, Ruler, Clock, MapPin, Maximize, GlassWater, Star } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
@@ -82,7 +82,6 @@ export default function AthleteProfilePage() {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
-  const [calculatedCoachId, setCalculatedCoachId] = useState<string | null>(null);
   const { user, profile, isUserLoading } = useUser();
   const { firestore } = useFirebase();
 
@@ -107,28 +106,26 @@ export default function AthleteProfilePage() {
     return query(paymentsCollection, where("athleteId", "==", user.uid));
   }, [firestore, user?.uid, profile?.clubId]);
   const { data: athletePayments, isLoading: arePaymentsLoading } = useCollection(paymentsQuery);
-
+  
+  // Training Plans query
+  const trainingPlansQuery = useMemoFirebase(() => {
+      if (!firestore || !profile?.clubId || !athleteData?.team || !athleteData?.level) return null;
+      return query(
+          collection(firestore, `clubs/${profile.clubId}/trainingPlans`),
+          where("team", "==", athleteData.team),
+          where("level", "==", athleteData.level)
+      );
+  }, [firestore, profile?.clubId, athleteData?.team, athleteData?.level]);
+  const { data: trainingPlans, isLoading: plansLoading } = useCollection(trainingPlansQuery);
+  
   const coachQuery = useMemoFirebase(() => {
     if (!firestore || !athleteData?.coachId || !profile?.clubId) return null;
     return doc(firestore, 'users', athleteData.coachId);
   }, [firestore, athleteData?.coachId, profile?.clubId]);
   const { data: coach, isLoading: isCoachLoading } = useDoc(coachQuery);
 
-  const allMicrocyclesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile?.clubId) return null;
-    return collection(firestore, `clubs/${profile.clubId}/microcycles`);
-  }, [firestore, profile?.clubId]);
-  const { data: allMicrocycles, isLoading: cyclesLoading } = useCollection(allMicrocyclesQuery);
-
-  const teamCycles = useMemo(() => {
-    if (!allMicrocycles || !athleteData?.team) return [];
-    return allMicrocycles.filter(c => c.team === athleteData.team);
-  }, [allMicrocycles, athleteData?.team]);
-  
   const attendanceQuery = useMemoFirebase(() => {
       if (!firestore || !user?.uid || !profile?.clubId) return null;
-      // This is a broad query, but necessary without complex backend logic.
-      // It gets all attendance records for the club and we filter client-side.
       return collection(firestore, `clubs/${profile.clubId}/attendance`);
   }, [firestore, user?.uid, profile?.clubId]);
   const { data: allAttendance, isLoading: attendanceLoading } = useCollection(attendanceQuery);
@@ -159,30 +156,20 @@ export default function AthleteProfilePage() {
   const watchedBirthDate = watch("birthDate");
 
   useEffect(() => {
-    if (watchedBirthDate && clubConfig?.categories && allMicrocycles) {
+    if (watchedBirthDate && clubConfig?.categories) {
         try {
             const birthYear = parseISO(watchedBirthDate).getFullYear();
             const foundCategory = clubConfig.categories.find((cat: any) => birthYear >= cat.minYear && birthYear <= cat.maxYear);
             if (foundCategory) {
-                const categoryName = foundCategory.name;
-                setValue('team', categoryName, { shouldValidate: true });
-
-                const cycleForTeam = allMicrocycles.find(c => c.team === categoryName);
-                if (cycleForTeam && cycleForTeam.coachId) {
-                    setCalculatedCoachId(cycleForTeam.coachId);
-                } else {
-                    setCalculatedCoachId(null);
-                }
+                setValue('team', foundCategory.name, { shouldValidate: true });
             } else {
                 setValue('team', '', { shouldValidate: true });
-                setCalculatedCoachId(null);
             }
         } catch(e) {
             setValue('team', '', { shouldValidate: true });
-            setCalculatedCoachId(null);
         }
     }
-  }, [watchedBirthDate, clubConfig, allMicrocycles, setValue]);
+  }, [watchedBirthDate, clubConfig, setValue]);
 
 
   // Payment Form
@@ -224,8 +211,6 @@ export default function AthleteProfilePage() {
   const onProfileSubmit = (data: ProfileFormValues) => {
     if (!user || !profile || !firestore || !athleteDocRef) return;
     
-    // The team is derived from birthdate, and that's what we save.
-    // We should NOT save the coachId from here, as that is a manager's responsibility.
     const athletePayload = {
         birthDate: data.birthDate || null,
         gender: data.gender || null,
@@ -262,7 +247,7 @@ export default function AthleteProfilePage() {
     paymentForm.reset();
   }
 
-  const isLoading = isUserLoading || isAthleteLoading || arePaymentsLoading || isCoachLoading || isClubConfigLoading || cyclesLoading || attendanceLoading;
+  const isLoading = isUserLoading || isAthleteLoading || arePaymentsLoading || isCoachLoading || isClubConfigLoading || plansLoading || attendanceLoading;
 
   if (isLoading) {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
@@ -356,6 +341,7 @@ export default function AthleteProfilePage() {
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
                         <div className="flex items-center gap-4"><User className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Nombre Completo</p><p className="font-medium">{displayData.firstName} {displayData.lastName}</p></div></div>
                         <div className="flex items-center gap-4"><Shield className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Equipo</p><p className="font-medium">{athleteData?.team || 'No asignado'}</p></div></div>
+                        <div className="flex items-center gap-4"><Star className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Nivel</p><p className="font-medium">{athleteData?.level || 'No asignado'}</p></div></div>
                         <div className="flex items-center gap-4"><Cake className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Fecha de Nacimiento</p><p className="font-medium">{displayData.birthDate ? `${format(parseISO(displayData.birthDate), "d 'de' MMMM, yyyy", { locale: es })} (${age} años)` : 'No especificada'}</p></div></div>
                         <div className="flex items-center gap-4"><FileText className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Documento</p><p className="font-medium">{displayData.documentType} {displayData.documentNumber || 'No especificado'}</p></div></div>
                         <div className="flex items-center gap-4"><VenetianMask className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Género</p><p className="font-medium">{displayData.gender || 'No especificado'}</p></div></div>
@@ -387,55 +373,48 @@ export default function AthleteProfilePage() {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                {!teamCycles || teamCycles.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-8">Aún no tienes un plan de entrenamiento asignado.</p>
+                {!trainingPlans || trainingPlans.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">Aún no tienes un plan de entrenamiento asignado para tu nivel y categoría.</p>
                 ) : (
                     <Accordion type="single" collapsible className="w-full space-y-4">
-                    {teamCycles.map((cycle) => (
-                        <Card key={cycle.id}>
-                        <AccordionItem value={`cycle-${cycle.id}`} className="border-b-0">
+                    {trainingPlans.map((plan) => (
+                        <Card key={plan.id}>
+                        <AccordionItem value={`plan-${plan.id}`} className="border-b-0">
                             <AccordionTrigger className="p-6 hover:no-underline">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full pr-4 text-left">
                                 <div>
-                                    <h4 className="font-bold text-lg">{cycle.week} - {cycle.team}</h4>
-                                    <Badge variant="secondary" className="mt-2">{methodologyLabels[cycle.methodology as MicrocycleMethodology]}</Badge>
+                                    <h4 className="font-bold text-lg">{plan.mesocycleObjective}</h4>
+                                    <Badge variant="secondary" className="mt-2">{methodologyLabels[plan.methodology as MicrocycleMethodology]}</Badge>
                                 </div>
                             </div>
                             </AccordionTrigger>
                             <AccordionContent className="p-6 pt-0">
-                            <div className="space-y-4">
-                                <div>
-                                    <h5 className="font-semibold">Objetivo Principal</h5>
-                                    <p className="text-muted-foreground">{cycle.mainObjective}</p>
-                                </div>
-                                <div className="space-y-2">
-                                    <h5 className="font-semibold">Sesiones y Asistencia</h5>
-                                    {cycle.sessions.map((session: any, index: number) => {
-                                        const eventIdForSession = `${cycle.id}_${session.day}`;
-                                        const attendanceStatus = athleteAttendance[eventIdForSession];
-                                        
-                                        return (
-                                            <div key={index} className="border-l-2 border-primary pl-4 py-2">
-                                                <div className="flex justify-between items-center">
-                                                     <p className="font-bold">{session.day} - {session.focus} ({session.duration} min)</p>
-                                                     {attendanceStatus === true && <Badge variant="default"><CheckCircle className="h-4 w-4 mr-1"/> Asistió</Badge>}
-                                                     {attendanceStatus === false && <Badge variant="destructive"><XCircle className="h-4 w-4 mr-1"/>No Asistió</Badge>}
-                                                     {attendanceStatus === undefined && <Badge variant="outline">Pendiente</Badge>}
+                            {plan.microcycles.map((micro: any, index: number) => (
+                                <div key={index} className="mt-4 border-t pt-4 first:mt-0 first:border-t-0 first:pt-0">
+                                    <h5 className="font-semibold">{micro.week}: <span className="text-muted-foreground font-normal">{micro.mainObjective}</span></h5>
+                                    <div className="space-y-2 mt-2">
+                                        {micro.sessions.map((session: any, sIndex: number) => {
+                                            const eventIdForSession = `${plan.id}_${micro.week}_${session.day}`;
+                                            const attendanceStatus = athleteAttendance[eventIdForSession];
+                                            return (
+                                                <div key={sIndex} className="border-l-2 border-primary pl-4 py-2">
+                                                    <div className="flex justify-between items-center">
+                                                        <p className="font-bold">{session.day} - {session.focus} ({session.duration} min)</p>
+                                                        {attendanceStatus === true && <Badge variant="default"><CheckCircle className="h-4 w-4 mr-1"/> Asistió</Badge>}
+                                                        {attendanceStatus === false && <Badge variant="destructive"><XCircle className="h-4 w-4 mr-1"/>No Asistió</Badge>}
+                                                        {attendanceStatus === undefined && <Badge variant="outline">Pendiente</Badge>}
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
+                                                        {session.fieldDimensions && (<span className="flex items-center gap-1.5"><Maximize className="h-4 w-4"/> {session.fieldDimensions}</span>)}
+                                                        {session.recoveryTime && (<span className="flex items-center gap-1.5"><GlassWater className="h-4 w-4"/> {session.recoveryTime}</span>)}
+                                                    </div>
+                                                    <p className="text-muted-foreground whitespace-pre-wrap mt-2">{session.activities}</p>
                                                 </div>
-                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
-                                                    {session.fieldDimensions && (
-                                                        <span className="flex items-center gap-1.5"><Maximize className="h-4 w-4"/> {session.fieldDimensions}</span>
-                                                    )}
-                                                    {session.recoveryTime && (
-                                                        <span className="flex items-center gap-1.5"><GlassWater className="h-4 w-4"/> {session.recoveryTime}</span>
-                                                    )}
-                                                </div>
-                                                <p className="text-muted-foreground whitespace-pre-wrap mt-2">{session.activities}</p>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
+                            ))}
                             </AccordionContent>
                         </AccordionItem>
                         </Card>
@@ -552,4 +531,3 @@ export default function AthleteProfilePage() {
     </div>
   );
 }
-

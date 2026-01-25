@@ -18,7 +18,7 @@ const methodologyDescriptions = {
   unifit: 'Entrenamiento Funcional UNIFIT: Sesiones de alta intensidad en un circuito de 10 estaciones. Cada estación se enfoca en un ejercicio diferente utilizando materiales como balones de pilates, lazos, bancos, bandas de poder, sacos de boxeo, colchonetas, platillos, conos y vallas de salto. El objetivo es mejorar la fuerza, resistencia, agilidad y coordinación general.',
 };
 
-export async function createTrainingPlan(input: TrainingPlanInput): Promise<TrainingPlanOutput> {
+export async function createTrainingPlan(input: TrainingPlanInput & { level: number }): Promise<TrainingPlanOutput> {
   // Augment the input with the methodology description for the AI.
   const augmentedInput = {
     ...input,
@@ -41,9 +41,10 @@ const prompt = ai.definePrompt({
         Tu tarea es generar un plan de entrenamiento (mesociclo) completo y coherente basado en los siguientes parámetros:
 
         1.  **Categoría del Equipo:** {{{category}}}
-        2.  **Metodología a Aplicar:** {{methodology}} - {{{methodologyDescription}}}
-        3.  **Objetivo Principal del Mesociclo:** {{{mesocycleObjective}}}
-        4.  **Duración del Mesociclo:** {{{weeks}}} semanas
+        2.  **Nivel de Habilidad:** {{{level}}} (en una escala de 1 a 12)
+        3.  **Metodología a Aplicar:** {{methodology}} - {{{methodologyDescription}}}
+        4.  **Objetivo Principal del Mesociclo:** {{{mesocycleObjective}}}
+        5.  **Duración del Mesociclo:** {{{weeks}}} semanas
 
         Basado en esta información, debes generar una estructura JSON que contenga:
         -   Un campo 'mesocycleObjective' con el objetivo principal que te he proporcionado.
@@ -62,7 +63,7 @@ const prompt = ai.definePrompt({
         -   'fieldDimensions': Las dimensiones del terreno a utilizar (Ej: 'Medio campo', '20x30m'). Para UNIFIT, usa 'Gimnasio / Zona Funcional'.
         -   'recoveryTime': Indicaciones sobre las pausas de recuperación e hidratación (Ej: 'Pausas de 2 min cada 15 min', 'Hidratación libre'). Para UNIFIT, especifica la recuperación entre estaciones.
 
-        **IMPORTANTE:** El contenido debe ser 100% en español. Asegúrate de que la progresión de los objetivos y la complejidad de las actividades sean coherentes con la metodología y la categoría de edad.
+        **IMPORTANTE:** El contenido debe ser 100% en español. Asegúrate de que la progresión de los objetivos y la complejidad de las actividades sean coherentes con la metodología, la categoría de edad y el nivel de habilidad.
     `,
 });
 
@@ -82,4 +83,3 @@ const createTrainingPlanFlow = ai.defineFlow(
     return output;
   }
 );
-

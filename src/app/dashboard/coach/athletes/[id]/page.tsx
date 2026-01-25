@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -22,7 +23,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2, Wind, ArrowUpFromLine, Zap, Footprints, Timer, Scale, Ruler } from 'lucide-react';
+import { User, Shield, Phone, Hospital, ClipboardCheck, CalendarHeart, Cake, Droplets, VenetianMask, FileText, Loader2, Wind, ArrowUpFromLine, Zap, Footprints, Timer, Scale, Ruler, Star } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser, useFirebase, useDoc, useMemoFirebase, useCollection } from '@/firebase';
@@ -43,6 +44,7 @@ const profileSchema = z.object({
   medicalInformation: z.string().optional(),
   team: z.string().optional(),
   coachId: z.string().optional(),
+  level: z.coerce.number().min(1).max(12).optional().or(z.literal('')),
   weight: z.coerce.number().positive().optional().or(z.literal('')),
   height: z.coerce.number().positive().optional().or(z.literal('')),
   vo2max: z.coerce.number().min(1).max(30).optional().or(z.literal('')),
@@ -103,6 +105,7 @@ export default function CoachAthleteProfilePage() {
       medicalInformation: '',
       team: '',
       coachId: '',
+      level: '',
       weight: '',
       height: '',
       vo2max: '',
@@ -160,6 +163,7 @@ export default function CoachAthleteProfilePage() {
         medicalInformation: combinedData.medicalInformation || '',
         team: combinedData.team || '',
         coachId: combinedData.coachId || '',
+        level: combinedData.level || '',
         weight: combinedData.weight || '',
         height: combinedData.height || '',
         vo2max: combinedData.vo2max || '',
@@ -192,6 +196,7 @@ export default function CoachAthleteProfilePage() {
       medicalInformation: data.medicalInformation || null,
       team: data.team,
       coachId: data.coachId || null,
+      level: data.level || null,
       weight: data.weight || null,
       height: data.height || null,
       vo2max: data.vo2max || null,
@@ -315,6 +320,20 @@ export default function CoachAthleteProfilePage() {
                                 </FormItem>
                                 )}
                             />
+                            <FormField control={control} name="level" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Nivel</FormLabel>
+                                    <Select onValueChange={(val) => field.onChange(parseInt(val))} value={String(field.value || '')}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Asignar Nivel (1-12)" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            {Array.from({length: 12}, (_, i) => i + 1).map(level => (
+                                                <SelectItem key={level} value={String(level)}>{level}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
                              <FormField control={control} name="gender" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Género</FormLabel>
@@ -382,6 +401,7 @@ export default function CoachAthleteProfilePage() {
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
                         <div className="flex items-center gap-4"><User className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Nombre Completo</p><p className="font-medium">{displayData.firstName} {displayData.lastName}</p></div></div>
                         <div className="flex items-center gap-4"><Shield className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Equipo</p><p className="font-medium">{athleteData?.team || 'No asignado'}</p></div></div>
+                        <div className="flex items-center gap-4"><Star className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Nivel</p><p className="font-medium">{athleteData?.level || 'No asignado'}</p></div></div>
                         <div className="flex items-center gap-4"><Cake className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Fecha de Nacimiento</p><p className="font-medium">{displayData.birthDate ? `${format(parseISO(displayData.birthDate), "d 'de' MMMM, yyyy", { locale: es })} (${age} años)` : 'No especificada'}</p></div></div>
                         <div className="flex items-center gap-4"><FileText className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Documento</p><p className="font-medium">{displayData.documentType} {displayData.documentNumber || 'No especificado'}</p></div></div>
                         <div className="flex items-center gap-4"><VenetianMask className="h-5 w-5 text-muted-foreground" /><div><p className="text-muted-foreground">Género</p><p className="font-medium">{displayData.gender || 'No especificado'}</p></div></div>
