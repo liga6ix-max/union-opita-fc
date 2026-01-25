@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -64,7 +65,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 
 type MicrocycleMethodology = 'tecnificacion' | 'futbol_medida' | 'periodizacion_tactica' | 'unifit';
@@ -447,11 +447,9 @@ export default function ManagerPlanningPage() {
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     Eliminar Plan
                                   </Button>
-                                  <DialogTrigger asChild>
-                                    <Button variant="outline" onClick={() => setPlanToClone(plan)}>
-                                        <Copy className="mr-2 h-4 w-4" /> Clonar y Asignar
-                                    </Button>
-                                  </DialogTrigger>
+                                  <Button variant="outline" onClick={() => setPlanToClone(plan)}>
+                                      <Copy className="mr-2 h-4 w-4" /> Clonar y Asignar
+                                  </Button>
                                </div>
                              </div>
                           </AccordionContent>
@@ -537,3 +535,5 @@ export default function ManagerPlanningPage() {
     </>
   );
 }
+
+    
