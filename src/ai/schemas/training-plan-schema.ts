@@ -19,7 +19,7 @@ const microcycleSchema = z.object({
 // Zod schema for the AI input, used for validation and type generation.
 export const TrainingPlanInputSchemaAI = z.object({
   category: z.string().describe("La categoría o equipo para el que se genera el plan (Ej: Sub-17, Tecnificación)."),
-  methodology: z.enum(['tecnificacion', 'futbol_medida', 'periodizacion_tactica']).describe("La metodología de formación a aplicar."),
+  methodology: z.enum(['tecnificacion', 'futbol_medida', 'periodizacion_tactica', 'unifit']).describe("La metodología de formación a aplicar."),
   methodologyDescription: z.string().describe("La descripción de la metodología seleccionada."),
   mesocycleObjective: z.string().describe("El objetivo principal a lograr durante todo el mesociclo (varias semanas)."),
   weeks: z.coerce.number().describe("El número de semanas que durará el mesociclo (cuántos microciclos generar)."),
