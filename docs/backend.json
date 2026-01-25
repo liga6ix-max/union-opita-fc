@@ -254,6 +254,48 @@
         "level": {
           "type": "number",
           "description": "Member's skill level from 1 to 12."
+        },
+        "birthDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Member's date of birth."
+        },
+        "gender": {
+          "type": "string",
+          "enum": [
+            "Masculino",
+            "Femenino"
+          ],
+          "description": "Member's gender."
+        },
+        "bloodType": {
+          "type": "string",
+          "description": "Member's blood type (e.g., O+)."
+        },
+        "documentType": {
+          "type": "string",
+          "enum": [
+            "TI",
+            "CC",
+            "RC"
+          ],
+          "description": "Type of identification document."
+        },
+        "documentNumber": {
+          "type": "string",
+          "description": "Number of the identification document."
+        },
+        "emergencyContactName": {
+          "type": "string",
+          "description": "Name of the emergency contact."
+        },
+        "emergencyContactPhone": {
+          "type": "string",
+          "description": "Phone number of the emergency contact."
+        },
+        "medicalInformation": {
+          "type": "string",
+          "description": "Important medical information about the member."
         }
       },
       "required": [
