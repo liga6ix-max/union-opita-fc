@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { createTrainingPlan } from '@/ai/flows/create-training-plan-flow';
-import { TrainingPlanInputSchema } from '@/ai/schemas/training-plan-schema';
+import { TrainingPlanInputSchema, type TrainingPlanOutput } from '@/ai/schemas/training-plan-schema';
 import clubConfig from '@/lib/club-config.json';
 import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, query, serverTimestamp, doc, where } from 'firebase/firestore';
@@ -18,6 +18,7 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BrainCircuit, Loader2, Trash2, Maximize, GlassWater, Copy } from 'lucide-react';
@@ -103,6 +104,8 @@ export default function ManagerPlanningPage() {
   const [planToClone, setPlanToClone] = useState<any | null>(null);
   const { profile, isUserLoading } = useUser();
   const { firestore } = useFirebase();
+  const [generatedPlan, setGeneratedPlan] = useState<TrainingPlanOutput | null>(null);
+  const [planFormData, setPlanFormData] = useState<PlanningFormValues | null>(null);
 
   const plansQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -137,33 +140,20 @@ export default function ManagerPlanningPage() {
 
   const onSubmit = (data: PlanningFormValues) => {
     setIsGenerating(true);
+    setGeneratedPlan(null);
+    setPlanFormData(null);
     toast({ title: 'Generando planificación...', description: 'La IA está creando el plan de entrenamiento. Esto puede tardar un momento.' });
-    if (!firestore) {
-        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo conectar a la base de datos.'});
-        setIsGenerating(false);
-        return;
-    }
 
     createTrainingPlan(data)
-      .then((generatedPlan) => {
-        if (!generatedPlan || !generatedPlan.microcycles) {
+      .then((plan) => {
+        if (!plan || !plan.microcycles) {
             throw new Error("La respuesta de la IA no tiene el formato esperado.");
         }
-        
-        const trainingPlansCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/trainingPlans`);
-        addDocumentNonBlocking(trainingPlansCollection, {
-            ...generatedPlan,
-            team: data.category,
-            level: data.methodology === 'unifit' ? data.level : null,
-            coachId: data.coachId,
-            methodology: data.methodology,
-            clubId: MAIN_CLUB_ID,
-            createdAt: serverTimestamp(),
-        });
-
+        setGeneratedPlan(plan);
+        setPlanFormData(data);
         toast({
-            title: '¡Planificación Generada y Guardada!',
-            description: `Se ha creado y guardado un mesociclo de ${data.weeks} semanas.`,
+            title: '¡Plan Generado!',
+            description: `Revisa el plan a continuación y confírmalo para guardarlo.`,
         });
       })
       .catch((error) => {
@@ -177,6 +167,37 @@ export default function ManagerPlanningPage() {
       .finally(() => {
         setIsGenerating(false);
       });
+  };
+
+  const handleConfirmSavePlan = () => {
+    if (!generatedPlan || !planFormData || !firestore) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No hay ningún plan generado para guardar.' });
+        return;
+    }
+
+    const trainingPlansCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/trainingPlans`);
+    addDocumentNonBlocking(trainingPlansCollection, {
+        ...generatedPlan,
+        team: planFormData.category,
+        level: planFormData.methodology === 'unifit' ? planFormData.level : null,
+        coachId: planFormData.coachId,
+        methodology: planFormData.methodology,
+        clubId: MAIN_CLUB_ID,
+        createdAt: serverTimestamp(),
+    });
+
+    toast({
+        title: '¡Planificación Guardada!',
+        description: `Se ha guardado un mesociclo de ${planFormData.weeks} semanas.`,
+    });
+
+    setGeneratedPlan(null);
+    setPlanFormData(null);
+  };
+  
+  const handleDiscardPlan = () => {
+    setGeneratedPlan(null);
+    setPlanFormData(null);
   };
   
   const confirmDeletePlan = () => {
@@ -215,34 +236,85 @@ export default function ManagerPlanningPage() {
   return (
     <>
       <div className="space-y-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-headline">Asistente de Planificación (IA)</CardTitle>
-            <CardDescription>
-              Genera y asigna un plan de entrenamiento completo (mesociclo) para una categoría y un entrenador específico.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-              <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                           <FormField control={form.control} name="methodology" render={({ field }) => (
-                              <FormItem>
-                                  <FormLabel>Metodología</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                      <FormControl><SelectTrigger><SelectValue placeholder="Selecciona una metodología" /></SelectTrigger></FormControl>
-                                      <SelectContent>
-                                          <SelectItem value="unifit">{methodologyLabels.unifit}</SelectItem>
-                                          <SelectItem value="tecnificacion">{methodologyLabels.tecnificacion}</SelectItem>
-                                          <SelectItem value="futbol_medida">{methodologyLabels.futbol_medida}</SelectItem>
-                                          <SelectItem value="periodizacion_tactica">{methodologyLabels.periodizacion_tactica}</SelectItem>
-                                      </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                              </FormItem>
-                          )}/>
-                          {watchMethodology !== 'unifit' ? (
-                             <FormField control={form.control} name="category" render={({ field }) => (
+        {generatedPlan && planFormData ? (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline">Previsualización del Plan Generado</CardTitle>
+                    <CardDescription>Revisa el plan de entrenamiento generado por la IA antes de guardarlo.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        <div className="p-4 bg-secondary/50 rounded-lg border">
+                            <h3 className="font-semibold text-lg">Objetivo Principal: <span className="text-muted-foreground font-normal">{generatedPlan.mesocycleObjective}</span></h3>
+                            <div className="flex items-center gap-4 mt-2 text-sm">
+                                <Badge variant="secondary">{planFormData.category}</Badge>
+                                <Badge variant="outline">{methodologyLabels[planFormData.methodology as MicrocycleMethodology]}</Badge>
+                                {planFormData.methodology === 'unifit' && <Badge variant="outline">Nivel {planFormData.level}</Badge>}
+                            </div>
+                        </div>
+                        <Accordion type="single" collapsible className="w-full" defaultValue="item-0">
+                            {generatedPlan.microcycles.map((micro, microIndex) => (
+                                <AccordionItem value={`item-${microIndex}`} key={microIndex}>
+                                    <AccordionTrigger>
+                                        <h4 className="font-bold text-base">{micro.week}: <span className="text-muted-foreground font-normal">{micro.mainObjective}</span></h4>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                        <div className="space-y-4 pt-2">
+                                        {micro.sessions.map((session, sessionIndex) => (
+                                            <div key={sessionIndex} className="border-l-2 border-primary pl-4 py-2">
+                                                <p className="font-bold">{session.day} - {session.focus} ({session.duration} min)</p>
+                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
+                                                    {session.fieldDimensions && (
+                                                        <span className="flex items-center gap-1.5"><Maximize className="h-4 w-4"/> {session.fieldDimensions}</span>
+                                                    )}
+                                                    {session.recoveryTime && (
+                                                        <span className="flex items-center gap-1.5"><GlassWater className="h-4 w-4"/> {session.recoveryTime}</span>
+                                                    )}
+                                                </div>
+                                                <p className="text-muted-foreground whitespace-pre-wrap mt-2">{session.activities}</p>
+                                            </div>
+                                        ))}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            ))}
+                        </Accordion>
+                    </div>
+                </CardContent>
+                <CardFooter className="gap-2">
+                    <Button variant="outline" onClick={handleDiscardPlan}>Descartar</Button>
+                    <Button onClick={handleConfirmSavePlan}>Confirmar y Guardar Plan</Button>
+                </CardFooter>
+            </Card>
+        ) : (
+            <Card>
+            <CardHeader>
+                <CardTitle className="font-headline">Asistente de Planificación (IA)</CardTitle>
+                <CardDescription>
+                Genera y asigna un plan de entrenamiento completo (mesociclo) para una categoría y un entrenador específico.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <FormField control={form.control} name="methodology" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Metodología</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Selecciona una metodología" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="unifit">{methodologyLabels.unifit}</SelectItem>
+                                            <SelectItem value="tecnificacion">{methodologyLabels.tecnificacion}</SelectItem>
+                                            <SelectItem value="futbol_medida">{methodologyLabels.futbol_medida}</SelectItem>
+                                            <SelectItem value="periodizacion_tactica">{methodologyLabels.periodizacion_tactica}</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                            {watchMethodology !== 'unifit' ? (
+                                <FormField control={form.control} name="category" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Categoría / Equipo</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -256,17 +328,17 @@ export default function ManagerPlanningPage() {
                                     <FormMessage />
                                 </FormItem>
                             )}/>
-                          ) : (
-                             <FormField control={form.control} name="category" render={({ field }) => (
+                            ) : (
+                                <FormField control={form.control} name="category" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Categoría</FormLabel>
                                     <FormControl><Input {...field} disabled readOnly /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}/>
-                          )}
-                          {watchMethodology === 'unifit' && (
-                               <FormField control={form.control} name="level" render={({ field }) => (
+                            )}
+                            {watchMethodology === 'unifit' && (
+                                <FormField control={form.control} name="level" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Nivel</FormLabel>
                                         <Select onValueChange={(val) => field.onChange(parseInt(val))} value={String(field.value || '')}>
@@ -279,48 +351,49 @@ export default function ManagerPlanningPage() {
                                         </Select>
                                         <FormMessage />
                                     </FormItem>
-                               )}/>
-                          )}
-                           <FormField control={form.control} name="weeks" render={({ field }) => (
-                              <FormItem>
-                                  <FormLabel>Duración (Semanas)</FormLabel>
-                                  <FormControl><Input type="number" {...field} /></FormControl>
-                                  <FormMessage />
-                              </FormItem>
-                          )}/>
-                          <FormField control={form.control} name="coachId" render={({ field }) => (
-                              <FormItem>
-                                  <FormLabel>Asignar a Entrenador</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar entrenador..." /></SelectTrigger></FormControl>
-                                  <SelectContent>
+                                )}/>
+                            )}
+                            <FormField control={form.control} name="weeks" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Duración (Semanas)</FormLabel>
+                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                            <FormField control={form.control} name="coachId" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Asignar a Entrenador</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar entrenador..." /></SelectTrigger></FormControl>
+                                    <SelectContent>
                                     {coaches && coaches.length > 0 ? coaches.map(coach => (
-                                      <SelectItem key={coach.id} value={coach.id}>{coach.firstName} {coach.lastName}</SelectItem>
+                                        <SelectItem key={coach.id} value={coach.id}>{coach.firstName} {coach.lastName}</SelectItem>
                                     )) : <SelectItem value="none" disabled>No hay entrenadores</SelectItem>}
-                                  </SelectContent>
+                                    </SelectContent>
                                 </Select>
-                                  <FormMessage />
-                              </FormItem>
-                          )}/>
-                      </div>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                        </div>
 
-                      <FormField control={form.control} name="mesocycleObjective" render={({ field }) => (
-                          <FormItem>
-                              <FormLabel>Objetivo Principal del Mesociclo</FormLabel>
-                              <FormControl><Textarea placeholder="Describe el objetivo principal para este plan..." {...field} /></FormControl>
-                              <FormDescription>La IA usará este objetivo para estructurar los microciclos.</FormDescription>
-                              <FormMessage />
-                          </FormItem>
-                      )}/>
-                      
-                      <Button type="submit" disabled={isGenerating}>
-                          {isGenerating ? <Loader2 className="animate-spin" /> : <BrainCircuit />}
-                          {isGenerating ? 'Generando Plan...' : 'Generar y Asignar Plan'}
-                      </Button>
-                  </form>
-              </Form>
-          </CardContent>
-        </Card>
+                        <FormField control={form.control} name="mesocycleObjective" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Objetivo Principal del Mesociclo</FormLabel>
+                                <FormControl><Textarea placeholder="Describe el objetivo principal para este plan..." {...field} /></FormControl>
+                                <FormDescription>La IA usará este objetivo para estructurar los microciclos.</FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                        
+                        <Button type="submit" disabled={isGenerating}>
+                            {isGenerating ? <Loader2 className="animate-spin" /> : <BrainCircuit />}
+                            {isGenerating ? 'Generando Plan...' : 'Generar y Asignar Plan'}
+                        </Button>
+                    </form>
+                </Form>
+            </CardContent>
+            </Card>
+        )}
 
         <Card>
           <CardHeader>
