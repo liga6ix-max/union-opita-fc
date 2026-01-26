@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import clubConfig from '@/lib/club-config.json';
-import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
+import { useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, where } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
@@ -58,14 +58,13 @@ export default function ManagerPaymentsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
-  const { profile, isUserLoading } = useUser();
-  const { firestore } = useFirebase();
+  const { user, firestore, isUserLoading } = useUser();
 
-  // Query for users, but only within the current club.
+  // Query for ALL users. The guard ensures this only runs when logged in.
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
-    return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID));
-  }, [firestore, profile]);
+    if (!firestore || !user) return null;
+    return collection(firestore, 'users');
+  }, [firestore, user]);
   const { data: allUsers, isLoading: usersLoading } = useCollection(usersQuery);
 
   // Memoized map for efficient user lookup.
