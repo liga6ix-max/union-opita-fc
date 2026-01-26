@@ -30,12 +30,6 @@ export default function ManagerDashboard() {
   }, [firestore]);
   const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
 
-  const coachesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "coach"));
-  }, [firestore]);
-  const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
-
   const paymentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
@@ -48,19 +42,19 @@ export default function ManagerDashboard() {
   }, [firestore]);
   const { data: tasks, isLoading: tasksLoading } = useCollection(tasksQuery);
   
-  const allCoachesQuery = useMemoFirebase(() => {
+  const allClubUsersQuery = useMemoFirebase(() => {
     if (!firestore || !profile) return null;
     return query(collection(firestore, `users`), where("clubId", "==", MAIN_CLUB_ID));
   }, [firestore, profile]);
-  const { data: allUsers, isLoading: allUsersLoading } = useCollection(allCoachesQuery);
+  const { data: allClubUsers, isLoading: allUsersLoading } = useCollection(allClubUsersQuery);
 
 
-  if (isUserLoading || athletesLoading || coachesLoading || paymentsLoading || tasksLoading || allUsersLoading) {
+  if (isUserLoading || athletesLoading || paymentsLoading || tasksLoading || allUsersLoading) {
     return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
-  const totalAthletes = athletes?.length || 0;
-  const totalCoaches = coaches?.length || 0;
+  const totalAthletes = allClubUsers?.filter(u => u.role === 'athlete' || u.role === 'unifit').length || 0;
+  const totalCoaches = allClubUsers?.filter(u => u.role === 'coach').length || 0;
   const paymentsDue = payments?.filter(p => p.status === 'Pendiente').length || 0;
 
   const paymentStatusData = [
@@ -160,7 +154,7 @@ export default function ManagerDashboard() {
                 </TableHeader>
                 <TableBody>
                     {tasks && tasks.map(task => {
-                        const coach = allUsers?.find(c => c.id === task.assigneeId);
+                        const coach = allClubUsers?.find(c => c.id === task.assigneeId);
                         return (
                             <TableRow key={task.id}>
                                 <TableCell className="font-medium">{task.description}</TableCell>
