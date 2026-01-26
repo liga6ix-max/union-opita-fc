@@ -52,7 +52,7 @@ export default function UnifitPaymentsPage() {
     const paymentsQuery = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
         const paymentsCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
-        return query(paymentsCollection, where("athleteId", "==", user.uid));
+        return query(paymentsCollection, where("userId", "==", user.uid));
     }, [firestore, user?.uid]);
     const { data: userPayments, isLoading: arePaymentsLoading } = useCollection(paymentsQuery);
 
@@ -164,3 +164,5 @@ export default function UnifitPaymentsPage() {
         </div>
     );
 }
+
+    

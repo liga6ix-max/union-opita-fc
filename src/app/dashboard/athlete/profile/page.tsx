@@ -103,7 +103,7 @@ export default function AthleteProfilePage() {
   const paymentsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid || !profile?.clubId) return null;
     const paymentsCollection = collection(firestore, `clubs/${profile.clubId}/payments`);
-    return query(paymentsCollection, where("athleteId", "==", user.uid));
+    return query(paymentsCollection, where("userId", "==", user.uid));
   }, [firestore, user?.uid, profile?.clubId]);
   const { data: athletePayments, isLoading: arePaymentsLoading } = useCollection(paymentsQuery);
   
@@ -529,3 +529,5 @@ export default function AthleteProfilePage() {
     </div>
   );
 }
+
+    

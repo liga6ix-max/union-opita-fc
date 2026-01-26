@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -61,11 +62,11 @@ export default function ManagerPaymentsPage() {
   const { profile, isUserLoading } = useUser();
   const { firestore } = useFirebase();
 
-  const athletesQuery = useMemoFirebase(() => {
+  const billableUsersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`);
+    return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "in", ["athlete", "unifit"]));
   }, [firestore]);
-  const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
+  const { data: billableUsers, isLoading: billableUsersLoading } = useCollection(billableUsersQuery);
 
   const paymentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -86,28 +87,28 @@ export default function ManagerPaymentsPage() {
   });
 
   const onScheduleSubmit = (data: PaymentScheduleFormValues) => {
-    if (!firestore || !athletes || !paymentList) {
+    if (!firestore || !billableUsers || !paymentList) {
         toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron cargar los datos necesarios para programar los pagos.' });
         return;
     }
     
-    if (athletes.length === 0) {
-      toast({ title: 'Sin Deportistas', description: 'No hay deportistas registrados en el club para programar pagos.' });
+    if (billableUsers.length === 0) {
+      toast({ title: 'Sin Deportistas', description: 'No hay deportistas o miembros de UNIFIT para programarles pagos.' });
       return;
     }
 
     const paymentsCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
     let newPaymentsCount = 0;
     
-    athletes.forEach(athlete => {
+    billableUsers.forEach(user => {
       const alreadyExists = paymentList.some(
-        p => p.athleteId === athlete.id && p.month === data.month
+        p => p.userId === user.id && p.month === data.month
       );
 
       if (!alreadyExists) {
         const newPaymentRef = doc(paymentsCollection);
         const newPaymentData = {
-          athleteId: athlete.id,
+          userId: user.id,
           month: data.month,
           amount: data.amount,
           status: 'Pendiente',
@@ -121,7 +122,7 @@ export default function ManagerPaymentsPage() {
     if (newPaymentsCount === 0) {
         toast({
             title: 'No se crearon pagos nuevos',
-            description: `Todos los deportistas ya tienen una cuota de pago para ${data.month}.`,
+            description: `Todos los usuarios ya tienen una cuota de pago para ${data.month}.`,
         });
     } else {
         toast({
@@ -135,8 +136,8 @@ export default function ManagerPaymentsPage() {
   
   const pendingVerifications = paymentList?.filter(p => p.status === 'En Verificación') || [];
 
-  const getAthleteName = (athleteId: string) => {
-    const user = allUsers?.find(u => u.id === athleteId);
+  const getUserName = (userId: string) => {
+    const user = allUsers?.find(u => u.id === userId);
     return user ? `${user.firstName} ${user.lastName}` : 'Desconocido';
   };
 
@@ -162,7 +163,7 @@ export default function ManagerPaymentsPage() {
     setIsDeleteDialogOpen(true);
   };
   
-  const isLoading = isUserLoading || athletesLoading || paymentsLoading || usersLoading;
+  const isLoading = isUserLoading || billableUsersLoading || paymentsLoading || usersLoading;
   
   if (isLoading) {
       return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -224,7 +225,7 @@ export default function ManagerPaymentsPage() {
                       <TableBody>
                       {pendingVerifications.map((payment) => (
                           <TableRow key={payment.id}>
-                              <TableCell className="font-medium">{getAthleteName(payment.athleteId)}</TableCell>
+                              <TableCell className="font-medium">{getUserName(payment.userId)}</TableCell>
                               <TableCell>{payment.month}</TableCell>
                               <TableCell>{payment.paymentDate}</TableCell>
                               <TableCell>{payment.referenceNumber}</TableCell>
@@ -261,7 +262,7 @@ export default function ManagerPaymentsPage() {
                   <TableBody>
                       {paymentList?.map(payment => (
                           <TableRow key={payment.id}>
-                              <TableCell className="font-medium">{getAthleteName(payment.athleteId)}</TableCell>
+                              <TableCell className="font-medium">{getUserName(payment.userId)}</TableCell>
                               <TableCell>{payment.month}</TableCell>
                               <TableCell>{payment.amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}</TableCell>
                               <TableCell>
@@ -308,3 +309,5 @@ export default function ManagerPaymentsPage() {
     </>
   );
 }
+
+    
