@@ -73,10 +73,10 @@ export default function ManagerPaymentsPage() {
   }, [firestore]);
   const { data: paymentList, isLoading: paymentsLoading } = useCollection(paymentsQuery);
   
-  // Query all users to map IDs to names
+  // Query all users to map IDs to names. This is more robust as it doesn't rely on clubId being perfectly consistent.
   const usersQuery = useMemoFirebase(() => {
       if (!firestore) return null;
-      return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID));
+      return collection(firestore, 'users');
   }, [firestore]);
   const { data: allUsers, isLoading: usersLoading } = useCollection(usersQuery);
 
