@@ -98,14 +98,30 @@ export default function ManagerPaymentsPage() {
     }
 
     const paymentsCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
-    let newPaymentsCount = 0;
     
-    billableUsers.forEach(user => {
-      const alreadyExists = paymentList.some(
-        p => p.userId === user.id && p.month === data.month
-      );
+    // Find all users who ALREADY have a payment for this month.
+    const usersWithExistingPayment = new Set(
+        paymentList
+            .filter(p => p.month === data.month)
+            .map(p => p.userId)
+    );
 
-      if (!alreadyExists) {
+    // Filter the billable users to only include those who DON'T have a payment yet.
+    const usersToBill = billableUsers.filter(user => !usersWithExistingPayment.has(user.id));
+
+    if (usersToBill.length === 0) {
+        toast({
+            title: 'No se crearon pagos nuevos',
+            description: `Todos los usuarios facturables ya tienen una cuota de pago programada para ${data.month}.`,
+        });
+        setIsDialogOpen(false);
+        form.reset();
+        return;
+    }
+    
+    let newPaymentsCount = 0;
+    // Create payments only for the users who need it.
+    usersToBill.forEach(user => {
         const newPaymentRef = doc(paymentsCollection);
         const newPaymentData = {
           userId: user.id,
@@ -116,20 +132,13 @@ export default function ManagerPaymentsPage() {
         };
         setDocumentNonBlocking(newPaymentRef, newPaymentData, {});
         newPaymentsCount++;
-      }
     });
 
-    if (newPaymentsCount === 0) {
-        toast({
-            title: 'No se crearon pagos nuevos',
-            description: `Todos los usuarios ya tienen una cuota de pago para ${data.month}.`,
-        });
-    } else {
-        toast({
-            title: 'Pagos Programados Exitosamente',
-            description: `Se crearon ${newPaymentsCount} nuevas cuotas de pago para el mes de ${data.month}.`,
-        });
-    }
+    toast({
+        title: 'Pagos Programados Exitosamente',
+        description: `Se crearon ${newPaymentsCount} nuevas cuotas de pago para el mes de ${data.month}.`,
+    });
+    
     setIsDialogOpen(false);
     form.reset();
   };
@@ -309,5 +318,3 @@ export default function ManagerPaymentsPage() {
     </>
   );
 }
-
-    
