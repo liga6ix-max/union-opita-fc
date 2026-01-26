@@ -98,10 +98,10 @@ service cloud.firestore {
 
     // USERS
     match /users/{userId} {
-      // Any signed-in user can read any other user's profile.
-      // This is required for security rules to be able to check roles.
-      // Client-side queries will restrict what data is actually shown to users.
-      allow read: if isSignedIn();
+      // Allow reading a single user doc if signed in (for role checks).
+      allow get: if isSignedIn();
+      // Allow listing users only for coaches and managers (for admin panels).
+      allow list: if isCoach();
       
       // Anyone can create a user account (e.g., during sign-up).
       allow create: if true;
