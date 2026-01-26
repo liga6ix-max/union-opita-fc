@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import clubConfig from '@/lib/club-config.json';
 import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
-import { collection, query, doc } from 'firebase/firestore';
+import { collection, query, doc, where } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -61,10 +61,10 @@ export default function ManagerPaymentsPage() {
   const { profile, isUserLoading } = useUser();
   const { firestore } = useFirebase();
 
-  // Single, reliable query for all users in the system.
+  // Query for users, but only within the current club.
   const usersQuery = useMemoFirebase(() => {
     if (!firestore || !profile) return null;
-    return collection(firestore, 'users');
+    return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID));
   }, [firestore, profile]);
   const { data: allUsers, isLoading: usersLoading } = useCollection(usersQuery);
 
