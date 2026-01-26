@@ -75,9 +75,9 @@ export default function ManagerPaymentsPage() {
   
   // Query all users to map IDs to names
   const usersQuery = useMemoFirebase(() => {
-      if (!firestore || !profile?.clubId) return null;
-      return query(collection(firestore, 'users'), where("clubId", "==", profile.clubId));
-  }, [firestore, profile?.clubId]);
+      if (!firestore) return null;
+      return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID));
+  }, [firestore]);
   const { data: allUsers, isLoading: usersLoading } = useCollection(usersQuery);
 
   const form = useForm<PaymentScheduleFormValues>({
