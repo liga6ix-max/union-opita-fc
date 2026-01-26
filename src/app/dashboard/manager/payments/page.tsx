@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import clubConfig from '@/lib/club-config.json';
 import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -61,24 +61,24 @@ export default function ManagerPaymentsPage() {
   const { profile, isUserLoading } = useUser();
   const { firestore } = useFirebase();
 
-  const billableUsersQuery = useMemoFirebase(() => {
+  // Single, reliable query for all users in the system.
+  const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "in", ["athlete", "unifit"]));
+    return collection(firestore, 'users');
   }, [firestore]);
-  const { data: billableUsers, isLoading: billableUsersLoading } = useCollection(billableUsersQuery);
+  const { data: allUsers, isLoading: usersLoading } = useCollection(usersQuery);
+
+  // Memoized map for efficient user lookup.
+  const usersMap = useMemo(() => {
+    if (!allUsers) return new Map();
+    return new Map(allUsers.map(user => [user.id, user]));
+  }, [allUsers]);
 
   const paymentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
   }, [firestore]);
   const { data: paymentList, isLoading: paymentsLoading } = useCollection(paymentsQuery);
-  
-  // Query all users to map IDs to names. This is more robust as it doesn't rely on clubId being perfectly consistent.
-  const usersQuery = useMemoFirebase(() => {
-      if (!firestore) return null;
-      return collection(firestore, 'users');
-  }, [firestore]);
-  const { data: allUsers, isLoading: usersLoading } = useCollection(usersQuery);
 
   const form = useForm<PaymentScheduleFormValues>({
     resolver: zodResolver(paymentScheduleSchema),
@@ -86,11 +86,14 @@ export default function ManagerPaymentsPage() {
   });
 
   const onScheduleSubmit = (data: PaymentScheduleFormValues) => {
-    if (!firestore || !billableUsers || !paymentList) {
+    if (!firestore || !allUsers || !paymentList) {
         toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron cargar los datos necesarios para programar los pagos.' });
         return;
     }
     
+    // Derive billable users from the single source of truth `allUsers`
+    const billableUsers = allUsers.filter(u => u.clubId === MAIN_CLUB_ID && (u.role === 'athlete' || u.role === 'unifit'));
+
     if (billableUsers.length === 0) {
       toast({ title: 'Sin Deportistas', description: 'No hay deportistas o miembros de UNIFIT para programarles pagos.' });
       return;
@@ -98,14 +101,12 @@ export default function ManagerPaymentsPage() {
 
     const paymentsCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
     
-    // Find all users who ALREADY have a payment for this month.
     const usersWithExistingPayment = new Set(
         paymentList
             .filter(p => p.month === data.month)
             .map(p => p.userId)
     );
 
-    // Filter the billable users to only include those who DON'T have a payment yet.
     const usersToBill = billableUsers.filter(user => !usersWithExistingPayment.has(user.id));
 
     if (usersToBill.length === 0) {
@@ -119,7 +120,6 @@ export default function ManagerPaymentsPage() {
     }
     
     let newPaymentsCount = 0;
-    // Create payments only for the users who need it.
     usersToBill.forEach(user => {
         const newPaymentRef = doc(paymentsCollection);
         const newPaymentData = {
@@ -166,7 +166,7 @@ export default function ManagerPaymentsPage() {
     setIsDeleteDialogOpen(true);
   };
   
-  const isLoading = isUserLoading || billableUsersLoading || paymentsLoading || usersLoading;
+  const isLoading = isUserLoading || paymentsLoading || usersLoading;
   
   if (isLoading) {
       return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -227,13 +227,13 @@ export default function ManagerPaymentsPage() {
                       </TableHeader>
                       <TableBody>
                       {pendingVerifications.map((payment) => {
-                          const user = allUsers?.find(u => u.id === payment.userId);
+                          const user = usersMap.get(payment.userId);
                           const roleLabel = user?.role === 'athlete' ? 'Deportista' : user?.role === 'unifit' ? 'UNIFIT' : '';
                           return (
                             <TableRow key={payment.id}>
                                 <TableCell className="font-medium">
                                   <div>{user ? `${user.firstName} ${user.lastName}` : 'Desconocido'}</div>
-                                  {roleLabel && <div className="text-xs text-muted-foreground">{roleLabel}</div>}
+                                  {user && roleLabel && <div className="text-xs text-muted-foreground">{roleLabel}</div>}
                                 </TableCell>
                                 <TableCell>{payment.month}</TableCell>
                                 <TableCell>{payment.paymentDate}</TableCell>
@@ -271,13 +271,13 @@ export default function ManagerPaymentsPage() {
                   </TableHeader>
                   <TableBody>
                       {paymentList?.map(payment => {
-                        const user = allUsers?.find(u => u.id === payment.userId);
+                        const user = usersMap.get(payment.userId);
                         const roleLabel = user?.role === 'athlete' ? 'Deportista' : user?.role === 'unifit' ? 'UNIFIT' : '';
                         return (
                           <TableRow key={payment.id}>
                               <TableCell className="font-medium">
                                 <div>{user ? `${user.firstName} ${user.lastName}` : 'Desconocido'}</div>
-                                {roleLabel && <div className="text-xs text-muted-foreground">{roleLabel}</div>}
+                                {user && roleLabel && <div className="text-xs text-muted-foreground">{roleLabel}</div>}
                               </TableCell>
                               <TableCell>{payment.month}</TableCell>
                               <TableCell>{payment.amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}</TableCell>
