@@ -32,7 +32,7 @@ export default function UnderwaterActivitiesPage() {
   }, [allActivities, profile]);
 
 
-  const isLoading = isUserLoading || activitiesLoading;
+  const isLoading = isUserLoading || activitiesLoading || !profile;
 
   if (isLoading) {
       return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
@@ -51,9 +51,7 @@ export default function UnderwaterActivitiesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-            {isLoading ? (
-               <div className="flex h-40 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-            ) : filteredActivities && filteredActivities.length > 0 ? (
+            {filteredActivities && filteredActivities.length > 0 ? (
               <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-6'>
                   {filteredActivities.map(activity => (
                       <Card key={activity.id} className="flex flex-col">
