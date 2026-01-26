@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -145,11 +144,6 @@ export default function ManagerPaymentsPage() {
   
   const pendingVerifications = paymentList?.filter(p => p.status === 'En Verificación') || [];
 
-  const getUserName = (userId: string) => {
-    const user = allUsers?.find(u => u.id === userId);
-    return user ? `${user.firstName} ${user.lastName}` : 'Desconocido';
-  };
-
   const handlePaymentAction = (paymentId: string, newStatus: 'Pagado' | 'Rechazado') => {
     if (!firestore) return;
     const paymentRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/payments`, paymentId);
@@ -224,7 +218,7 @@ export default function ManagerPaymentsPage() {
                   <Table>
                       <TableHeader>
                       <TableRow>
-                          <TableHead>Deportista</TableHead>
+                          <TableHead>Usuario</TableHead>
                           <TableHead>Mes</TableHead>
                           <TableHead>Fecha Reporte</TableHead>
                           <TableHead>Referencia</TableHead>
@@ -232,18 +226,25 @@ export default function ManagerPaymentsPage() {
                       </TableRow>
                       </TableHeader>
                       <TableBody>
-                      {pendingVerifications.map((payment) => (
-                          <TableRow key={payment.id}>
-                              <TableCell className="font-medium">{getUserName(payment.userId)}</TableCell>
-                              <TableCell>{payment.month}</TableCell>
-                              <TableCell>{payment.paymentDate}</TableCell>
-                              <TableCell>{payment.referenceNumber}</TableCell>
-                              <TableCell className="text-right space-x-2">
-                                  <Button size="sm" variant="outline" onClick={() => handlePaymentAction(payment.id, 'Rechazado')}><XCircle className="mr-2 h-4 w-4 text-destructive" />Rechazar</Button>
-                                  <Button size="sm" onClick={() => handlePaymentAction(payment.id, 'Pagado')}><CheckCircle className="mr-2 h-4 w-4" />Aprobar</Button>
-                              </TableCell>
-                          </TableRow>
-                      ))}
+                      {pendingVerifications.map((payment) => {
+                          const user = allUsers?.find(u => u.id === payment.userId);
+                          const roleLabel = user?.role === 'athlete' ? 'Deportista' : user?.role === 'unifit' ? 'UNIFIT' : '';
+                          return (
+                            <TableRow key={payment.id}>
+                                <TableCell className="font-medium">
+                                  <div>{user ? `${user.firstName} ${user.lastName}` : 'Desconocido'}</div>
+                                  {roleLabel && <div className="text-xs text-muted-foreground">{roleLabel}</div>}
+                                </TableCell>
+                                <TableCell>{payment.month}</TableCell>
+                                <TableCell>{payment.paymentDate}</TableCell>
+                                <TableCell>{payment.referenceNumber}</TableCell>
+                                <TableCell className="text-right space-x-2">
+                                    <Button size="sm" variant="outline" onClick={() => handlePaymentAction(payment.id, 'Rechazado')}><XCircle className="mr-2 h-4 w-4 text-destructive" />Rechazar</Button>
+                                    <Button size="sm" onClick={() => handlePaymentAction(payment.id, 'Pagado')}><CheckCircle className="mr-2 h-4 w-4" />Aprobar</Button>
+                                </TableCell>
+                            </TableRow>
+                          );
+                      })}
                       </TableBody>
                   </Table>
               ): (
@@ -261,7 +262,7 @@ export default function ManagerPaymentsPage() {
               <Table>
                   <TableHeader>
                       <TableRow>
-                          <TableHead>Deportista</TableHead>
+                          <TableHead>Usuario</TableHead>
                           <TableHead>Mes</TableHead>
                           <TableHead>Monto</TableHead>
                           <TableHead>Estado</TableHead>
@@ -269,9 +270,15 @@ export default function ManagerPaymentsPage() {
                       </TableRow>
                   </TableHeader>
                   <TableBody>
-                      {paymentList?.map(payment => (
+                      {paymentList?.map(payment => {
+                        const user = allUsers?.find(u => u.id === payment.userId);
+                        const roleLabel = user?.role === 'athlete' ? 'Deportista' : user?.role === 'unifit' ? 'UNIFIT' : '';
+                        return (
                           <TableRow key={payment.id}>
-                              <TableCell className="font-medium">{getUserName(payment.userId)}</TableCell>
+                              <TableCell className="font-medium">
+                                <div>{user ? `${user.firstName} ${user.lastName}` : 'Desconocido'}</div>
+                                {roleLabel && <div className="text-xs text-muted-foreground">{roleLabel}</div>}
+                              </TableCell>
                               <TableCell>{payment.month}</TableCell>
                               <TableCell>{payment.amount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}</TableCell>
                               <TableCell>
@@ -289,7 +296,8 @@ export default function ManagerPaymentsPage() {
                                   </Button>
                               </TableCell>
                           </TableRow>
-                      ))}
+                        );
+                      })}
                   </TableBody>
               </Table>
               {(!paymentList || paymentList.length === 0) && (
