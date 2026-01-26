@@ -60,11 +60,11 @@ export default function ManagerPaymentsPage() {
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
   const { user, firestore, isUserLoading } = useUser();
 
-  // Query for ALL users. The guard ensures this only runs when logged in.
+  // Query for ALL users. This is more robust.
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore) return null;
     return collection(firestore, 'users');
-  }, [firestore, user]);
+  }, [firestore]);
   const { data: allUsers, isLoading: usersLoading } = useCollection(usersQuery);
 
   // Memoized map for efficient user lookup.
@@ -90,7 +90,7 @@ export default function ManagerPaymentsPage() {
         return;
     }
     
-    // Derive billable users from the single source of truth `allUsers`
+    // Derive billable users from the single source of truth `allUsers` that belong to the current club
     const billableUsers = allUsers.filter(u => u.clubId === MAIN_CLUB_ID && (u.role === 'athlete' || u.role === 'unifit'));
 
     if (billableUsers.length === 0) {
@@ -100,12 +100,14 @@ export default function ManagerPaymentsPage() {
 
     const paymentsCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
     
+    // Create a Set of user IDs who already have a payment for the specified month.
     const usersWithExistingPayment = new Set(
         paymentList
             .filter(p => p.month === data.month)
             .map(p => p.userId)
     );
 
+    // Filter the billable users to only include those who do NOT have an existing payment for the month.
     const usersToBill = billableUsers.filter(user => !usersWithExistingPayment.has(user.id));
 
     if (usersToBill.length === 0) {
