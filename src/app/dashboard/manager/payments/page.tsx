@@ -63,9 +63,9 @@ export default function ManagerPaymentsPage() {
 
   // Single, reliable query for all users in the system.
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     return collection(firestore, 'users');
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: allUsers, isLoading: usersLoading } = useCollection(usersQuery);
 
   // Memoized map for efficient user lookup.

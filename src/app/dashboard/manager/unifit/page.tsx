@@ -16,9 +16,9 @@ export default function ManagerUnifitPage() {
     const { profile: currentUserProfile, isUserLoading, firestore } = useUser();
 
     const unifitUsersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !currentUserProfile) return null;
         return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "==", "unifit"));
-    }, [firestore]);
+    }, [firestore, currentUserProfile]);
 
     const unifitProfilesQuery = useMemoFirebase(() => {
         if (!firestore || !currentUserProfile) return null;
