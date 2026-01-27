@@ -39,6 +39,7 @@ export interface UserProfile {
   enduranceTest8kmTime?: string;
   lastPeriodDate?: string;
   cycleLength?: number;
+  assignedDietType?: 'weight_loss' | 'weight_gain' | 'vegan';
 }
 
 

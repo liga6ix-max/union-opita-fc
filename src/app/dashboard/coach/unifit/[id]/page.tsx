@@ -56,6 +56,12 @@ const measurementSchema = z.object({
 
 type MeasurementFormValues = z.infer<typeof measurementSchema>;
 
+const dietTypes = [
+    { id: 'weight_loss', name: 'Pérdida de Peso' },
+    { id: 'weight_gain', name: 'Aumento de Peso' },
+    { id: 'vegan', name: 'Vegana' },
+];
+
 export default function CoachUnifitAthleteProfilePage() {
     const { toast } = useToast();
     const params = useParams();
@@ -128,6 +134,12 @@ export default function CoachUnifitAthleteProfilePage() {
         updateDocumentNonBlocking(unifitProfileDocRef, { coachId });
         toast({ title: "Entrenador Asignado", description: "Se ha actualizado el entrenador para este deportista." });
     };
+    
+    const handleAssignDiet = (dietType: string) => {
+        if (!unifitProfileDocRef) return;
+        updateDocumentNonBlocking(unifitProfileDocRef, { assignedDietType: dietType });
+        toast({ title: "Dieta Asignada", description: "Se ha actualizado la dieta para este deportista." });
+    };
 
     const handleDeleteMeasurement = () => {
         if (!measurementToDelete || !firestore || !memberId) return;
@@ -157,10 +169,22 @@ export default function CoachUnifitAthleteProfilePage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline">Perfil UNIFIT: {userData?.firstName} {userData?.lastName}</CardTitle>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <CardDescription>
-                            Entrenador Asignado: {assignedCoach ? `${assignedCoach.firstName} ${assignedCoach.lastName}` : 'Ninguno'}
+                            Entrenador: {assignedCoach ? `${assignedCoach.firstName} ${assignedCoach.lastName}` : 'Ninguno'}
                         </CardDescription>
+                         <Select onValueChange={handleAssignDiet} value={unifitProfile?.assignedDietType || ''} disabled={!canEdit}>
+                            <SelectTrigger className="w-full sm:w-[280px]">
+                                <SelectValue placeholder="Asignar Dieta..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {dietTypes?.map((diet) => (
+                                    <SelectItem key={diet.id} value={diet.id}>
+                                        {diet.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                         {currentUserProfile?.role === 'manager' && (
                              <Select onValueChange={handleAssignCoach} value={unifitProfile?.coachId || ''}>
                                 <SelectTrigger className="w-full sm:w-[280px]">
