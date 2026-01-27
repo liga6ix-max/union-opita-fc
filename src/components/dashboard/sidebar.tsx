@@ -36,6 +36,7 @@ import {
   HeartPulse,
   Activity,
   Waves,
+  Beef,
 } from "lucide-react";
 import { useFirebase } from "@/firebase";
 
@@ -46,8 +47,7 @@ const managerNav = [
   { href: "/dashboard/manager/teams", label: "Equipos", icon: Shield },
   { href: "/dashboard/manager/approvals", label: "Aprobaciones", icon: UserPlus },
   { href: "/dashboard/manager/unifit", label: "UNIFIT", icon: HeartPulse },
-  { href: "/dashboard/manager/unifit-schedule", label: "Horarios UNIFIT", icon: CalendarDays },
-  { href: "/dashboard/manager/underwater-activities", label: "Act. Subacuáticas", icon: Waves },
+  { href: "/dashboard/manager/nutrition", label: "Nutrición", icon: Beef },
   { href: "/dashboard/manager/tasks", label: "Tareas", icon: ClipboardList },
   { href: "/dashboard/manager/planning", label: "Planificación", icon: CalendarClock },
   { href: "/dashboard/manager/matches", label: "Partidos", icon: Swords },
@@ -79,7 +79,8 @@ const athleteNav = [
 
 const unifitNav = [
   { href: "/dashboard/unifit/profile", label: "Mi Perfil", icon: User },
-  { href: "/dashboard/unifit/plan", label: "Mi Plan", icon: CalendarClock },
+  { href: "/dashboard/unifit/plan", label: "Plan de Entrenamiento", icon: CalendarClock },
+  { href: "/dashboard/unifit/nutrition", label: "Plan Nutricional", icon: Beef },
   { href: "/dashboard/unifit/progress", label: "Mis Medidas", icon: Activity },
   { href: "/dashboard/unifit/schedule", label: "Horarios y Lugar", icon: CalendarDays },
   { href: "/dashboard/unifit/underwater-activities", label: "Act. Subacuáticas", icon: Waves },

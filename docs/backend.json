@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "Club": {
@@ -305,6 +304,11 @@
         "cycleLength": {
           "type": "number",
           "description": "Average length of the menstrual cycle in days (e.g., 28)."
+        },
+        "assignedDietType": {
+          "type": "string",
+          "enum": ["weight_loss", "weight_gain", "vegan"],
+          "description": "The assigned diet type for the member."
         }
       },
       "required": [
@@ -380,6 +384,14 @@
         "calfLeft": {
           "type": "number",
           "description": "Left calf measurement in cm."
+        },
+        "neck": {
+          "type": "number",
+          "description": "Neck measurement in cm."
+        },
+        "bmi": {
+          "type": "number",
+          "description": "Calculated Body Mass Index."
         }
       },
       "required": [
@@ -658,6 +670,46 @@
         "level": { "type": "number", "description": "The skill level (1-12) this activity is intended for." }
       },
       "required": ["id", "clubId", "date", "time", "location", "activity"]
+    },
+    "DailyMealPlan": {
+      "title": "DailyMealPlan",
+      "type": "object",
+      "properties": {
+        "breakfast": { "type": "string", "description": "Breakfast meal." },
+        "snack1": { "type": "string", "description": "Morning snack." },
+        "lunch": { "type": "string", "description": "Lunch meal." },
+        "snack2": { "type": "string", "description": "Afternoon snack." },
+        "dinner": { "type": "string", "description": "Dinner meal." }
+      }
+    },
+    "NutritionPlan": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "NutritionPlan",
+      "type": "object",
+      "description": "Represents a weekly nutritional plan for a specific diet type.",
+      "properties": {
+        "id": { "type": "string", "description": "Should be the same as dietType, e.g. 'weight_loss'." },
+        "clubId": { "type": "string" },
+        "dietType": {
+          "type": "string",
+          "enum": ["weight_loss", "weight_gain", "vegan"],
+          "description": "The type of diet this plan is for."
+        },
+        "weekPlan": {
+          "type": "object",
+          "description": "The meal plan for each day of the week.",
+          "properties": {
+            "Lunes": { "$ref": "#/backend/entities/DailyMealPlan" },
+            "Martes": { "$ref": "#/backend/entities/DailyMealPlan" },
+            "Miércoles": { "$ref": "#/backend/entities/DailyMealPlan" },
+            "Jueves": { "$ref": "#/backend/entities/DailyMealPlan" },
+            "Viernes": { "$ref": "#/backend/entities/DailyMealPlan" },
+            "Sábado": { "$ref": "#/backend/entities/DailyMealPlan" },
+            "Domingo": { "$ref": "#/backend/entities/DailyMealPlan" }
+          }
+        }
+      },
+      "required": ["id", "clubId", "dietType"]
     }
   },
   "auth": {
@@ -920,10 +972,22 @@
             { "name": "activityId" }
           ]
         }
+      },
+      {
+        "path": "/clubs/{clubId}/nutritionPlans/{planId}",
+        "definition": {
+          "entityName": "NutritionPlan",
+          "schema": {
+            "$ref": "#/backend/entities/NutritionPlan"
+          },
+          "description": "Stores the different nutritional plans for UNIFIT members. The document ID should match the dietType.",
+          "params": [
+            { "name": "clubId" },
+            { "name": "planId" }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to manage a sports club (Opita Club Manager) with role-based access control. It prioritizes authorization independence by denormalizing clubId into every collection that requires club-specific data, eliminating the need for `get()` calls in security rules and enabling atomic operations.\n\n- `/clubs`: Stores club details. This top-level collection allows easy querying for clubs.\n- `/users`: Stores user details, including their role and clubId. This enables role-based access control at the user level.\n- `/clubs/{clubId}/athletes`: Stores athlete information related to a specific club. The clubId is denormalized to enable secure querying of athletes within a club without requiring a `get()` call to the clubs collection. This supports QAPs by ensuring that listing athletes is secure and efficient.\n- `/clubs/{clubId}/unifitMembers`: Stores information about members of the functional training program, separate from regular athletes.\n- `/clubs/{clubId}/unifitMembers/{userId}/measurements`: A subcollection to store a history of body measurements for Unifit members, allowing for progress tracking over time.\n- `/clubs/{clubId}/unifitBookings`: Stores booking information for UNIFIT sessions.\n- `/clubs/{clubId}/payments`: Stores payment information for athletes within a specific club. The clubId is denormalized here as well, ensuring secure and efficient payment listing.\n- `/clubs/{clubId}/tasks`: Stores tasks assigned to coaches or staff within a club. The clubId is denormalized.\n- `/clubs/{clubId}/landingPageContent`: Stores landing page content specific to each club. The clubId is denormalized.\n- `/clubs/{clubId}/matches`: Stores match details. Denormalizing `clubId` allows for secure and efficient querying of matches within a club.\n- `/clubs/{clubId}/trainingPlans`: Stores reusable training plan templates generated by the AI, which can be assigned to different teams/levels."
+    "reasoning": "The Firestore structure is designed to manage a sports club (Opita Club Manager) with role-based access control. It prioritizes authorization independence by denormalizing clubId into every collection that requires club-specific data, eliminating the need for `get()` calls in security rules and enabling atomic operations.\n\n- `/clubs`: Stores club details. This top-level collection allows easy querying for clubs.\n- `/users`: Stores user details, including their role and clubId. This enables role-based access control at the user level.\n- `/clubs/{clubId}/athletes`: Stores athlete information related to a specific club. The clubId is denormalized to enable secure querying of athletes within a club without requiring a `get()` call to the clubs collection. This supports QAPs by ensuring that listing athletes is secure and efficient.\n- `/clubs/{clubId}/unifitMembers`: Stores information about members of the functional training program, separate from regular athletes.\n- `/clubs/{clubId}/unifitMembers/{userId}/measurements`: A subcollection to store a history of body measurements for Unifit members, allowing for progress tracking over time.\n- `/clubs/{clubId}/unifitBookings`: Stores booking information for UNIFIT sessions.\n- `/clubs/{clubId}/payments`: Stores payment information for users (athletes or UNIFIT members) within a specific club. The clubId is denormalized here as well, ensuring secure and efficient payment listing.\n- `/clubs/{clubId}/tasks`: Stores tasks assigned to coaches or staff within a club. The clubId is denormalized.\n- `/clubs/{clubId}/landingPageContent`: Stores landing page content specific to each club. The clubId is denormalized.\n- `/clubs/{clubId}/matches`: Stores match details. Denormalizing `clubId` allows for secure and efficient querying of matches within a club.\n- `/clubs/{clubId}/trainingPlans`: Stores reusable training plan templates generated by the AI, which can be assigned to different teams/levels."
   }
 }
-
-    

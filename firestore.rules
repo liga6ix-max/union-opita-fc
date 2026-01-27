@@ -101,7 +101,7 @@ service cloud.firestore {
       // Allow reading a single user doc if signed in (for role checks).
       allow get: if isSignedIn();
       // Allow listing users only for coaches and managers (for admin panels).
-      allow list: if isCoach();
+      allow list: if isCoach() || isManager();
       
       // Anyone can create a user account (e.g., during sign-up).
       allow create: if true;
@@ -135,6 +135,12 @@ service cloud.firestore {
     // Underwater Activities
     match /clubs/{clubId}/underwaterActivities/{activityId} {
       allow read, write: if isCoach() && isMemberOfTheClub(clubId);
+    }
+    
+    // Nutrition Plans
+    match /clubs/{clubId}/nutritionPlans/{planId} {
+      allow read: if isMemberOfTheClub(clubId);
+      allow write: if isManager();
     }
     
     // Subcollections need to verify the user is part of the parent club OR is a manager.
