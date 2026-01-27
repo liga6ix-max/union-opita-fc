@@ -26,7 +26,7 @@ const prompt = ai.definePrompt({
   prompt: `
     Eres un nutricionista experto en la gastronomía colombiana. Tu tarea es crear un plan de alimentación semanal (microciclo) económico y saludable para un deportista.
 
-    El plan debe ser para una dieta de: {{{dietTypeDescriptions[dietType]}}}.
+    El plan debe ser para una dieta de: {{{dietDescription}}}.
 
     Genera un plan de comidas para los 7 días de la semana (Lunes a Domingo). Para cada día, debes especificar 5 comidas:
     1.  Desayuno
@@ -44,7 +44,7 @@ const prompt = ai.definePrompt({
   // Augment the input with the description before sending to the prompt
   transform: (input) => ({
     ...input,
-    dietTypeDescriptions: dietTypeDescriptions
+    dietDescription: dietTypeDescriptions[input.dietType]
   }),
 });
 
