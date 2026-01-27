@@ -108,15 +108,15 @@ export default function ManagerPlanningPage() {
   const [planFormData, setPlanFormData] = useState<PlanningFormValues | null>(null);
 
   const plansQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     return collection(firestore, `clubs/${MAIN_CLUB_ID}/trainingPlans`);
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: planList, isLoading: plansLoading } = useCollection(plansQuery);
   
   const coachesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "in", ["coach", "manager"]));
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: coaches, isLoading: coachesLoading } = useCollection(coachesQuery);
 
   const form = useForm<PlanningFormValues>({
@@ -535,5 +535,4 @@ export default function ManagerPlanningPage() {
     </>
   );
 }
-
     
