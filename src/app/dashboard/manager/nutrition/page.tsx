@@ -1,16 +1,15 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { useUser } from '@/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, BrainCircuit } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, BrainCircuit, Pencil } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { createNutritionPlan } from '@/ai/flows/create-nutrition-plan-flow';
 
 const MAIN_CLUB_ID = 'OpitaClub';
@@ -22,7 +21,6 @@ const dietTypes = [
 ];
 
 const daysOfWeek = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-const meals = ['breakfast', 'snack1', 'lunch', 'snack2', 'dinner'];
 const mealLabels: Record<string, string> = {
     breakfast: 'Desayuno',
     snack1: 'Media Mañana',
@@ -32,7 +30,7 @@ const mealLabels: Record<string, string> = {
 };
 
 const defaultPlan = daysOfWeek.reduce((acc, day) => {
-    acc[day] = meals.reduce((mealsAcc, meal) => {
+    acc[day] = Object.keys(mealLabels).reduce((mealsAcc, meal) => {
         mealsAcc[meal] = '';
         return mealsAcc;
     }, {} as Record<string, string>);
@@ -44,8 +42,9 @@ export default function ManagerNutritionPage() {
     const { toast } = useToast();
     const [plans, setPlans] = useState<Record<string, any>>({});
     const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
+    const [isSaving, setIsSaving] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState<string | null>(null);
+    const [openDialog, setOpenDialog] = useState<string | null>(null);
 
     // Fetch existing plans
     useEffect(() => {
@@ -55,7 +54,7 @@ export default function ManagerNutritionPage() {
             const fetchedPlans: Record<string, any> = {};
             for (const diet of dietTypes) {
                 const planRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/nutritionPlans`, diet.id);
-                const docSnap = await (await import('firebase/firestore')).getDoc(planRef);
+                const docSnap = await getDoc(planRef);
                 if (docSnap.exists()) {
                     fetchedPlans[diet.id] = docSnap.data().weekPlan || defaultPlan;
                 } else {
@@ -99,25 +98,24 @@ export default function ManagerNutritionPage() {
         }
     };
 
-    const handleSavePlans = async () => {
-        if (!firestore) return;
-        setIsSaving(true);
+    const handleSavePlan = async (dietType: string) => {
+        if (!firestore || !plans[dietType]) return;
+        setIsSaving(dietType);
         try {
-            for (const diet of dietTypes) {
-                const planRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/nutritionPlans`, diet.id);
-                await setDoc(planRef, {
-                    id: diet.id,
-                    clubId: MAIN_CLUB_ID,
-                    dietType: diet.id,
-                    weekPlan: plans[diet.id],
-                });
-            }
-            toast({ title: '¡Planes Guardados!', description: 'Todos los planes nutricionales han sido actualizados.' });
+            const planRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/nutritionPlans`, dietType);
+            await setDoc(planRef, {
+                id: dietType,
+                clubId: MAIN_CLUB_ID,
+                dietType: dietType,
+                weekPlan: plans[dietType],
+            });
+            toast({ title: `¡Plan de ${dietTypes.find(d => d.id === dietType)?.name} Guardado!`, description: 'El plan nutricional ha sido actualizado.' });
+            setOpenDialog(null);
         } catch (error) {
-            console.error("Error saving plans:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron guardar los planes.' });
+            console.error("Error saving plan:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo guardar el plan.' });
         }
-        setIsSaving(false);
+        setIsSaving(null);
     };
 
     if (isLoading || isUserLoading) {
@@ -128,56 +126,71 @@ export default function ManagerNutritionPage() {
         <Card>
             <CardHeader>
                 <CardTitle>Gestión de Planes Nutricionales</CardTitle>
-                <CardDescription>Define los planes de comidas semanales para cada tipo de dieta.</CardDescription>
+                <CardDescription>Define los planes de comidas semanales para cada tipo de dieta. Cada plan se guarda de forma individual.</CardDescription>
             </CardHeader>
-            <CardContent>
-                <Tabs defaultValue="weight_loss" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
-                        {dietTypes.map(diet => (
-                            <TabsTrigger key={diet.id} value={diet.id}>{diet.name}</TabsTrigger>
-                        ))}
-                    </TabsList>
-                    {dietTypes.map(diet => (
-                        <TabsContent key={diet.id} value={diet.id} className="space-y-6 mt-6">
-                            <div className="flex justify-end">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => handleGeneratePlan(diet.id)}
-                                    disabled={isGenerating === diet.id}
-                                >
-                                    {isGenerating === diet.id ? <Loader2 className="animate-spin mr-2" /> : <BrainCircuit className="mr-2" />}
-                                    {isGenerating === diet.id ? 'Generando...' : 'Generar con IA'}
-                                </Button>
-                            </div>
-                            {daysOfWeek.map(day => (
-                                <Card key={day}>
-                                    <CardHeader>
-                                        <CardTitle className="font-headline">{day}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {meals.map(meal => (
-                                            <div key={meal} className="space-y-2">
-                                                <Label>{mealLabels[meal]}</Label>
-                                                <Textarea
-                                                    placeholder={`Detalles de ${mealLabels[meal].toLowerCase()}...`}
-                                                    value={plans[diet.id]?.[day]?.[meal] || ''}
-                                                    onChange={(e) => handlePlanChange(diet.id, day, meal, e.target.value)}
-                                                    rows={4}
-                                                />
-                                            </div>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {dietTypes.map(diet => (
+                    <Card key={diet.id}>
+                        <CardHeader>
+                            <CardTitle>{diet.name}</CardTitle>
+                            <CardDescription>Plan de alimentación enfocado en {diet.name.toLowerCase()}.</CardDescription>
+                        </CardHeader>
+                        <CardFooter>
+                            <Dialog open={openDialog === diet.id} onOpenChange={(isOpen) => setOpenDialog(isOpen ? diet.id : null)}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline"><Pencil className="mr-2 h-4 w-4" /> Editar Plan</Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-4xl">
+                                    <DialogHeader>
+                                        <DialogTitle>Editando Plan: {diet.name}</DialogTitle>
+                                        <DialogDescription>
+                                            Define las comidas para cada día. Puedes usar la IA para obtener una base y luego ajustarla.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="py-4 space-y-6 max-h-[70vh] overflow-y-auto pr-6">
+                                        <div className="flex justify-end sticky top-0 py-2 bg-background/90 z-10">
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => handleGeneratePlan(diet.id)}
+                                                disabled={isGenerating === diet.id}
+                                            >
+                                                {isGenerating === diet.id ? <Loader2 className="animate-spin mr-2" /> : <BrainCircuit className="mr-2" />}
+                                                {isGenerating === diet.id ? 'Generando...' : 'Generar con IA'}
+                                            </Button>
+                                        </div>
+                                        {daysOfWeek.map(day => (
+                                            <Card key={`${diet.id}-${day}`}>
+                                                <CardHeader>
+                                                    <CardTitle className="font-headline">{day}</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    {Object.entries(mealLabels).map(([mealKey, mealLabel]) => (
+                                                        <div key={mealKey} className="space-y-2">
+                                                            <Label>{mealLabel}</Label>
+                                                            <Textarea
+                                                                placeholder={`Detalles de ${mealLabel.toLowerCase()}...`}
+                                                                value={plans[diet.id]?.[day]?.[mealKey] || ''}
+                                                                onChange={(e) => handlePlanChange(diet.id, day, mealKey, e.target.value)}
+                                                                rows={4}
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </CardContent>
+                                            </Card>
                                         ))}
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </TabsContent>
-                    ))}
-                </Tabs>
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="ghost" onClick={() => setOpenDialog(null)}>Cancelar</Button>
+                                        <Button onClick={() => handleSavePlan(diet.id)} disabled={isSaving === diet.id}>
+                                            {isSaving === diet.id ? <Loader2 className="animate-spin" /> : "Guardar Plan"}
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        </CardFooter>
+                    </Card>
+                ))}
             </CardContent>
-            <CardFooter>
-                 <Button onClick={handleSavePlans} disabled={isSaving}>
-                    {isSaving ? <Loader2 className="animate-spin" /> : "Guardar Todos los Planes"}
-                </Button>
-            </CardFooter>
         </Card>
     );
 }
