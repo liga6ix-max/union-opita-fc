@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
 import { useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -10,8 +9,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
+import { Loader2, BrainCircuit } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { createNutritionPlan } from '@/ai/flows/create-nutrition-plan-flow';
 
 const MAIN_CLUB_ID = 'OpitaClub';
 
@@ -45,6 +45,7 @@ export default function ManagerNutritionPage() {
     const [plans, setPlans] = useState<Record<string, any>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isGenerating, setIsGenerating] = useState<string | null>(null);
 
     // Fetch existing plans
     useEffect(() => {
@@ -78,6 +79,24 @@ export default function ManagerNutritionPage() {
                 },
             },
         }));
+    };
+
+    const handleGeneratePlan = async (dietType: string) => {
+        setIsGenerating(dietType);
+        toast({ title: 'Generando Plan con IA...', description: 'Esto puede tardar un momento.' });
+        try {
+            const generatedPlan = await createNutritionPlan({ dietType: dietType as any });
+            setPlans(prev => ({
+                ...prev,
+                [dietType]: generatedPlan,
+            }));
+            toast({ title: '¡Plan Generado!', description: 'El plan ha sido cargado en el formulario. Revísalo y guárdalo.' });
+        } catch (error) {
+            console.error("Error generating plan:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo generar el plan con IA.' });
+        } finally {
+            setIsGenerating(null);
+        }
     };
 
     const handleSavePlans = async () => {
@@ -120,6 +139,16 @@ export default function ManagerNutritionPage() {
                     </TabsList>
                     {dietTypes.map(diet => (
                         <TabsContent key={diet.id} value={diet.id} className="space-y-6 mt-6">
+                            <div className="flex justify-end">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => handleGeneratePlan(diet.id)}
+                                    disabled={isGenerating === diet.id}
+                                >
+                                    {isGenerating === diet.id ? <Loader2 className="animate-spin mr-2" /> : <BrainCircuit className="mr-2" />}
+                                    {isGenerating === diet.id ? 'Generando...' : 'Generar con IA'}
+                                </Button>
+                            </div>
                             {daysOfWeek.map(day => (
                                 <Card key={day}>
                                     <CardHeader>
@@ -133,6 +162,7 @@ export default function ManagerNutritionPage() {
                                                     placeholder={`Detalles de ${mealLabels[meal].toLowerCase()}...`}
                                                     value={plans[diet.id]?.[day]?.[meal] || ''}
                                                     onChange={(e) => handlePlanChange(diet.id, day, meal, e.target.value)}
+                                                    rows={4}
                                                 />
                                             </div>
                                         ))}
