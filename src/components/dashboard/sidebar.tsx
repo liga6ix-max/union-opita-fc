@@ -47,6 +47,7 @@ const managerNav = [
   { href: "/dashboard/manager/teams", label: "Equipos", icon: Shield },
   { href: "/dashboard/manager/approvals", label: "Aprobaciones", icon: UserPlus },
   { href: "/dashboard/manager/unifit", label: "UNIFIT", icon: HeartPulse },
+  { href: "/dashboard/manager/unifit-schedule", label: "Horarios UNIFIT", icon: CalendarDays },
   { href: "/dashboard/manager/nutrition", label: "Nutrición", icon: Beef },
   { href: "/dashboard/manager/tasks", label: "Tareas", icon: ClipboardList },
   { href: "/dashboard/manager/planning", label: "Planificación", icon: CalendarClock },
