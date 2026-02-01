@@ -16,9 +16,9 @@ export default function UnderwaterActivitiesPage() {
   const { profile, isUserLoading, firestore } = useUser();
 
   const activitiesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     return query(collection(firestore, `clubs/${MAIN_CLUB_ID}/underwaterActivities`), where('date', '>=', format(startOfToday(), 'yyyy-MM-dd')), orderBy('date', 'asc'));
-  }, [firestore]);
+  }, [firestore, profile]);
 
   const { data: allActivities, isLoading: activitiesLoading } = useCollection(activitiesQuery);
 

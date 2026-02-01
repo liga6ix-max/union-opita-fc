@@ -70,9 +70,9 @@ export default function CoachUnderwaterActivitiesPage() {
   const { profile, isUserLoading, firestore } = useUser();
   
   const activitiesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile) return null;
     return query(collection(firestore, `clubs/${MAIN_CLUB_ID}/underwaterActivities`), orderBy('date', 'desc'));
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: activities, isLoading: activitiesLoading } = useCollection(activitiesQuery);
 
   const form = useForm<ActivityFormValues>({
