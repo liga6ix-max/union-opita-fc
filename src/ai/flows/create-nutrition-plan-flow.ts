@@ -28,7 +28,7 @@ const prompt = ai.definePrompt({
 
     El plan debe ser para una dieta de: {{{dietDescription}}}.
 
-    Genera un plan de comidas para los 7 días de la semana (Lunes a Domingo). Para cada día, debes especificar 5 comidas:
+    Genera un plan de comidas para los 7 días de la semana (Lunes a Domingo). Para cada día, debes especificar 5 comidas, incluyendo alimentos y cantidades:
     1.  Desayuno
     2.  Media Mañana (Snack 1)
     3.  Almuerzo
@@ -36,6 +36,7 @@ const prompt = ai.definePrompt({
     5.  Cena
 
     **REQUISITOS IMPORTANTES:**
+    -   **Especificar Cantidades:** Para cada comida, debes detallar las cantidades aproximadas de cada alimento (ej: "150g de pechuga de pollo", "1 taza de arroz", "2 huevos revueltos", "1 banano").
     -   **Ingredientes Colombianos y Económicos:** Utiliza ingredientes comunes, de fácil acceso y de bajo costo en Colombia. Piensa en alimentos como arepas, huevos, frijoles, arroz, plátano, yuca, papa, pollo, carnes económicas, y abundantes frutas y verduras locales.
     -   **Balance Nutricional:** Asegúrate de que cada día esté nutricionalmente balanceado para un deportista, considerando el tipo de dieta solicitado.
     -   **Formato de Salida:** La respuesta debe ser un objeto JSON que siga exactamente la estructura de salida definida, con los días de la semana como claves principales.
