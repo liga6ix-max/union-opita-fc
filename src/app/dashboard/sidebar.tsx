@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import Link from "next/link";
@@ -36,6 +34,7 @@ import {
   HeartPulse,
   Activity,
   Waves,
+  Beef,
 } from "lucide-react";
 import { useFirebase } from "@/firebase";
 
@@ -46,6 +45,9 @@ const managerNav = [
   { href: "/dashboard/manager/teams", label: "Equipos", icon: Shield },
   { href: "/dashboard/manager/approvals", label: "Aprobaciones", icon: UserPlus },
   { href: "/dashboard/manager/unifit", label: "UNIFIT", icon: HeartPulse },
+  { href: "/dashboard/manager/unifit-schedule", label: "Horarios UNIFIT", icon: CalendarDays },
+  { href: "/dashboard/manager/underwater-activities", label: "Act. Subacuáticas", icon: Waves },
+  { href: "/dashboard/manager/nutrition", label: "Nutrición", icon: Beef },
   { href: "/dashboard/manager/tasks", label: "Tareas", icon: ClipboardList },
   { href: "/dashboard/manager/planning", label: "Planificación", icon: CalendarClock },
   { href: "/dashboard/manager/matches", label: "Partidos", icon: Swords },
@@ -58,6 +60,9 @@ const managerNav = [
 const coachNav = [
     { href: "/dashboard/coach", label: "Resumen", icon: LayoutDashboard },
     { href: "/dashboard/coach/athletes", label: "Mis Deportistas", icon: Users },
+    { href: "/dashboard/coach/unifit", label: "UNIFIT", icon: HeartPulse },
+    { href: "/dashboard/coach/unifit-schedule", label: "Horarios UNIFIT", icon: CalendarDays },
+    { href: "/dashboard/coach/underwater-activities", label: "Act. Subacuáticas", icon: Waves },
     { href: "/dashboard/coach/planning", label: "Planificación", icon: CalendarClock },
     { href: "/dashboard/coach/schedule", label: "Mis Horarios", icon: CalendarDays },
     { href: "/dashboard/coach/matches", label: "Partidos", icon: Swords },
@@ -74,6 +79,8 @@ const athleteNav = [
 
 const unifitNav = [
   { href: "/dashboard/unifit/profile", label: "Mi Perfil", icon: User },
+  { href: "/dashboard/unifit/plan", label: "Plan de Entrenamiento", icon: CalendarClock },
+  { href: "/dashboard/unifit/nutrition", label: "Plan Nutricional", icon: Beef },
   { href: "/dashboard/unifit/progress", label: "Mis Medidas", icon: Activity },
   { href: "/dashboard/unifit/schedule", label: "Horarios y Lugar", icon: CalendarDays },
   { href: "/dashboard/unifit/underwater-activities", label: "Act. Subacuáticas", icon: Waves },

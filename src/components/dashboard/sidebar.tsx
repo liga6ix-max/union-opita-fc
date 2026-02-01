@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import Link from "next/link";
@@ -48,6 +46,7 @@ const managerNav = [
   { href: "/dashboard/manager/approvals", label: "Aprobaciones", icon: UserPlus },
   { href: "/dashboard/manager/unifit", label: "UNIFIT", icon: HeartPulse },
   { href: "/dashboard/manager/unifit-schedule", label: "Horarios UNIFIT", icon: CalendarDays },
+  { href: "/dashboard/manager/underwater-activities", label: "Act. Subacuáticas", icon: Waves },
   { href: "/dashboard/manager/nutrition", label: "Nutrición", icon: Beef },
   { href: "/dashboard/manager/tasks", label: "Tareas", icon: ClipboardList },
   { href: "/dashboard/manager/planning", label: "Planificación", icon: CalendarClock },
