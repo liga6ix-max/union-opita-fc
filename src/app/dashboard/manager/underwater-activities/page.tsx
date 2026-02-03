@@ -1,25 +1,13 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -28,233 +16,151 @@ import { collection, query, serverTimestamp, doc, orderBy } from 'firebase/fires
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Waves, PlusCircle, Loader2, MoreVertical, Pencil, Trash2, Calendar, Clock, MapPin } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 
+const MAIN_CLUB_ID = 'OpitaClub';
 
 const activitySchema = z.object({
   date: z.string().min(1, "La fecha es requerida."),
   time: z.string().min(1, "La hora es requerida."),
   location: z.string().min(3, "La ubicación es requerida."),
-  activity: z.string().min(5, "La descripción de la actividad es requerida."),
+  activity: z.string().min(5, "La descripción es requerida."),
   level: z.coerce.number().min(1).max(12).optional().or(z.literal('')),
 });
 
 type ActivityFormValues = z.infer<typeof activitySchema>;
-
-const MAIN_CLUB_ID = 'OpitaClub';
 
 export default function ManagerUnderwaterActivitiesPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<any | null>(null);
-
-  const { profile, isUserLoading, firestore } = useUser();
+  const { user, profile, firestore, isUserLoading } = useUser();
   
+  // CRITICAL GUARD: Only fetch if authenticated to prevent sign-out error
   const activitiesQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore || !user || profile?.role !== 'manager') return null;
     return query(collection(firestore, `clubs/${MAIN_CLUB_ID}/underwaterActivities`), orderBy('date', 'desc'));
-  }, [firestore, profile]);
+  }, [firestore, user, profile?.role]);
   const { data: activities, isLoading: activitiesLoading } = useCollection(activitiesQuery);
 
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activitySchema),
-    defaultValues: {
-      date: '',
-      time: '',
-      location: '',
-      activity: '',
-      level: '',
-    },
+    defaultValues: { date: '', time: '', location: '', activity: '', level: '' },
   });
 
   useEffect(() => {
     if (selectedActivity && isDialogOpen) {
       form.reset({ ...selectedActivity, level: selectedActivity.level || '' });
-    } else {
-      form.reset({ date: '', time: '', location: '', activity: '', level: '' });
     }
   }, [selectedActivity, isDialogOpen, form]);
 
-  const onSubmit = async (data: ActivityFormValues) => {
-    if (!firestore || !profile) return;
-    
-    const payload = {
-        ...data,
-        level: data.level || null,
-    };
+  const onSubmit = (data: ActivityFormValues) => {
+    if (!firestore || !user) return;
+    const payload = { ...data, level: data.level || null };
 
     if (selectedActivity) {
-      // Update existing activity
-      const activityRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/underwaterActivities`, selectedActivity.id);
-      updateDocumentNonBlocking(activityRef, {
-        ...payload,
-        updatedAt: serverTimestamp(),
-      });
-      toast({ title: '¡Actividad Actualizada!', description: 'La actividad ha sido actualizada.' });
+      updateDocumentNonBlocking(doc(firestore, `clubs/${MAIN_CLUB_ID}/underwaterActivities`, selectedActivity.id), { ...payload, updatedAt: serverTimestamp() });
+      toast({ title: 'Actividad Actualizada' });
     } else {
-      // Create new activity
-      addDocumentNonBlocking(collection(firestore, `clubs/${MAIN_CLUB_ID}/underwaterActivities`), {
-        ...payload,
-        clubId: MAIN_CLUB_ID,
-        createdBy: profile.id,
-        createdAt: serverTimestamp(),
-      });
-      toast({ title: '¡Actividad Creada!', description: 'La nueva actividad ha sido programada.' });
+      addDocumentNonBlocking(collection(firestore, `clubs/${MAIN_CLUB_ID}/underwaterActivities`), { ...payload, clubId: MAIN_CLUB_ID, createdBy: user.uid, createdAt: serverTimestamp() });
+      toast({ title: 'Actividad Creada' });
     }
-
     setIsDialogOpen(false);
     setSelectedActivity(null);
   };
   
-  const handleDeleteActivity = () => {
-    if (!firestore || !selectedActivity) return;
-    
-    const activityRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/underwaterActivities`, selectedActivity.id);
-    deleteDocumentNonBlocking(activityRef);
-    
-    toast({ title: '¡Actividad Eliminada!', description: 'La actividad ha sido eliminada del sistema.'});
+  const handleDelete = () => {
+    if (!selectedActivity || !firestore) return;
+    deleteDocumentNonBlocking(doc(firestore, `clubs/${MAIN_CLUB_ID}/underwaterActivities`, selectedActivity.id));
+    toast({ title: 'Actividad Eliminada' });
     setIsDeleteDialogOpen(false);
-    setSelectedActivity(null);
   }
 
-  const openDialog = (activity: any | null) => {
-    setSelectedActivity(activity);
-    setIsDialogOpen(true);
+  if (isUserLoading || activitiesLoading) {
+    return <div className="flex h-full w-full items-center justify-center pt-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
-  
-  const openDeleteDialog = (activity: any) => {
-    setSelectedActivity(activity);
-    setIsDeleteDialogOpen(true);
-  }
-  
-  const isLoading = isUserLoading || activitiesLoading;
 
   return (
-    <>
-      <div className="space-y-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="font-headline flex items-center gap-2"><Waves/> Gestión de Actividades Subacuáticas</CardTitle>
-              <CardDescription>Crea y gestiona las sesiones de actividades subacuáticas del club.</CardDescription>
-            </div>
-            <Button onClick={() => openDialog(null)}><PlusCircle className="mr-2" />Nueva Actividad</Button>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-               <div className="flex h-40 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-            ) : activities && activities.length > 0 ? (
-              <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-6'>
-                  {activities.map(activity => (
-                      <Card key={activity.id} className="flex flex-col">
-                          <CardHeader className="flex-grow">
-                              <div className="flex justify-between items-start">
-                                  <div>
-                                      <CardTitle className="font-headline text-xl">{activity.activity}</CardTitle>
-                                      <CardDescription className="flex items-center gap-2 pt-1"><Calendar/> {format(new Date(`${activity.date}T00:00:00`), "d 'de' MMMM, yyyy", { locale: es })}</CardDescription>
-                                  </div>
-                                   <div className="flex flex-col items-end gap-2">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="-mt-2 -mr-2"><MoreVertical className="h-4 w-4" /></Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent>
-                                                <DropdownMenuItem onClick={() => openDialog(activity)}><Pencil className="mr-2"/>Editar</DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => openDeleteDialog(activity)} className="text-destructive"><Trash2 className="mr-2"/>Eliminar</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                        {activity.level && <Badge variant="secondary">Nivel {activity.level}</Badge>}
-                                   </div>
-                              </div>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-sm text-muted-foreground space-y-2">
-                                <div className="flex items-center gap-2"><Clock/> {activity.time}</div>
-                                <div className="flex items-center gap-2"><MapPin/> {activity.location}</div>
-                            </div>
-                          </CardContent>
-                      </Card>
-                  ))}
-              </div>
-            ): (
-              <p className="text-center text-muted-foreground py-8">
-                  No hay actividades programadas.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+    <div className="space-y-8">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="font-headline flex items-center gap-2"><Waves/> Gestión Actividades Subacuáticas</CardTitle>
+            <CardDescription>Programa sesiones de piscina para los deportistas.</CardDescription>
+          </div>
+          <Button onClick={() => { setSelectedActivity(null); form.reset(); setIsDialogOpen(true); }}><PlusCircle className="mr-2" />Nueva</Button>
+        </CardHeader>
+        <CardContent>
+          <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-6'>
+              {activities?.map(act => (
+                  <Card key={act.id}>
+                      <CardHeader className="flex flex-row items-start justify-between">
+                          <div>
+                              <CardTitle className="text-lg">{act.activity}</CardTitle>
+                              <CardDescription>{format(new Date(`${act.date}T00:00:00`), "d 'de' MMMM", { locale: es })}</CardDescription>
+                          </div>
+                          <DropdownMenu>
+                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4"/></Button></DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => { setSelectedActivity(act); setIsDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
+                                  <DropdownMenuItem className="text-destructive" onClick={() => { setSelectedActivity(act); setIsDeleteDialogOpen(true); }}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem>
+                              </DropdownMenuContent>
+                          </DropdownMenu>
+                      </CardHeader>
+                      <CardContent className="text-sm space-y-1">
+                          <div className="flex items-center gap-2"><Clock className="h-4 w-4"/> {act.time}</div>
+                          <div className="flex items-center gap-2"><MapPin className="h-4 w-4"/> {act.location}</div>
+                          {act.level && <Badge className="mt-2" variant="secondary">Nivel {act.level}</Badge>}
+                      </CardContent>
+                  </Card>
+              ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={(isOpen) => { if(!isOpen) setSelectedActivity(null); setIsDialogOpen(isOpen); }}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader><DialogTitle>{selectedActivity ? 'Editar Actividad' : 'Crear Nueva Actividad'}</DialogTitle></DialogHeader>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{selectedActivity ? 'Editar' : 'Nueva'} Actividad</DialogTitle></DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="date" render={({ field }) => (<FormItem><FormLabel>Fecha</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="time" render={({ field }) => (<FormItem><FormLabel>Hora</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name="date" render={({ field }) => (<FormItem><FormLabel>Fecha</FormLabel><FormControl><Input type="date" {...field} /></FormControl></FormItem>)}/>
+                    <FormField control={form.control} name="time" render={({ field }) => (<FormItem><FormLabel>Hora</FormLabel><FormControl><Input type="time" {...field} /></FormControl></FormItem>)}/>
                 </div>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Lugar</FormLabel><FormControl><Input placeholder="Ej: Piscina Olímpica" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="level" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Nivel (Opcional)</FormLabel>
-                            <Select onValueChange={(val) => field.onChange(val === 'all' ? '' : val)} value={field.value ? String(field.value) : 'all'}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    <SelectItem value="all">Todos</SelectItem>
-                                    {Array.from({length: 12}, (_, i) => i + 1).map(level => (
-                                        <SelectItem key={level} value={String(level)}>Nivel {level}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )}/>
-                </div>
-                <FormField control={form.control} name="activity" render={({ field }) => (<FormItem><FormLabel>Actividad</FormLabel><FormControl><Textarea placeholder="Describe la actividad o el enfoque de la sesión..." {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                <DialogFooter> <Button type="submit" disabled={form.formState.isSubmitting}> {form.formState.isSubmitting ? <Loader2 className="animate-spin" /> : (selectedActivity ? "Guardar Cambios" : "Crear Actividad")} </Button> </DialogFooter>
+                <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Lugar</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)}/>
+                <FormField control={form.control} name="level" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Nivel (1-12)</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value ? String(field.value) : ''}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger></FormControl>
+                            <SelectContent>{Array.from({length: 12}, (_, i) => (
+                                <SelectItem key={i+1} value={String(i+1)}>Nivel {i+1}</SelectItem>
+                            ))}</SelectContent>
+                        </Select>
+                    </FormItem>
+                )}/>
+                <FormField control={form.control} name="activity" render={({ field }) => (<FormItem><FormLabel>Descripción</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)}/>
+                <DialogFooter><Button type="submit">Guardar</Button></DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
-      
+
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>¿Estás seguro de eliminar esta actividad?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Esta acción no se puede deshacer. Esto eliminará permanentemente la actividad.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
+            <AlertDialogHeader><AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle></AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setSelectedActivity(null)}>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteActivity} className="bg-destructive hover:bg-destructive/90">
-                    Sí, eliminar
-                </AlertDialogAction>
+                <AlertDialogCancel>No</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive">Sí, eliminar</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }
