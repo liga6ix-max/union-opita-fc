@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useCollection, useMemoFirebase, useFirebase } from "@/firebase";
@@ -8,7 +9,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Line, LineChart as RechartsLineChart } from "recharts";
+import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Line, LineChart as RechartsLineChart } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { collection, query, where, orderBy, limit } from "firebase/firestore";
@@ -21,40 +22,38 @@ const chartConfig = {
 };
 
 export default function ManagerDashboard() {
-  const { profile, isUserLoading } = useUser();
+  const { user, profile, isUserLoading } = useUser();
   const { firestore } = useFirebase();
 
-  const athletesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, `clubs/${MAIN_CLUB_ID}/athletes`);
-  }, [firestore]);
-  const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
+  // CRITICAL: Guard queries to prevent permission errors on sign-out
+  const canFetch = !!user && profile?.role === 'manager';
 
   const paymentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !canFetch) return null;
     return collection(firestore, `clubs/${MAIN_CLUB_ID}/payments`);
-  }, [firestore]);
+  }, [firestore, canFetch]);
   const { data: payments, isLoading: paymentsLoading } = useCollection(paymentsQuery);
 
   const tasksQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !canFetch) return null;
     return query(collection(firestore, `clubs/${MAIN_CLUB_ID}/tasks`), orderBy("dueDate", "desc"), limit(4));
-  }, [firestore]);
+  }, [firestore, canFetch]);
   const { data: tasks, isLoading: tasksLoading } = useCollection(tasksQuery);
   
   const allClubUsersQuery = useMemoFirebase(() => {
-    if (!firestore || !profile) return null;
+    if (!firestore || !canFetch) return null;
     return query(collection(firestore, `users`), where("clubId", "==", MAIN_CLUB_ID));
-  }, [firestore, profile]);
+  }, [firestore, canFetch]);
   const { data: allClubUsers, isLoading: allUsersLoading } = useCollection(allClubUsersQuery);
 
 
-  if (isUserLoading || athletesLoading || paymentsLoading || tasksLoading || allUsersLoading) {
-    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (isUserLoading || paymentsLoading || tasksLoading || allUsersLoading) {
+    return <div className="flex h-full w-full items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
-  const totalAthletes = allClubUsers?.filter(u => u.role === 'athlete' || u.role === 'unifit').length || 0;
-  const totalCoaches = allClubUsers?.filter(u => u.role === 'coach').length || 0;
+  // CORRECTED METRIC: Total Athletes = athlete + unifit roles
+  const totalAthletes = allClubUsers?.filter(u => !u.disabled && (u.role === 'athlete' || u.role === 'unifit')).length || 0;
+  const totalCoaches = allClubUsers?.filter(u => !u.disabled && u.role === 'coach').length || 0;
   const paymentsDue = payments?.filter(p => p.status === 'Pendiente').length || 0;
 
   const paymentStatusData = [
@@ -62,7 +61,6 @@ export default function ManagerDashboard() {
       { status: "Pendiente", count: paymentsDue, fill: "hsl(var(--destructive))" },
   ]
 
-  // This is mock data, would need real historical data for a real chart
   const enrollmentData = [
       { month: "Mar", count: 5 }, { month: "Abr", count: 8 },
       { month: "May", count: 12 }, { month: "Jun", count: 15 },
@@ -79,7 +77,7 @@ export default function ManagerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalAthletes}</div>
-            <p className="text-xs text-muted-foreground">Miembros activos en el club</p>
+            <p className="text-xs text-muted-foreground">Miembros activos (Fútbol + UNIFIT)</p>
           </CardContent>
         </Card>
         <Card>

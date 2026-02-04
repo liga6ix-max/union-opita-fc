@@ -10,13 +10,12 @@ import { useToast } from '@/hooks/use-toast';
 import { UserCog, MoreVertical, Trash2, ShieldCheck, ShieldOff, Loader2 } from 'lucide-react';
 import { useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
-import { setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -29,10 +28,9 @@ export default function ApprovalsPage() {
     const { toast } = useToast();
     const { user, profile, firestore, isUserLoading } = useUser();
 
-    // Guard against sign-out permissions error: only fetch if user is logged in
+    // Fetch ALL users to ensure immediate visibility of new registrations
     const usersQuery = useMemoFirebase(() => {
         if (!firestore || !user || profile?.role !== 'manager') return null;
-        // Broader query to ensure new users appear instantly
         return collection(firestore, 'users');
     }, [firestore, user, profile?.role]);
 
@@ -40,8 +38,8 @@ export default function ApprovalsPage() {
     
     const userList = useMemo(() => {
         if (!rawUsers) return [];
-        // Filter in-memory for consistency and speed
-        return rawUsers.filter(u => u.clubId === MAIN_CLUB_ID);
+        // Filter by clubId client-side for better synchronization with new sign-ups
+        return rawUsers.filter(u => u.clubId === MAIN_CLUB_ID).sort((a, b) => (a.disabled === b.disabled ? 0 : a.disabled ? -1 : 1));
     }, [rawUsers]);
 
     const handleToggleDisable = (userId: string, currentStatus: boolean) => {
@@ -55,7 +53,7 @@ export default function ApprovalsPage() {
         if (!firestore) return;
         const userDocRef = doc(firestore, 'users', userId);
         updateDocumentNonBlocking(userDocRef, { role: newRole });
-        toast({ title: 'Rol Actualizado', description: 'El cambio se aplicará en el próximo inicio de sesión.' });
+        toast({ title: 'Rol Actualizado' });
     };
     
     const handleDeleteUser = (userId: string) => {
@@ -67,7 +65,7 @@ export default function ApprovalsPage() {
     };
     
     if (isUserLoading || usersLoading) {
-        return <div className="flex h-full w-full items-center justify-center pt-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+        return <div className="flex h-full w-full items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
     }
 
     return (
@@ -75,14 +73,13 @@ export default function ApprovalsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline flex items-center gap-2"><UserCog/> Gestión de Usuarios</CardTitle>
-                    <CardDescription>Habilita o deshabilita el acceso a los miembros del club.</CardDescription>
+                    <CardDescription>Habilita el acceso a los nuevos registros aquí.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Nombre</TableHead>
-                                <TableHead>Email</TableHead>
                                 <TableHead>Rol</TableHead>
                                 <TableHead>Estado</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
@@ -91,28 +88,36 @@ export default function ApprovalsPage() {
                         <TableBody>
                             {userList.map((u) => (
                                 <TableRow key={u.id}>
-                                    <TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell>
-                                    <TableCell>{u.email}</TableCell>
+                                    <TableCell className="font-medium">
+                                        <div>
+                                            <p>{u.firstName} {u.lastName}</p>
+                                            <p className="text-xs text-muted-foreground">{u.email}</p>
+                                        </div>
+                                    </TableCell>
                                     <TableCell><Badge variant="outline">{u.role}</Badge></TableCell>
-                                    <TableCell><Badge variant={u.disabled ? 'destructive' : 'default'}>{u.disabled ? 'Inactivo' : 'Activo'}</Badge></TableCell>
+                                    <TableCell>
+                                        <Badge variant={u.disabled ? 'destructive' : 'default'}>
+                                            {u.disabled ? 'Pendiente / Inactivo' : 'Activo'}
+                                        </Badge>
+                                    </TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem onClick={() => handleToggleDisable(u.id, u.disabled)}>
-                                                    {u.disabled ? <ShieldCheck className="mr-2 h-4 w-4"/> : <ShieldOff className="mr-2 h-4 w-4"/>}
-                                                    {u.disabled ? 'Habilitar' : 'Inhabilitar'}
+                                                    {u.disabled ? <ShieldCheck className="mr-2 h-4 w-4 text-green-600"/> : <ShieldOff className="mr-2 h-4 w-4"/>}
+                                                    {u.disabled ? 'Habilitar Acceso' : 'Inhabilitar'}
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSub>
                                                     <DropdownMenuSubTrigger>Cambiar Rol</DropdownMenuSubTrigger>
                                                     <DropdownMenuSubContent>
-                                                        <DropdownMenuItem onClick={() => handleChangeRole(u.id, 'athlete')}>Deportista</DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleChangeRole(u.id, 'unifit')}>UNIFIT</DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => handleChangeRole(u.id, 'athlete')}>Deportista Fútbol</DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => handleChangeRole(u.id, 'unifit')}>Deportista UNIFIT</DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => handleChangeRole(u.id, 'coach')}>Entrenador</DropdownMenuItem>
                                                     </DropdownMenuSubContent>
                                                 </DropdownMenuSub>
                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(u.id)}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(u.id)}><Trash2 className="mr-2 h-4 w-4"/>Eliminar Cuenta</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>

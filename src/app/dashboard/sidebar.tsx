@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -103,7 +104,7 @@ export function DashboardSidebar() {
   const handleLogout = () => {
     if (auth) {
       auth.signOut();
-      router.push('/login'); // Immediate redirection
+      router.push('/login');
     }
   };
 
@@ -113,11 +114,9 @@ export function DashboardSidebar() {
     return (
         <Sidebar>
             <SidebarHeader>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 p-2">
                     <ClubLogo className="size-8 text-primary" />
-                    <span className="text-lg font-semibold font-headline group-data-[collapsible=icon]:hidden">
-                        Cargando...
-                    </span>
+                    <span className="text-lg font-semibold font-headline">Cargando...</span>
                 </div>
             </SidebarHeader>
             <SidebarMenu className="flex-1 justify-center items-center">
@@ -127,20 +126,18 @@ export function DashboardSidebar() {
     );
   }
   
-  if (role === 'pending') {
+  if (role === 'pending' || profile?.disabled) {
      return (
         <Sidebar>
             <SidebarHeader>
-                <Link href="/" className="flex items-center gap-2">
+                <Link href="/" className="flex items-center gap-2 p-2">
                     <ClubLogo className="size-8 text-primary" />
-                    <span className="text-lg font-semibold font-headline group-data-[collapsible=icon]:hidden">
-                        Unión Opita FC
-                    </span>
+                    <span className="text-lg font-semibold font-headline">Unión Opita FC</span>
                 </Link>
             </SidebarHeader>
             <SidebarMenu>
                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    Tu cuenta está pendiente de aprobación por un administrador.
+                    Tu cuenta está pendiente de habilitación.
                  </div>
             </SidebarMenu>
             <SidebarFooter className="mt-auto">
@@ -157,37 +154,22 @@ export function DashboardSidebar() {
      );
   }
 
-  const currentNav = navItems[role] || [];
-
-  const isLinkActive = (href: string) => {
-    if (href.endsWith('/manager') || href.endsWith('/coach') || href.endsWith('/athlete') || href.endsWith('/unifit')) {
-        return pathname === href;
-    }
-     if (href.endsWith('/athlete/profile')) {
-        return pathname.startsWith('/dashboard/athlete/profile');
-    }
-    return pathname.startsWith(href);
-  };
-
+  const currentNav = role ? navItems[role as keyof typeof navItems] || [] : [];
 
   return (
     <Sidebar>
       <SidebarHeader>
-        <Link href="/" className="flex items-center gap-2">
-            <ClubLogo className="size-8 text-primary group-data-[collapsible=icon]:size-6" />
+        <Link href="/" className="flex items-center gap-2 p-2">
+            <ClubLogo className="size-8 text-primary" />
             <span className="text-lg font-semibold font-headline group-data-[collapsible=icon]:hidden">
                 Unión Opita FC
             </span>
         </Link>
       </SidebarHeader>
-      <SidebarMenu>
+      <SidebarMenu className="px-2">
         {currentNav.map((item) => (
           <SidebarMenuItem key={item.label}>
-            <SidebarMenuButton
-              asChild
-              isActive={isLinkActive(item.href)}
-              tooltip={item.label}
-            >
+            <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.label}>
               <Link href={item.href}>
                 <item.icon />
                 <span>{item.label}</span>
@@ -196,7 +178,7 @@ export function DashboardSidebar() {
           </SidebarMenuItem>
         ))}
       </SidebarMenu>
-      <SidebarFooter className="mt-auto">
+      <SidebarFooter className="mt-auto p-2">
         <SidebarMenu>
             <SidebarMenuItem>
                 <SidebarMenuButton onClick={handleLogout} tooltip="Cerrar Sesión">

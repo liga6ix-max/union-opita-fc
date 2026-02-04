@@ -21,14 +21,18 @@ export async function createNutritionPlan(input: NutritionPlanInput): Promise<Nu
 
 const prompt = ai.definePrompt({
   name: 'createNutritionPlanPrompt',
-  input: { schema: NutritionPlanInputSchema },
+  input: { 
+    schema: NutritionPlanInputSchema.extend({
+      dietDescription: z.string()
+    })
+  },
   output: { schema: NutritionPlanOutputSchema },
   prompt: `
     Eres un nutricionista experto en la gastronomía colombiana. Tu tarea es crear un plan de alimentación semanal (microciclo) económico y saludable para un deportista.
 
     El plan debe ser para una dieta de: {{{dietDescription}}}.
 
-    Genera un plan de comidas para los 7 días de la semana (Lunes a Domingo). Para cada día, debes especificar 5 comidas, incluyendo alimentos y cantidades:
+    Genera un plan de comidas para los 7 días de la semana (Lunes a Domingo). Para cada día, debes especificar 5 comidas, incluyendo alimentos y cantidades precisas:
     1.  Desayuno
     2.  Media Mañana (Snack 1)
     3.  Almuerzo
@@ -36,17 +40,11 @@ const prompt = ai.definePrompt({
     5.  Cena
 
     **REQUISITOS IMPORTANTES:**
-    -   **Especificar Cantidades:** Para cada comida, debes detallar las cantidades aproximadas de cada alimento (ej: "150g de pechuga de pollo", "1 taza de arroz", "2 huevos revueltos", "1 banano").
-    -   **Ingredientes Colombianos y Económicos:** Utiliza ingredientes comunes, de fácil acceso y de bajo costo en Colombia. Piensa en alimentos como arepas, huevos, frijoles, arroz, plátano, yuca, papa, pollo, carnes económicas, y abundantes frutas y verduras locales.
+    -   **Especificar Cantidades:** Para cada comida, DEBES detallar las cantidades aproximadas de cada alimento (ej: "150g de pechuga de pollo", "1 taza de arroz", "2 huevos revueltos", "1 banano mediano"). No des solo el nombre del plato.
+    -   **Ingredientes Colombianos y Económicos:** Utiliza ingredientes comunes, de fácil acceso y de bajo costo en Colombia. Alimentos como arepas, huevos, frijoles, arroz, plátano, yuca, papa, pollo, carnes económicas, y abundantes frutas y verduras locales.
     -   **Balance Nutricional:** Asegúrate de que cada día esté nutricionalmente balanceado para un deportista, considerando el tipo de dieta solicitado.
-    -   **Formato de Salida:** La respuesta debe ser un objeto JSON que siga exactamente la estructura de salida definida, con los días de la semana como claves principales.
     -   **Idioma:** Toda la salida debe estar en español.
   `,
-  // Augment the input with the description before sending to the prompt
-  transform: (input) => ({
-    ...input,
-    dietDescription: dietTypeDescriptions[input.dietType]
-  }),
 });
 
 const createNutritionPlanFlow = ai.defineFlow(
@@ -56,7 +54,10 @@ const createNutritionPlanFlow = ai.defineFlow(
     outputSchema: NutritionPlanOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
+    const { output } = await prompt({
+      ...input,
+      dietDescription: dietTypeDescriptions[input.dietType]
+    });
     if (!output) {
       throw new Error("La IA no pudo generar un plan nutricional.");
     }

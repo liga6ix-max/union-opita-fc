@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -18,7 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, PlusCircle, User, Activity, Calendar, Ruler, Star, Trash2 } from 'lucide-react';
+import { Loader2, PlusCircle, Activity, Calendar, Trash2, Scale } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -31,6 +32,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { calculateBmi, calculateBodyFatPercentage } from '@/lib/fitness';
+import { Badge } from '@/components/ui/badge';
 
 
 const MAIN_CLUB_ID = 'OpitaClub';
@@ -39,7 +42,8 @@ const measurementSchema = z.object({
     level: z.coerce.number().min(1).max(12).optional().or(z.literal('')),
     weight: z.coerce.number().positive("El peso debe ser positivo").optional().or(z.literal('')),
     height: z.coerce.number().positive("La estatura debe ser positiva").optional().or(z.literal('')),
-    bodyFatPercentage: z.coerce.number().positive("El % de grasa debe ser positivo").optional().or(z.literal('')),
+    bodyFatPercentage: z.coerce.number().optional().or(z.literal('')),
+    neck: z.coerce.number().positive("Medida inválida").optional().or(z.literal('')),
     chest: z.coerce.number().positive("Medida inválida").optional().or(z.literal('')),
     shoulders: z.coerce.number().positive("Medida inválida").optional().or(z.literal('')),
     hip: z.coerce.number().positive("Medida inválida").optional().or(z.literal('')),
@@ -70,7 +74,6 @@ export default function ManagerUnifitAthleteProfilePage() {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [measurementToDelete, setMeasurementToDelete] = useState<string | null>(null);
     
-    // Data fetching
     const userDocRef = useMemoFirebase(() => {
         if (!firestore || !currentUserProfile) return null;
         return doc(firestore, 'users', memberId);
@@ -97,7 +100,7 @@ export default function ManagerUnifitAthleteProfilePage() {
 
     const form = useForm<MeasurementFormValues>({
         resolver: zodResolver(measurementSchema),
-        defaultValues: { level: '', weight: '', height: '', bodyFatPercentage: '', chest: '', shoulders: '', hip: '', armRight: '', armLeft: '', legRight: '', legLeft: '', back: '', waist: '', calfRight: '', calfLeft: '' },
+        defaultValues: { level: '', weight: '', height: '', bodyFatPercentage: '', neck: '', chest: '', shoulders: '', hip: '', armRight: '', armLeft: '', legRight: '', legLeft: '', back: '', waist: '', calfRight: '', calfLeft: '' },
     });
 
     useEffect(() => {
@@ -105,6 +108,7 @@ export default function ManagerUnifitAthleteProfilePage() {
         form.reset({
             level: unifitProfile?.level || '',
             weight: latest.weight || '', height: latest.height || '', bodyFatPercentage: latest.bodyFatPercentage || '',
+            neck: latest.neck || '',
             chest: latest.chest || '', shoulders: latest.shoulders || '', hip: latest.hip || '',
             armRight: latest.armRight || '', armLeft: latest.armLeft || '',
             legRight: latest.legRight || '', legLeft: latest.legLeft || '', back: latest.back || '', waist: latest.waist || '',
@@ -113,161 +117,171 @@ export default function ManagerUnifitAthleteProfilePage() {
     }, [measurements, unifitProfile, form]);
 
     const onAddMeasurement = (data: MeasurementFormValues) => {
-        if (!firestore || !unifitProfileDocRef) return;
+        if (!firestore || !unifitProfileDocRef || !userData) return;
         
         const { level, ...measurementData } = data;
         
+        // Calculate health metrics automatically
+        const bmi = calculateBmi(data.weight as number, data.height as number);
+        const bfp = calculateBodyFatPercentage(
+            userData.gender as any,
+            data.height as number,
+            data.waist as number,
+            data.neck as number,
+            data.hip as number
+        );
+
         // Save level to the main unifit member doc
         updateDocumentNonBlocking(unifitProfileDocRef, { level: level || null });
         
         const measurementsCollection = collection(firestore, `clubs/${MAIN_CLUB_ID}/unifitMembers/${memberId}/measurements`);
         const payload = {
             ...measurementData,
+            bmi,
+            bodyFatPercentage: bfp || data.bodyFatPercentage || null,
             date: serverTimestamp()
         };
         addDocumentNonBlocking(measurementsCollection, payload);
-        toast({ title: "¡Datos Guardados!", description: "El nivel y el nuevo registro de medidas se han guardado." });
+        toast({ title: "¡Datos Guardados!", description: "El nivel y el nuevo registro de medidas se han guardado con cálculos automáticos." });
     };
 
     const handleAssignCoach = (coachId: string) => {
         if (!unifitProfileDocRef) return;
         updateDocumentNonBlocking(unifitProfileDocRef, { coachId });
-        toast({ title: "Entrenador Asignado", description: "Se ha actualizado el entrenador para este deportista." });
+        toast({ title: "Entrenador Asignado" });
     };
     
     const handleAssignDiet = (dietType: string) => {
         if (!unifitProfileDocRef) return;
         updateDocumentNonBlocking(unifitProfileDocRef, { assignedDietType: dietType });
-        toast({ title: "Dieta Asignada", description: "Se ha actualizado la dieta para este deportista." });
+        toast({ title: "Dieta Asignada" });
     };
 
     const handleDeleteMeasurement = () => {
         if (!measurementToDelete || !firestore || !memberId) return;
         const measurementRef = doc(firestore, `clubs/${MAIN_CLUB_ID}/unifitMembers/${memberId}/measurements`, measurementToDelete);
         deleteDocumentNonBlocking(measurementRef);
-        toast({ title: "Medición Eliminada", description: "El registro ha sido eliminado del historial." });
+        toast({ title: "Medición Eliminada" });
         setIsDeleteDialogOpen(false);
         setMeasurementToDelete(null);
     };
 
-    const openDeleteDialog = (id: string) => {
-        setMeasurementToDelete(id);
-        setIsDeleteDialogOpen(true);
-    };
-
-    const canEdit = currentUserProfile?.role === 'manager' || currentUserProfile?.id === unifitProfile?.coachId;
     const isLoading = isUserLoading || userLoading || profileLoading || measurementsLoading || coachesLoading;
 
     if (isLoading) {
-        return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+        return <div className="flex h-full w-full items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
     }
     
     const assignedCoach = coaches?.find(c => c.id === unifitProfile?.coachId);
+    const latestMeasurement = measurements && measurements.length > 0 ? measurements[0] : null;
 
     return (
         <div className="space-y-8">
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline">Perfil UNIFIT: {userData?.firstName} {userData?.lastName}</CardTitle>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4">
                         <CardDescription>
                             Entrenador: {assignedCoach ? `${assignedCoach.firstName} ${assignedCoach.lastName}` : 'Ninguno'}
                         </CardDescription>
-                        <Select onValueChange={handleAssignDiet} value={unifitProfile?.assignedDietType || ''}>
-                            <SelectTrigger className="w-full sm:w-[280px]">
-                                <SelectValue placeholder="Asignar Dieta..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {dietTypes?.map((diet) => (
-                                    <SelectItem key={diet.id} value={diet.id}>
-                                        {diet.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        {currentUserProfile?.role === 'manager' && (
-                             <Select onValueChange={handleAssignCoach} value={unifitProfile?.coachId || ''}>
-                                <SelectTrigger className="w-full sm:w-[280px]">
+                        <div className="flex flex-wrap gap-2">
+                            <Select onValueChange={handleAssignDiet} value={unifitProfile?.assignedDietType || ''}>
+                                <SelectTrigger className="w-full sm:w-[200px]">
+                                    <SelectValue placeholder="Asignar Dieta..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {dietTypes?.map((diet) => (
+                                        <SelectItem key={diet.id} value={diet.id}>{diet.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select onValueChange={handleAssignCoach} value={unifitProfile?.coachId || ''}>
+                                <SelectTrigger className="w-full sm:w-[200px]">
                                     <SelectValue placeholder="Cambiar Entrenador..." />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {coaches?.map((coach) => (
-                                        <SelectItem key={coach.id} value={coach.id}>
-                                            {coach.firstName} {coach.lastName}
-                                        </SelectItem>
+                                        <SelectItem key={coach.id} value={coach.id}>{coach.firstName} {coach.lastName}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                        )}
+                        </div>
                     </div>
                 </CardHeader>
+                <CardContent>
+                    {latestMeasurement && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+                            <div className="p-3 bg-secondary/50 rounded-lg">
+                                <p className="text-xs text-muted-foreground uppercase">IMC Actual</p>
+                                <p className="text-xl font-bold">{latestMeasurement.bmi || '-'}</p>
+                            </div>
+                            <div className="p-3 bg-secondary/50 rounded-lg">
+                                <p className="text-xs text-muted-foreground uppercase">% Grasa Corporal</p>
+                                <p className="text-xl font-bold">{latestMeasurement.bodyFatPercentage ? `${latestMeasurement.bodyFatPercentage}%` : '-'}</p>
+                            </div>
+                            <div className="p-3 bg-secondary/50 rounded-lg">
+                                <p className="text-xs text-muted-foreground uppercase">Nivel</p>
+                                <p className="text-xl font-bold">{unifitProfile?.level || '-'}</p>
+                            </div>
+                            <div className="p-3 bg-secondary/50 rounded-lg">
+                                <p className="text-xs text-muted-foreground uppercase">Peso</p>
+                                <p className="text-xl font-bold">{latestMeasurement.weight ? `${latestMeasurement.weight}kg` : '-'}</p>
+                            </div>
+                        </div>
+                    )}
+                </CardContent>
             </Card>
 
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline flex items-center gap-2"><Activity/> Registrar Nivel y Medidas</CardTitle>
-                    <CardDescription>Añade un nuevo registro de medidas corporales. El sistema guardará la fecha actual.</CardDescription>
+                    <CardDescription>Añade un nuevo registro. El IMC y el % de grasa se calcularán automáticamente.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {canEdit ? (
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onAddMeasurement)} className="space-y-8">
-                                 <FormField control={form.control} name="level" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Nivel de Habilidad</FormLabel>
-                                        <Select onValueChange={(val) => field.onChange(parseInt(val))} value={String(field.value || '')}>
-                                            <FormControl><SelectTrigger className="w-full sm:w-[280px]"><SelectValue placeholder="Asignar Nivel (1-12)" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                {Array.from({length: 12}, (_, i) => i + 1).map(level => (
-                                                    <SelectItem key={level} value={String(level)}>{level}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                                <Separator/>
-                                <fieldset className="space-y-4 rounded-lg border p-4">
-                                     <legend className="-ml-1 px-1 text-base font-medium">Medidas Generales</legend>
-                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2">
-                                        <FormField control={form.control} name="weight" render={({ field }) => (<FormItem><FormLabel>Peso (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="kg" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                        <FormField control={form.control} name="height" render={({ field }) => (<FormItem><FormLabel>Estatura (cm)</FormLabel><FormControl><Input type="number" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                        <FormField control={form.control} name="bodyFatPercentage" render={({ field }) => (<FormItem><FormLabel>% Grasa Corporal</FormLabel><FormControl><Input type="number" step="0.1" placeholder="%" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    </div>
-                                </fieldset>
-                                
-                                <fieldset className="space-y-4 rounded-lg border p-4">
-                                     <legend className="-ml-1 px-1 text-base font-medium">Medidas del Torso (cm)</legend>
-                                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-2">
-                                        <FormField control={form.control} name="shoulders" render={({ field }) => (<FormItem><FormLabel>Hombros</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                        <FormField control={form.control} name="chest" render={({ field }) => (<FormItem><FormLabel>Pecho</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                        <FormField control={form.control} name="back" render={({ field }) => (<FormItem><FormLabel>Espalda</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                        <FormField control={form.control} name="waist" render={({ field }) => (<FormItem><FormLabel>Cintura</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                        <FormField control={form.control} name="hip" render={({ field }) => (<FormItem><FormLabel>Cadera</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    </div>
-                                </fieldset>
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onAddMeasurement)} className="space-y-8">
+                                <FormField control={form.control} name="level" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Nivel de Habilidad</FormLabel>
+                                    <Select onValueChange={(val) => field.onChange(parseInt(val))} value={String(field.value || '')}>
+                                        <FormControl><SelectTrigger className="w-full sm:w-[280px]"><SelectValue placeholder="Asignar Nivel (1-12)" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            {Array.from({length: 12}, (_, i) => i + 1).map(level => (
+                                                <SelectItem key={level} value={String(level)}>{level}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                            <Separator/>
+                            <fieldset className="space-y-4 rounded-lg border p-4">
+                                    <legend className="-ml-1 px-1 text-base font-medium">Medidas para Cálculos (Requeridas para IMC/% Grasa)</legend>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+                                    <FormField control={form.control} name="weight" render={({ field }) => (<FormItem><FormLabel>Peso (kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField control={form.control} name="height" render={({ field }) => (<FormItem><FormLabel>Estatura (cm)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField control={form.control} name="waist" render={({ field }) => (<FormItem><FormLabel>Cintura (cm)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField control={form.control} name="neck" render={({ field }) => (<FormItem><FormLabel>Cuello (cm)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                </div>
+                            </fieldset>
+                            
+                            <fieldset className="space-y-4 rounded-lg border p-4">
+                                    <legend className="-ml-1 px-1 text-base font-medium">Otras Medidas Corporales (cm)</legend>
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-2">
+                                    <FormField control={form.control} name="shoulders" render={({ field }) => (<FormItem><FormLabel>Hombros</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField control={form.control} name="chest" render={({ field }) => (<FormItem><FormLabel>Pecho</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField control={form.control} name="hip" render={({ field }) => (<FormItem><FormLabel>Cadera</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField control={form.control} name="armRight" render={({ field }) => (<FormItem><FormLabel>B. Der.</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField control={form.control} name="legRight" render={({ field }) => (<FormItem><FormLabel>P. Der.</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                </div>
+                            </fieldset>
 
-                                <fieldset className="space-y-4 rounded-lg border p-4">
-                                     <legend className="-ml-1 px-1 text-base font-medium">Medidas de Extremidades (cm)</legend>
-                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-                                        <FormField control={form.control} name="armRight" render={({ field }) => (<FormItem><FormLabel>Brazo Der.</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                        <FormField control={form.control} name="armLeft" render={({ field }) => (<FormItem><FormLabel>Brazo Izq.</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                        <FormField control={form.control} name="legRight" render={({ field }) => (<FormItem><FormLabel>Pierna Der.</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                        <FormField control={form.control} name="legLeft" render={({ field }) => (<FormItem><FormLabel>Pierna Izq.</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                        <FormField control={form.control} name="calfRight" render={({ field }) => (<FormItem><FormLabel>Gemelo Der.</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                        <FormField control={form.control} name="calfLeft" render={({ field }) => (<FormItem><FormLabel>Gemelo Izq.</FormLabel><FormControl><Input type="number" step="0.1" placeholder="cm" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    </div>
-                                </fieldset>
-
-                                <Button type="submit" disabled={form.formState.isSubmitting}>
-                                    {form.formState.isSubmitting ? <Loader2 className="animate-spin" /> : <PlusCircle />}
-                                    Añadir Medición y Guardar Nivel
-                                </Button>
-                            </form>
-                        </Form>
-                    ) : (
-                        <p className="text-muted-foreground text-center py-4">No tienes permisos para editar este perfil.</p>
-                    )}
+                            <Button type="submit" disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting ? <Loader2 className="animate-spin" /> : <PlusCircle className="mr-2" />}
+                                Guardar Registro y Actualizar Nivel
+                            </Button>
+                        </form>
+                    </Form>
                 </CardContent>
             </Card>
 
@@ -281,15 +295,10 @@ export default function ManagerUnifitAthleteProfilePage() {
                             <TableRow>
                                 <TableHead>Fecha</TableHead>
                                 <TableHead>Peso</TableHead>
+                                <TableHead>IMC</TableHead>
                                 <TableHead>% Grasa</TableHead>
-                                <TableHead>Pecho</TableHead>
                                 <TableHead>Cintura</TableHead>
-                                <TableHead>Cadera</TableHead>
-                                <TableHead>B. Der.</TableHead>
-                                <TableHead>P. Der.</TableHead>
-                                {currentUserProfile?.role === 'manager' && (
-                                    <TableHead className="text-right">Acciones</TableHead>
-                                )}
+                                <TableHead className="text-right">Borrar</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -297,42 +306,27 @@ export default function ManagerUnifitAthleteProfilePage() {
                                 <TableRow key={m.id}>
                                     <TableCell>{m.date ? format(m.date.toDate(), "d MMM yyyy", { locale: es }) : 'N/A'}</TableCell>
                                     <TableCell>{m.weight ? `${m.weight} kg` : '-'}</TableCell>
+                                    <TableCell>{m.bmi || '-'}</TableCell>
                                     <TableCell>{m.bodyFatPercentage ? `${m.bodyFatPercentage}%` : '-'}</TableCell>
-                                    <TableCell>{m.chest ? `${m.chest} cm` : '-'}</TableCell>
                                     <TableCell>{m.waist ? `${m.waist} cm` : '-'}</TableCell>
-                                    <TableCell>{m.hip ? `${m.hip} cm` : '-'}</TableCell>
-                                    <TableCell>{m.armRight ? `${m.armRight} cm` : '-'}</TableCell>
-                                    <TableCell>{m.legRight ? `${m.legRight} cm` : '-'}</TableCell>
-                                    {currentUserProfile?.role === 'manager' && (
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(m.id)}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
-                                        </TableCell>
-                                    )}
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => { setMeasurementToDelete(m.id); setIsDeleteDialogOpen(true); }}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
-                    {(!measurements || measurements.length === 0) && (
-                        <p className="text-center py-8 text-muted-foreground">No hay mediciones registradas para este deportista.</p>
-                    )}
                 </CardContent>
             </Card>
 
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Se eliminará el registro de medición permanentemente.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
+                    <AlertDialogHeader><AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle></AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setMeasurementToDelete(null)}>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteMeasurement} className="bg-destructive hover:bg-destructive/90">
-                            Eliminar
-                        </AlertDialogAction>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteMeasurement} className="bg-destructive">Eliminar</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

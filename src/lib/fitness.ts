@@ -33,6 +33,7 @@ export const calculateBodyFatPercentage = (
     
     try {
         if (gender === 'Masculino') {
+            // Formula for men
             const bfp = 495 / (1.0324 - 0.19077 * Math.log10(waistCm - neckCm) + 0.15456 * Math.log10(heightCm)) - 450;
             if (isNaN(bfp) || !isFinite(bfp)) return null;
             return parseFloat(bfp.toFixed(2));
@@ -40,12 +41,12 @@ export const calculateBodyFatPercentage = (
 
         if (gender === 'Femenino') {
             if (!hipCm || hipCm <= 0) return null; // Hip is required for women
+            // Formula for women
             const bfp = 495 / (1.29579 - 0.35004 * Math.log10(waistCm + hipCm - neckCm) + 0.22100 * Math.log10(heightCm)) - 450;
             if (isNaN(bfp) || !isFinite(bfp)) return null;
             return parseFloat(bfp.toFixed(2));
         }
     } catch (error) {
-        // Math.log10 can throw an error if the input is not positive
         return null;
     }
     
