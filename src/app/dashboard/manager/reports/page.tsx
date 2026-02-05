@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useUser, useCollection, useMemoFirebase, useFirebase } from '@/firebase';
@@ -25,11 +26,11 @@ export default function ManagerReportsPage() {
     }, [firestore]);
     const { data: athletes, isLoading: athletesLoading } = useCollection(athletesQuery);
 
-    const coachesQuery = useMemoFirebase(() => {
+    const staffQuery = useMemoFirebase(() => {
         if (!firestore || !profile) return null;
         return query(collection(firestore, 'users'), where("clubId", "==", MAIN_CLUB_ID), where("role", "in", ["coach", "manager"]));
     }, [firestore, profile]);
-    const { data: staff, isLoading: staffLoading } = useCollection(coachesQuery);
+    const { data: staff, isLoading: staffLoading } = useCollection(staffQuery);
 
     const paymentsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -37,25 +38,13 @@ export default function ManagerReportsPage() {
     }, [firestore]);
     const { data: payments, isLoading: paymentsLoading } = useCollection(paymentsQuery);
 
-    const tasksQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, `clubs/${MAIN_CLUB_ID}/tasks`), orderBy("dueDate", "desc"), limit(4));
-    }, [firestore]);
-    const { data: tasks, isLoading: tasksLoading } = useCollection(tasksQuery);
-  
-    const allCoachesQuery = useMemoFirebase(() => {
-        if (!firestore || !profile) return null;
-        return query(collection(firestore, `users`), where("clubId", "==", MAIN_CLUB_ID));
-    }, [firestore, profile]);
-    const { data: allUsers, isLoading: allUsersLoading } = useCollection(allCoachesQuery);
-
-
-    if (isUserLoading || athletesLoading || staffLoading || paymentsLoading || tasksLoading || allUsersLoading) {
-        return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    if (isUserLoading || athletesLoading || staffLoading || paymentsLoading) {
+        return <div className="flex h-full w-full items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
     }
 
     const totalAthletes = athletes?.length || 0;
-    const totalCoaches = staff?.filter(s => s.role === 'coach').length || 0;
+    const coachesList = staff?.filter(s => s.role === 'coach') || [];
+    const totalCoaches = coachesList.length;
     
     const formatCurrency = (value: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
 
@@ -67,7 +56,7 @@ export default function ManagerReportsPage() {
         if (!acc[teamName]) {
             acc[teamName] = { name: teamName, 'Ingresos': 0 };
         }
-        const athletePayments = payments?.filter(p => p.athleteId === athlete.id && p.status === 'Pagado');
+        const athletePayments = payments?.filter(p => p.userId === athlete.id && p.status === 'Pagado');
         const totalPaid = athletePayments?.reduce((sum, p) => sum + p.amount, 0) || 0;
         acc[teamName]['Ingresos'] += totalPaid;
         return acc;
@@ -81,8 +70,8 @@ export default function ManagerReportsPage() {
     }, {} as Record<string, number>) || {};
     const athletesPerCategoryData = Object.entries(athletesPerCategory).map(([name, count]) => ({ name, 'Deportistas': count }));
 
-    // Simulated payroll data as it is not stored in user profile
-    const totalPayroll = 0; // Replace with real data if available
+    // Calculate real payroll from user salaries
+    const totalPayroll = coachesList.reduce((sum, coach) => sum + (coach.salary || 0), 0);
 
     return (
         <div className="space-y-8">
@@ -90,7 +79,7 @@ export default function ManagerReportsPage() {
                 <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Deportistas</CardTitle><Users className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{totalAthletes}</div><p className="text-xs text-muted-foreground">Miembros activos del club</p></CardContent></Card>
                 <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Entrenadores</CardTitle><User className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{totalCoaches}</div><p className="text-xs text-muted-foreground">Personal técnico activo</p></CardContent></Card>
                 <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Ingresos Totales</CardTitle><DollarSign className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div><p className="text-xs text-muted-foreground">Suma de todas las cuotas pagadas</p></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Nómina Mensual (Sim)</CardTitle><Wallet className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{formatCurrency(totalPayroll)}</div><p className="text-xs text-muted-foreground">Costo operativo de personal</p></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Nómina Mensual</CardTitle><Wallet className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{formatCurrency(totalPayroll)}</div><p className="text-xs text-muted-foreground">Costo operativo de personal</p></CardContent></Card>
             </div>
 
             <div className="grid gap-8 md:grid-cols-2">
@@ -125,12 +114,26 @@ export default function ManagerReportsPage() {
             </div>
 
             <Card>
-                <CardHeader><CardTitle className="font-headline">Nómina (Simulación)</CardTitle><CardDescription>Desglose de los salarios a pagar al personal del club.</CardDescription></CardHeader>
+                <CardHeader><CardTitle className="font-headline">Nómina Detallada</CardTitle><CardDescription>Desglose de los salarios a pagar al personal del club.</CardDescription></CardHeader>
                 <CardContent>
                     <Table>
-                        <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Rol</TableHead><TableHead className="text-right">Salario Mensual</TableHead></TableRow></TableHeader>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Nombre</TableHead>
+                                <TableHead>Rol</TableHead>
+                                <TableHead className="text-right">Salario Mensual</TableHead>
+                            </TableRow>
+                        </TableHeader>
                         <TableBody>
-                            <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">Datos de nómina no disponibles.</TableCell></TableRow>
+                            {coachesList.length > 0 ? coachesList.map(coach => (
+                                <TableRow key={coach.id}>
+                                    <TableCell>{coach.firstName} {coach.lastName}</TableCell>
+                                    <TableCell><Badge variant="outline">{coach.role}</Badge></TableCell>
+                                    <TableCell className="text-right font-medium">{formatCurrency(coach.salary || 0)}</TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">No hay datos de salarios configurados.</TableCell></TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>
